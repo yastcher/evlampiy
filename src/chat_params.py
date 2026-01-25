@@ -1,6 +1,7 @@
-from telegram import Update
 from telegram.constants import ChatMemberStatus
 from telegram.ext import ContextTypes
+
+from telegram import Update
 
 
 def is_private_chat(update: Update) -> bool:
