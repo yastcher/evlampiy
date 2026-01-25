@@ -5,6 +5,7 @@ class UserSettings(Document):
     """
     User model MongoDB for Beanie.
     """
+
     chat_id: str
     language: str | None = None
     command: str | None = None

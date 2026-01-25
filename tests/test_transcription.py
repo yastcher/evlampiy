@@ -17,7 +17,9 @@ class TestTranscribeAudio:
         mock_wit.speech = MagicMock(return_value={"text": "Hello world"})
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment),
+            patch(
+                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
+            ),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             result = transcribe_audio(b"audio_data", "ogg", "en")
@@ -36,14 +38,18 @@ class TestTranscribeAudio:
         mock_audio_segment.export = MagicMock()
 
         mock_wit = MagicMock()
-        mock_wit.speech = MagicMock(side_effect=[
-            {"text": "Part one. "},
-            {"text": "Part two. "},
-            {"text": "Part three."},
-        ])
+        mock_wit.speech = MagicMock(
+            side_effect=[
+                {"text": "Part one. "},
+                {"text": "Part two. "},
+                {"text": "Part three."},
+            ]
+        )
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment),
+            patch(
+                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
+            ),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             result = transcribe_audio(b"audio_data", "ogg", "en")
@@ -62,7 +68,9 @@ class TestTranscribeAudio:
         mock_wit.speech = MagicMock(return_value={})  # No 'text' key
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment),
+            patch(
+                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
+            ),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             result = transcribe_audio(b"audio_data", "ogg", "en")
@@ -83,8 +91,13 @@ class TestTranscribeAudio:
         mock_wit_en.speech = MagicMock(return_value={"text": "Hello world"})
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment),
-            patch("src.transcription.service.voice_translators", {"ru": mock_wit_ru, "en": mock_wit_en}),
+            patch(
+                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
+            ),
+            patch(
+                "src.transcription.service.voice_translators",
+                {"ru": mock_wit_ru, "en": mock_wit_en},
+            ),
         ):
             result = transcribe_audio(b"audio_data", "ogg", "ru")
 
@@ -104,7 +117,9 @@ class TestTranscribeAudio:
         mock_wit.speech = MagicMock(return_value={"text": "Test"})
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment),
+            patch(
+                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
+            ),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             transcribe_audio(b"audio_data", "ogg", "en")

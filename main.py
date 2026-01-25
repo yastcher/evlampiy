@@ -53,21 +53,15 @@ def main():
     for command_name, command_handler in COMMAND_HANDLERS.items():
         application.add_handler(CommandHandler(command_name, command_handler))
 
-    application.add_handler(
-        CallbackQueryHandler(handlers.lang_buttons, pattern="set_lang_")
-    )
+    application.add_handler(CallbackQueryHandler(handlers.lang_buttons, pattern="set_lang_"))
 
     application.add_handler(MessageHandler(filters.VOICE, from_voice_to_text))
 
     enter_command_handler = ConversationHandler(
-        entry_points=[
-            CommandHandler("enter_your_command", handlers.enter_your_command)
-        ],
+        entry_points=[CommandHandler("enter_your_command", handlers.enter_your_command)],
         states={
             handlers.WAITING_FOR_COMMAND: [
-                MessageHandler(
-                    filters.TEXT & ~filters.COMMAND, handlers.handle_command_input
-                )
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.handle_command_input)
             ]
         },
         fallbacks=[],

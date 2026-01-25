@@ -1,4 +1,5 @@
 """Wit.ai client initialization."""
+
 import wit
 
 from src.config import ENGLISH, GERMANY, RUSSIAN, SPANISH, settings

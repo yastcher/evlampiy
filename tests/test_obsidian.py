@@ -26,16 +26,12 @@ class TestAddShortNoteToObsidian:
 
         responses.add(
             responses.PUT,
-            re.compile(
-                r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"
-            ),
+            re.compile(r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"),
             json={"content": {"name": "test.md"}},
             status=201,
         )
 
-        with patch(
-            "src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)
-        ):
+        with patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)):
             await add_short_note_to_obsidian(mock_private_update)
 
         assert len(responses.calls) == 1
@@ -55,16 +51,12 @@ class TestAddShortNoteToObsidian:
 
         responses.add(
             responses.PUT,
-            re.compile(
-                r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"
-            ),
+            re.compile(r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"),
             json={"message": "Bad credentials"},
             status=401,
         )
 
-        with patch(
-            "src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)
-        ):
+        with patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)):
             await add_short_note_to_obsidian(mock_private_update)
 
         assert len(responses.calls) == 1
@@ -98,16 +90,12 @@ class TestAddShortNoteToObsidian:
 
         responses.add(
             responses.PUT,
-            re.compile(
-                r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"
-            ),
+            re.compile(r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"),
             json={"content": {"name": "test.md"}},
             status=201,
         )
 
-        with patch(
-            "src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)
-        ):
+        with patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)):
             await add_short_note_to_obsidian(mock_private_update)
 
         request_body = responses.calls[0].request.body

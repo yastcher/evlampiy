@@ -40,7 +40,9 @@ class TestSendResponse:
         long_text = "B" * (MAX_TELEGRAM_MESSAGE_LENGTH * 2 + 50)
         keyboard = MagicMock(spec=InlineKeyboardMarkup)
 
-        await send_response(mock_private_update, mock_context, response=long_text, keyboard=keyboard)
+        await send_response(
+            mock_private_update, mock_context, response=long_text, keyboard=keyboard
+        )
 
         assert mock_context.bot.send_message.call_count == 3
         first_call = mock_context.bot.send_message.call_args_list[0]

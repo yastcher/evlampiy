@@ -1,4 +1,5 @@
 """Telegram voice message handler."""
+
 import logging
 
 from telegram import Update

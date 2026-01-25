@@ -4,7 +4,12 @@ ENGLISH = "en"
 RUSSIAN = "ru"
 SPANISH = "es"
 GERMANY = "de"
-LANGUAGES = (ENGLISH, RUSSIAN, SPANISH, GERMANY, )
+LANGUAGES = (
+    ENGLISH,
+    RUSSIAN,
+    SPANISH,
+    GERMANY,
+)
 
 
 class Settings(BaseSettings):

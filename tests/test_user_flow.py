@@ -41,9 +41,7 @@ class TestStartCommand:
 
     async def test_group_chat_owner_allowed(self, mock_group_update, mock_context):
         """Owner sends /start in group chat."""
-        mock_context.bot.get_chat_member.return_value = MagicMock(
-            status=ChatMemberStatus.OWNER
-        )
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.OWNER)
 
         with (
             patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="ru")),
@@ -55,9 +53,7 @@ class TestStartCommand:
 
     async def test_group_chat_member_blocked(self, mock_group_update, mock_context):
         """Regular member sends /start in group chat - ignored."""
-        mock_context.bot.get_chat_member.return_value = MagicMock(
-            status=ChatMemberStatus.MEMBER
-        )
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
         await start(mock_group_update, mock_context)
 
@@ -80,9 +76,7 @@ class TestChooseLanguage:
 
     async def test_group_chat_non_admin_blocked(self, mock_group_update, mock_context):
         """Non-admin in group chat - ignored."""
-        mock_context.bot.get_chat_member.return_value = MagicMock(
-            status=ChatMemberStatus.MEMBER
-        )
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
         await choose_language(mock_group_update, mock_context)
 
@@ -166,9 +160,7 @@ class TestVoiceMessage:
             call_kwargs = mock_send.call_args.kwargs
             assert call_kwargs["response"] == "Hello world"
 
-    async def test_voice_message_with_command_prefix(
-        self, mock_private_update, mock_context
-    ):
+    async def test_voice_message_with_command_prefix(self, mock_private_update, mock_context):
         """Voice message starting with command triggers GPT response."""
         from src.telegram.voice import from_voice_to_text
 
@@ -250,9 +242,7 @@ class TestEnterYourCommand:
 
         from src.telegram.handlers import enter_your_command
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(
-            status=ChatMemberStatus.MEMBER
-        )
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
         result = await enter_your_command(mock_group_update, mock_context)
 
@@ -293,9 +283,7 @@ class TestSetGithubCommand:
             await set_github_command(mock_private_update, mock_context)
 
             mock_set_gh.assert_called_once_with("u_12345", "owner", "repo", "ghp_token123")
-            mock_private_update.message.reply_text.assert_called_once_with(
-                "GitHub settings saved."
-            )
+            mock_private_update.message.reply_text.assert_called_once_with("GitHub settings saved.")
 
     async def test_shows_usage_for_invalid_input(self, mock_private_update, mock_context):
         """Usage message is shown for invalid input."""
@@ -334,9 +322,7 @@ class TestConnectGithub:
         """Authorize function is called."""
         from src.telegram.handlers import connect_github
 
-        with patch(
-            "src.telegram.handlers.authorize_github_for_user", AsyncMock()
-        ) as mock_auth:
+        with patch("src.telegram.handlers.authorize_github_for_user", AsyncMock()) as mock_auth:
             await connect_github(mock_private_update, mock_context)
 
             mock_auth.assert_called_once_with(mock_private_update, mock_context)

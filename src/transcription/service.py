@@ -1,4 +1,5 @@
 """Voice transcription service — platform-agnostic."""
+
 import logging
 from io import BytesIO
 
@@ -26,10 +27,7 @@ def transcribe_audio(audio_bytes: bytes, audio_format: str, language: str) -> st
     audio_stream = BytesIO(audio_bytes)
     audio = AudioSegment.from_file(audio_stream, format=audio_format)
 
-    chunks = [
-        audio[i : i + CHUNK_LENGTH_MS]
-        for i in range(0, len(audio), CHUNK_LENGTH_MS)
-    ]
+    chunks = [audio[i : i + CHUNK_LENGTH_MS] for i in range(0, len(audio), CHUNK_LENGTH_MS)]
 
     translator = voice_translators[language]
     full_text = ""
@@ -40,8 +38,7 @@ def transcribe_audio(audio_bytes: bytes, audio_format: str, language: str) -> st
         converted_stream.seek(0)
 
         response = translator.speech(
-            audio_file=converted_stream,
-            headers={"Content-Type": "audio/mpeg3"}
+            audio_file=converted_stream, headers={"Content-Type": "audio/mpeg3"}
         )
         text = response.get("text", "")
         full_text += text

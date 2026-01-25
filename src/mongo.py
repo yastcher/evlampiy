@@ -56,7 +56,7 @@ async def set_github_settings(chat_id: str, owner: str, repo: str, token: str):
                 "owner": owner,
                 "repo": repo,
                 "token": token,
-            }
+            },
         )
         await user.insert()
     else:
