@@ -82,11 +82,13 @@ WIT_DE_TOKEN=dein_deutsch_token
 # Optional: GPT-Integration
 GPT_TOKEN=dein_openai_token
 
-# Optional: WhatsApp-Integration
+# Optional: WhatsApp-Integration (siehe WHATSAPP_SETUP.md)
 WHATSAPP_TOKEN=dein_whatsapp_token
 WHATSAPP_PHONE_ID=deine_phone_id
 WHATSAPP_VERIFY_TOKEN=dein_verify_token
 ```
+
+Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
 
 ## Bot-Befehle
 

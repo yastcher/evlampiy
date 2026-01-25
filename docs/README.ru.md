@@ -82,11 +82,13 @@ WIT_DE_TOKEN=токен_немецкий
 # Опционально: интеграция с GPT
 GPT_TOKEN=ваш_openai_токен
 
-# Опционально: интеграция с WhatsApp
+# Опционально: интеграция с WhatsApp (см. WHATSAPP_SETUP.md)
 WHATSAPP_TOKEN=ваш_whatsapp_токен
 WHATSAPP_PHONE_ID=ваш_phone_id
 WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
 ```
+
+Инструкции по настройке WhatsApp: [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
 
 ## Команды бота
 

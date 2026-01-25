@@ -7,6 +7,12 @@ x-variables: &variables
     WIT_DE_TOKEN: ${WIT_DE_TOKEN}
     MONGO_URI: ${MONGO_URI}
     GPT_TOKEN: ${GPT_TOKEN}
+    # WhatsApp (optional)
+    WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+    WHATSAPP_PHONE_ID: ${WHATSAPP_PHONE_ID:-}
+    WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+    WHATSAPP_APP_ID: ${WHATSAPP_APP_ID:-}
+    WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
 
 services:
 
@@ -20,5 +26,7 @@ services:
     image: evlampiy_notes_tgbot:latest
     restart: always
     <<: *variables
+    ports:
+      - "8000:8000"  # FastAPI for WhatsApp webhook
     depends_on:
       - mongodb
