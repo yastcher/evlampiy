@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from telegram.ext import (
+    ApplicationBuilder,
     CallbackQueryHandler,
     CommandHandler,
     ConversationHandler,
@@ -13,7 +14,6 @@ from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.mongo import init_beanie_models
 from src.telegram import handlers
-from src.telegram.bot import application
 from src.telegram.voice import from_voice_to_text
 
 logging.basicConfig(
@@ -49,6 +49,8 @@ def main():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(init_beanie_models())
+
+    application = ApplicationBuilder().token(settings.telegram_bot_token).build()
 
     for command_name, command_handler in COMMAND_HANDLERS.items():
         application.add_handler(CommandHandler(command_name, command_handler))

@@ -2,11 +2,7 @@ from typing import Optional
 
 from telegram import InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, ContextTypes
-
-from src.config import settings
-
-application = ApplicationBuilder().token(settings.telegram_bot_token).build()
+from telegram.ext import ContextTypes
 
 MAX_TELEGRAM_MESSAGE_LENGTH = 4096
 
