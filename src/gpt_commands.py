@@ -1,11 +1,12 @@
 import logging
 
 import openai
-from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.bot import send_response
+from telegram import Update
+
 from src.config import settings
+from src.telegram.bot import send_response
 
 logger = logging.getLogger(__name__)
 
@@ -21,23 +22,13 @@ async def evlampiy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         chat_response = client.chat.completions.create(
             model=settings.gpt_model,
-            messages=[
-                {"role": "user", "content": user_message}
-            ],
+            messages=[{"role": "user", "content": user_message}],
             temperature=0.7,
         )
 
-        gpt_response = chat_response['choices'][0]['message']['content']
+        gpt_response = chat_response["choices"][0]["message"]["content"]
 
-        await send_response(
-            update,
-            context,
-            response=gpt_response
-        )
+        await send_response(update, context, response=gpt_response)
     except Exception as e:
         logger.error(f"Error occurred: {e}")
-        await send_response(
-            update,
-            context,
-            response=str(e)
-        )
+        await send_response(update, context, response=str(e))

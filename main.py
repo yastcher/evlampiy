@@ -9,12 +9,12 @@ from telegram.ext import (
     filters,
 )
 
-from src import handlers
-from src.bot import application
 from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.mongo import init_beanie_models
-from src.speech import from_voice_to_text
+from src.telegram import handlers
+from src.telegram.bot import application
+from src.telegram.voice import from_voice_to_text
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

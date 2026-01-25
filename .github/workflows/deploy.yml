@@ -4,9 +4,52 @@ on:
   push:
     branches:
       - release
+  pull_request:
+    branches:
+      - release
+      - main
 
 jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --group dev
+
+      - name: Run linter
+        run: uv run ruff check
+
+      - name: Run tests with coverage
+        env:
+          MONGO_URI: mongodb://localhost:27017/
+        run: uv run pytest --cov=src --cov-report=xml --cov-fail-under=85
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+        continue-on-error: true
+
   build-and-deploy:
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/release' && github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -22,22 +65,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Run linter
-        run: |
-          pip install uv
-          uv sync --group dev
-          uv run ruff check
-
-      - name: Run tests
-        run: |
-          uv run pytest
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         run: |
@@ -59,6 +87,8 @@ jobs:
             cd evlampiy
             docker compose down || true
             gunzip -c ~/evlampiy/evlampiy_notes_tgbot.tar.gz | docker load
+            rm ~/evlampiy/evlampiy_notes_tgbot.tar.gz
+            docker image prune -f
             docker compose up -d
           EOF
           rm private_key

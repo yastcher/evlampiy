@@ -20,3 +20,5 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+.claude
+.agents

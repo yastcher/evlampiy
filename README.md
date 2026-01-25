@@ -1,41 +1,119 @@
-# evlampiy_notes_bot
+# Evlampiy Notes Bot
 
 [![CI](https://github.com/YastYa/evlampiy_notes_tgbot/actions/workflows/deploy.yml/badge.svg)](https://github.com/YastYa/evlampiy_notes_tgbot/actions)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/YastYa/evlampiy_notes_tgbot)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-https://t.me/evlampiy_notes_bot
+[Русский](docs/README.ru.md) | English
 
-Telegram bot for managing notes with voice-to-text translation.
+Voice-to-text bot for Telegram with multi-language support.
+
+**Try it:** https://t.me/evlampiy_notes_bot
 
 ## Features
 
-- Translate voice messages to text (supports English, German, Russian, Spanish)
-- Custom language settings per chat/user
-- GPT command integration via voice
-- Export notes to Obsidian via GitHub
+- **Voice transcription** — Convert voice messages to text using [Wit.ai](https://wit.ai/)
+- **Multi-language** — Supports English, German, Russian, Spanish
+- **Per-chat settings** — Each user/group can have individual language preferences
+- **GPT integration** — Trigger GPT commands via voice (say "evlampiy" + your question)
+- **Obsidian export** — Save notes to your Obsidian vault via GitHub
+
+## Architecture
+
+```
+src/
+├── transcription/       # Domain layer (platform-agnostic)
+│   ├── service.py       # Core transcription logic
+│   └── wit_client.py    # Wit.ai clients
+├── telegram/            # Telegram adapter
+│   ├── bot.py
+│   ├── handlers.py
+│   └── voice.py
+└── whatsapp/            # WhatsApp adapter (coming soon)
+```
 
 ## Requirements
 
 - Python 3.12+
 - MongoDB
-- FFmpeg
-- [Wit.ai](https://wit.ai/) tokens for speech recognition
-- Telegram Bot token
+- FFmpeg (for audio processing)
+- [Wit.ai](https://wit.ai/) API tokens
+- Telegram Bot token from [@BotFather](https://t.me/BotFather)
 
-### [Installation, configuration and deploy](DEPLOY.md)
+## Quick Start
 
-### Bot commands
+```bash
+# Clone
+git clone https://github.com/yastcher/evlampiy.git
+cd evlampiy
 
-- `/start` — Show help and current settings
-- `/choose_your_language` — Set voice recognition language
+# Install dependencies
+pip install uv
+uv sync
+
+# Configure
+cp .env.example .env
+# Edit .env with your tokens
+
+# Run
+uv run python main.py
+```
+
+## Configuration
+
+Create `.env` file:
+
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token
+MONGO_URI=mongodb://localhost:27017/
+
+# Wit.ai tokens (get from https://wit.ai/)
+WIT_EN_TOKEN=your_english_token
+WIT_RU_TOKEN=your_russian_token
+WIT_ES_TOKEN=your_spanish_token
+WIT_DE_TOKEN=your_german_token
+
+# Optional: GPT integration
+GPT_TOKEN=your_openai_token
+```
+
+## Bot Commands
+
+| Command                 | Description                    |
+|-------------------------|--------------------------------|
+| `/start`                | Show help and current settings |
+| `/choose_your_language` | Set voice recognition language |
+| `/enter_your_command`   | Set custom GPT trigger word    |
+
+## Development
+
+```bash
+# Install dev dependencies
+uv sync --group dev
+
+# Run tests
+uv run pytest
+
+# Run linter
+uv run ruff check
+
+# Run with coverage
+uv run pytest --cov=src --cov-fail-under=85
+```
+
+## Deployment
+
+See [DEPLOY.md](DEPLOY.md) for Docker deployment instructions.
 
 ## Roadmap
 
-- [x] Voice-to-text translation
-- [x] Multi-language support
+- [x] Voice-to-text transcription
+- [x] Multi-language support (EN, RU, ES, DE)
 - [ ] GPT command integration
-- [ ] Export to Obsidian
+- [x] CI/CD with GitHub Actions
+- [ ] WhatsApp integration
+- [ ] Obsidian export improvements
 - [ ] Message classification by topics
 - [ ] ChatMemberUpdated handler for cleanup
 

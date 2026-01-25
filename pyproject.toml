@@ -24,6 +24,8 @@ dev = [
     "pytest-asyncio~=0.23.8",
     "pytest-mock==3.15.1",
     "pytest-cov~=7.0.0",
+    "mongomock-motor~=0.0.34",
+    "responses~=0.25.7",
 ]
 
 [tool.ruff]
@@ -60,3 +62,4 @@ addopts = [
     "--cov-branch"
 ]
 testpaths = ["tests"]
+asyncio_mode = "auto"
