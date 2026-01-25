@@ -5,15 +5,16 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-Русский | [English](../README.md)
+Русский | [English](../README.md) | [Español](README.es.md) | [Deutsch](README.de.md)
 
-Telegram-бот для транскрипции голосовых сообщений с поддержкой нескольких языков.
+Telegram и WhatsApp бот для транскрипции голосовых сообщений с поддержкой нескольких языков.
 
 **Попробовать:** https://t.me/evlampiy_notes_bot
 
 ## Возможности
 
 - **Транскрипция голоса** — Преобразование голосовых сообщений в текст через [Wit.ai](https://wit.ai/)
+- **Мультиплатформенность** — Работает с Telegram и WhatsApp
 - **Мультиязычность** — Поддержка английского, немецкого, русского, испанского
 - **Настройки по чатам** — Каждый пользователь/группа может иметь свой язык
 - **Интеграция с GPT** — Вызов GPT голосом (скажите "евлампий" + ваш вопрос)
@@ -30,7 +31,10 @@ src/
 │   ├── bot.py
 │   ├── handlers.py
 │   └── voice.py
-└── whatsapp/            # Адаптер WhatsApp (скоро)
+├── whatsapp/            # Адаптер WhatsApp
+│   ├── client.py
+│   └── handlers.py
+└── main.py              # Точка входа
 ```
 
 ## Требования
@@ -40,13 +44,14 @@ src/
 - FFmpeg (для обработки аудио)
 - API токены [Wit.ai](https://wit.ai/)
 - Токен Telegram бота от [@BotFather](https://t.me/BotFather)
+- (Опционально) Данные WhatsApp Business API
 
 ## Быстрый старт
 
 ```bash
 # Клонирование
-git clone https://github.com/YastYa/evlampiy_notes_tgbot.git
-cd evlampiy_notes_tgbot
+git clone https://github.com/yastcher/evlampiy.git
+cd evlampiy
 
 # Установка зависимостей
 pip install uv
@@ -57,7 +62,7 @@ cp .env.example .env
 # Отредактируйте .env, добавив токены
 
 # Запуск
-uv run python main.py
+uv run python -m src.main
 ```
 
 ## Конфигурация
@@ -76,15 +81,20 @@ WIT_DE_TOKEN=токен_немецкий
 
 # Опционально: интеграция с GPT
 GPT_TOKEN=ваш_openai_токен
+
+# Опционально: интеграция с WhatsApp
+WHATSAPP_TOKEN=ваш_whatsapp_токен
+WHATSAPP_PHONE_ID=ваш_phone_id
+WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
 ```
 
 ## Команды бота
 
-| Команда | Описание |
-|---------|----------|
-| `/start` | Показать справку и текущие настройки |
-| `/choose_your_language` | Выбрать язык распознавания |
-| `/enter_your_command` | Задать слово-триггер для GPT |
+| Команда                 | Описание                             |
+|-------------------------|--------------------------------------|
+| `/start`                | Показать справку и текущие настройки |
+| `/choose_your_language` | Выбрать язык распознавания           |
+| `/enter_your_command`   | Задать слово-триггер для GPT         |
 
 ## Разработка
 
@@ -110,9 +120,9 @@ uv run pytest --cov=src --cov-fail-under=85
 
 - [x] Транскрипция голоса в текст
 - [x] Мультиязычность (EN, RU, ES, DE)
-- [x] Интеграция с GPT
+- [ ] Интеграция с GPT
 - [x] CI/CD через GitHub Actions
-- [ ] Интеграция с WhatsApp
+- [x] Интеграция с WhatsApp
 - [ ] Улучшения экспорта в Obsidian
 - [ ] Классификация сообщений по темам
 

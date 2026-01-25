@@ -34,5 +34,12 @@ class Settings(BaseSettings):
     wit_es_token: str = ""
     wit_de_token: str = ""
 
+    # WhatsApp (Meta Cloud API)
+    whatsapp_token: str = ""
+    whatsapp_phone_id: str = ""
+    whatsapp_verify_token: str = ""
+    whatsapp_app_id: str = ""
+    whatsapp_app_secret: str = ""
+
 
 settings: Settings = Settings()

@@ -10,4 +10,4 @@ COPY . .
 RUN pip install uv && uv sync
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["python", "main.py"]
+CMD ["python", "-m", "src.main"]

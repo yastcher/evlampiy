@@ -5,15 +5,16 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-[Русский](docs/README.ru.md) | English
+[Русский](docs/README.ru.md) | [Español](docs/README.es.md) | [Deutsch](docs/README.de.md) | English
 
-Voice-to-text bot for Telegram with multi-language support.
+Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 
 **Try it:** https://t.me/evlampiy_notes_bot
 
 ## Features
 
 - **Voice transcription** — Convert voice messages to text using [Wit.ai](https://wit.ai/)
+- **Multi-platform** — Works with Telegram and WhatsApp
 - **Multi-language** — Supports English, German, Russian, Spanish
 - **Per-chat settings** — Each user/group can have individual language preferences
 - **GPT integration** — Trigger GPT commands via voice (say "evlampiy" + your question)
@@ -30,7 +31,10 @@ src/
 │   ├── bot.py
 │   ├── handlers.py
 │   └── voice.py
-└── whatsapp/            # WhatsApp adapter (coming soon)
+├── whatsapp/            # WhatsApp adapter
+│   ├── client.py
+│   └── handlers.py
+└── main.py              # Application entry point
 ```
 
 ## Requirements
@@ -40,6 +44,7 @@ src/
 - FFmpeg (for audio processing)
 - [Wit.ai](https://wit.ai/) API tokens
 - Telegram Bot token from [@BotFather](https://t.me/BotFather)
+- (Optional) WhatsApp Business API credentials
 
 ## Quick Start
 
@@ -57,7 +62,7 @@ cp .env.example .env
 # Edit .env with your tokens
 
 # Run
-uv run python main.py
+uv run python -m src.main
 ```
 
 ## Configuration
@@ -76,6 +81,11 @@ WIT_DE_TOKEN=your_german_token
 
 # Optional: GPT integration
 GPT_TOKEN=your_openai_token
+
+# Optional: WhatsApp integration
+WHATSAPP_TOKEN=your_whatsapp_token
+WHATSAPP_PHONE_ID=your_phone_id
+WHATSAPP_VERIFY_TOKEN=your_verify_token
 ```
 
 ## Bot Commands
@@ -112,7 +122,7 @@ See [DEPLOY.md](DEPLOY.md) for Docker deployment instructions.
 - [x] Multi-language support (EN, RU, ES, DE)
 - [ ] GPT command integration
 - [x] CI/CD with GitHub Actions
-- [ ] WhatsApp integration
+- [x] WhatsApp integration
 - [ ] Obsidian export improvements
 - [ ] Message classification by topics
 - [ ] ChatMemberUpdated handler for cleanup

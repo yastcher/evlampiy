@@ -1,6 +1,6 @@
 [project]
 name = "evlampiy-notes-tgbot"
-version = "0.2.2"
+version = "0.3.0"
 description = "Telegram bot (Evlampiy) for managing notes"
 readme = "README.md"
 authors = ["Yast <yastcher@gmail.com>"]
@@ -15,6 +15,9 @@ dependencies = [
     "openai~=1.59.8",
     "beanie==1.29.0",
     "motor==3.7.1",
+    "pywa~=2.1",
+    "fastapi~=0.115",
+    "uvicorn~=0.34",
 ]
 
 [dependency-groups]
@@ -63,3 +66,9 @@ addopts = [
 ]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+omit = [
+    "src/main.py",
+    "src/github_tg_oauth.py",
+]

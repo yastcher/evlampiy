@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import threading
 
 from telegram.ext import (
     ApplicationBuilder,
@@ -27,6 +28,7 @@ trash_loggers = (
     "pydub.converter",
     "urllib3",
     "pymongo.topology",
+    "uvicorn.access",
 )
 for logger_name in trash_loggers:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
@@ -41,14 +43,49 @@ COMMAND_HANDLERS = {
 }
 
 
-if not settings.telegram_bot_token:
-    raise ValueError("need TELEGRAM_BOT_TOKEN env variables")
+def create_fastapi_app():
+    """Create FastAPI application with WhatsApp webhook."""
+    from fastapi import FastAPI
+
+    from src.whatsapp.client import get_whatsapp_client
+    from src.whatsapp.handlers import register_handlers
+
+    app = FastAPI(title="Evlampiy Bot API")
+
+    wa = get_whatsapp_client()
+    if wa:
+        register_handlers(wa)
+        wa.setup_fastapi(app)
+        logger.info("WhatsApp webhook configured")
+
+    @app.get("/health")
+    async def health_check():
+        return {"status": "ok"}
+
+    return app
+
+
+def run_fastapi_server():
+    """Run FastAPI server in a separate thread."""
+    import uvicorn
+
+    app = create_fastapi_app()
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")
 
 
 def main():
+    if not settings.telegram_bot_token:
+        raise ValueError("need TELEGRAM_BOT_TOKEN env variables")
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(init_beanie_models())
+
+    # Start FastAPI server if WhatsApp is configured
+    if settings.whatsapp_token and settings.whatsapp_phone_id:
+        api_thread = threading.Thread(target=run_fastapi_server, daemon=True)
+        api_thread.start()
+        logger.info("FastAPI server started for WhatsApp webhook")
 
     application = ApplicationBuilder().token(settings.telegram_bot_token).build()
 
