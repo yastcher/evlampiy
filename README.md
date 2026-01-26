@@ -1,11 +1,11 @@
 # Evlampiy Notes Bot
 
-[![CI](https://github.com/YastYa/evlampiy_notes_tgbot/actions/workflows/deploy.yml/badge.svg)](https://github.com/YastYa/evlampiy_notes_tgbot/actions)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/YastYa/evlampiy_notes_tgbot)
+[![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-[Русский](docs/README.ru.md) | [Español](docs/README.es.md) | [Deutsch](docs/README.de.md) | English
+English | [Русский](docs/README.ru.md) | [Español](docs/README.es.md) | [Deutsch](docs/README.de.md)
 
 Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 
@@ -18,7 +18,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Multi-language** — Supports English, German, Russian, Spanish
 - **Per-chat settings** — Each user/group can have individual language preferences
 - **GPT integration** — Trigger GPT commands via voice (say "evlampiy" + your question)
-- **Obsidian export** — Save notes to your Obsidian vault via GitHub
+- **Obsidian integration** — Auto-save voice transcriptions to Obsidian vault via GitHub (OAuth Device Flow)
 
 ## Architecture
 
@@ -34,6 +34,9 @@ src/
 ├── whatsapp/            # WhatsApp adapter
 │   ├── client.py
 │   └── handlers.py
+├── github_oauth.py      # GitHub OAuth Device Flow
+├── github_api.py        # GitHub API operations
+├── obsidian.py          # Obsidian vault integration
 └── main.py              # Application entry point
 ```
 
@@ -45,6 +48,7 @@ src/
 - [Wit.ai](https://wit.ai/) API tokens
 - Telegram Bot token from [@BotFather](https://t.me/BotFather)
 - (Optional) WhatsApp Business API credentials
+- (Optional) GitHub OAuth App client ID (for Obsidian integration)
 
 ## Quick Start
 
@@ -86,17 +90,23 @@ GPT_TOKEN=your_openai_token
 WHATSAPP_TOKEN=your_whatsapp_token
 WHATSAPP_PHONE_ID=your_phone_id
 WHATSAPP_VERIFY_TOKEN=your_verify_token
+
+# Optional: GitHub OAuth (for Obsidian integration)
+GITHUB_CLIENT_ID=your_github_oauth_app_client_id
 ```
 
 For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md).
 
 ## Bot Commands
 
-| Command                 | Description                    |
-|-------------------------|--------------------------------|
-| `/start`                | Show help and current settings |
-| `/choose_your_language` | Set voice recognition language |
-| `/enter_your_command`   | Set custom GPT trigger word    |
+| Command                 | Description                                |
+|-------------------------|--------------------------------------------|
+| `/start`                | Show help and current settings             |
+| `/choose_your_language` | Set voice recognition language             |
+| `/enter_your_command`   | Set custom GPT trigger word                |
+| `/connect_github`       | Connect GitHub account (OAuth Device Flow) |
+| `/toggle_obsidian`      | Enable/disable Obsidian sync               |
+| `/disconnect_github`    | Disconnect GitHub and disable sync         |
 
 ## Development
 
@@ -125,7 +135,7 @@ See [DEPLOY.md](DEPLOY.md) for Docker deployment instructions.
 - [ ] GPT command integration
 - [x] CI/CD with GitHub Actions
 - [x] WhatsApp integration
-- [ ] Obsidian export improvements
+- [x] Obsidian integration via GitHub OAuth
 - [ ] Message classification by topics
 - [ ] ChatMemberUpdated handler for cleanup
 

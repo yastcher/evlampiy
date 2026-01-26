@@ -1,11 +1,9 @@
 import base64
-import re
 from unittest.mock import AsyncMock, patch
 
 import pytest
-import responses
 
-from src.obsidian import add_short_note_to_obsidian
+from src.obsidian import add_short_note_to_obsidian, save_transcription_to_obsidian
 
 pytestmark = [pytest.mark.asyncio]
 
@@ -13,7 +11,6 @@ pytestmark = [pytest.mark.asyncio]
 class TestAddShortNoteToObsidian:
     """Test GitHub note creation."""
 
-    @responses.activate
     async def test_creates_note_successfully(self, mock_private_update):
         """Note is created in GitHub repository."""
         mock_private_update.message.text = "Test note content"
@@ -24,21 +21,26 @@ class TestAddShortNoteToObsidian:
             "token": "ghp_testtoken",
         }
 
-        responses.add(
-            responses.PUT,
-            re.compile(r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"),
-            json={"content": {"name": "test.md"}},
-            status=201,
-        )
+        mock_response = AsyncMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {"content": {"name": "test.md"}}
 
-        with patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)):
+        with (
+            patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
+            patch("src.obsidian.httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client = AsyncMock()
+            mock_client.put.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
             await add_short_note_to_obsidian(mock_private_update)
 
-        assert len(responses.calls) == 1
-        request = responses.calls[0].request
-        assert "Bearer ghp_testtoken" in request.headers["Authorization"]
+        mock_client.put.assert_called_once()
+        call_kwargs = mock_client.put.call_args
+        assert "Bearer ghp_testtoken" in call_kwargs.kwargs["headers"]["Authorization"]
 
-    @responses.activate
     async def test_handles_github_error(self, mock_private_update, caplog):
         """GitHub API error is logged."""
         mock_private_update.message.text = "Test note"
@@ -49,17 +51,23 @@ class TestAddShortNoteToObsidian:
             "token": "ghp_testtoken",
         }
 
-        responses.add(
-            responses.PUT,
-            re.compile(r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"),
-            json={"message": "Bad credentials"},
-            status=401,
-        )
+        mock_response = AsyncMock()
+        mock_response.status_code = 401
+        mock_response.json.return_value = {"message": "Bad credentials"}
 
-        with patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)):
+        with (
+            patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
+            patch("src.obsidian.httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client = AsyncMock()
+            mock_client.put.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
             await add_short_note_to_obsidian(mock_private_update)
 
-        assert len(responses.calls) == 1
+        mock_client.put.assert_called_once()
 
     async def test_skips_when_no_message(self, mock_private_update):
         """Skips processing when no message."""
@@ -75,7 +83,6 @@ class TestAddShortNoteToObsidian:
         await add_short_note_to_obsidian(mock_private_update)
         # No error should occur
 
-    @responses.activate
     async def test_content_is_base64_encoded(self, mock_private_update):
         """Note content is properly base64 encoded."""
         note_text = "Hello, World!"
@@ -88,18 +95,103 @@ class TestAddShortNoteToObsidian:
             "token": "ghp_testtoken",
         }
 
-        responses.add(
-            responses.PUT,
-            re.compile(r"https://api\.github\.com/repos/testowner/testrepo/contents/income/.+"),
-            json={"content": {"name": "test.md"}},
-            status=201,
-        )
+        mock_response = AsyncMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {"content": {"name": "test.md"}}
 
-        with patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)):
+        with (
+            patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
+            patch("src.obsidian.httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client = AsyncMock()
+            mock_client.put.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
             await add_short_note_to_obsidian(mock_private_update)
 
-        request_body = responses.calls[0].request.body
-        import json
-
-        body = json.loads(request_body)
+        call_kwargs = mock_client.put.call_args
+        body = call_kwargs.kwargs["json"]
         assert body["content"] == expected_base64
+
+
+class TestSaveTranscriptionToObsidian:
+    """Test transcription saving with YAML frontmatter."""
+
+    async def test_returns_false_when_disabled(self):
+        """Returns False when save_to_obsidian is disabled."""
+        with patch("src.obsidian.get_save_to_obsidian", AsyncMock(return_value=False)):
+            result = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
+
+        assert result is False
+
+    async def test_returns_false_when_no_github_settings(self):
+        """Returns False when no GitHub settings configured."""
+        with (
+            patch("src.obsidian.get_save_to_obsidian", AsyncMock(return_value=True)),
+            patch("src.obsidian.get_github_settings", AsyncMock(return_value={})),
+        ):
+            result = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
+
+        assert result is False
+
+    async def test_saves_with_yaml_frontmatter(self):
+        """Transcription saved with correct YAML frontmatter."""
+        github_settings = {"owner": "user", "repo": "notes", "token": "ghp_abc"}
+
+        with (
+            patch("src.obsidian.get_save_to_obsidian", AsyncMock(return_value=True)),
+            patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
+            patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put,
+        ):
+            result = await save_transcription_to_obsidian(
+                "u_12345", "Hello world", "telegram", "en"
+            )
+
+        assert result is True
+        mock_put.assert_called_once()
+        call_kwargs = mock_put.call_args.kwargs
+        assert call_kwargs["token"] == "ghp_abc"
+        assert call_kwargs["owner"] == "user"
+        assert call_kwargs["repo"] == "notes"
+        assert call_kwargs["path"].startswith("income/")
+        assert call_kwargs["path"].endswith(".md")
+
+        content = call_kwargs["content"]
+        assert content.startswith("---\n")
+        assert "source: telegram" in content
+        assert "language: en" in content
+        assert "chat_id: u_12345" in content
+        assert "Hello world" in content
+
+    async def test_saves_whatsapp_source(self):
+        """Transcription from WhatsApp has correct source."""
+        github_settings = {"owner": "user", "repo": "notes", "token": "ghp_abc"}
+
+        with (
+            patch("src.obsidian.get_save_to_obsidian", AsyncMock(return_value=True)),
+            patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
+            patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put,
+        ):
+            result = await save_transcription_to_obsidian(
+                "w_79001234567", "Привет", "whatsapp", "ru"
+            )
+
+        assert result is True
+        content = mock_put.call_args.kwargs["content"]
+        assert "source: whatsapp" in content
+        assert "language: ru" in content
+
+    async def test_returns_false_on_api_failure(self):
+        """Returns False when GitHub API call fails."""
+        github_settings = {"owner": "user", "repo": "notes", "token": "ghp_abc"}
+
+        with (
+            patch("src.obsidian.get_save_to_obsidian", AsyncMock(return_value=True)),
+            patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
+            patch("src.obsidian.put_github_file", AsyncMock(return_value=False)),
+        ):
+            result = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
+
+        assert result is False

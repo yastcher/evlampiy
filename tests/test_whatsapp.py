@@ -83,6 +83,7 @@ class TestHandleVoiceMessage:
             patch("src.whatsapp.handlers.get_chat_language", AsyncMock(return_value="en")),
             patch("src.whatsapp.handlers.transcribe_audio", return_value="Hello world"),
             patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
+            patch("src.whatsapp.handlers.save_transcription_to_obsidian", AsyncMock()),
         ):
             mock_client = AsyncMock()
             mock_client.get = AsyncMock(return_value=mock_response)
@@ -145,6 +146,7 @@ class TestHandleVoiceMessage:
             ) as mock_get_lang,
             patch("src.whatsapp.handlers.transcribe_audio", return_value="Test"),
             patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
+            patch("src.whatsapp.handlers.save_transcription_to_obsidian", AsyncMock()),
         ):
             mock_client = AsyncMock()
             mock_client.get = AsyncMock(return_value=mock_response)

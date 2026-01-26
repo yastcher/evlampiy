@@ -2,12 +2,13 @@ import base64
 import datetime
 import logging
 
-import requests
+import httpx
 
 from telegram import Update
 
 from src.chat_params import get_chat_id
-from src.mongo import get_github_settings
+from src.github_api import OBSIDIAN_NOTES_FOLDER, put_github_file
+from src.mongo import get_github_settings, get_save_to_obsidian
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +34,55 @@ async def add_short_note_to_obsidian(update: Update):
         "Accept": "application/vnd.github+json",
     }
     data = {"message": commit_message, "content": content_base64}
-    response = requests.put(url, headers=headers, json=data)
+    async with httpx.AsyncClient() as client:
+        response = await client.put(url, headers=headers, json=data)
     if response.status_code in (200, 201):
         logger.debug(f"Created note {filename} in the repository.")
     else:
         logger.error(
             f"Error creating note. Status: {response.status_code}, Details: {response.json()}"
         )
+
+
+async def save_transcription_to_obsidian(
+    chat_id: str,
+    text: str,
+    source: str,
+    language: str,
+) -> bool:
+    if not await get_save_to_obsidian(chat_id):
+        return False
+
+    github_settings = await get_github_settings(chat_id)
+    if not github_settings:
+        return False
+
+    now = datetime.datetime.now(datetime.UTC)
+    now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{OBSIDIAN_NOTES_FOLDER}/{now_str}.md"
+
+    frontmatter = (
+        "---\n"
+        f"date: {now.isoformat()}Z\n"
+        f"source: {source}\n"
+        f"language: {language}\n"
+        f"chat_id: {chat_id}\n"
+        "---\n\n"
+    )
+    content = frontmatter + text
+
+    result = await put_github_file(
+        token=github_settings["token"],
+        owner=github_settings["owner"],
+        repo=github_settings["repo"],
+        path=filename,
+        content=content,
+        commit_message=f"Add transcription {now_str}",
+    )
+
+    if result:
+        logger.info("Saved transcription to %s for %s", filename, chat_id)
+    else:
+        logger.error("Failed to save transcription for %s", chat_id)
+
+    return result

@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 
 from src.chat_params import get_chat_id
 from src.mongo import get_chat_language, get_gpt_command
+from src.obsidian import save_transcription_to_obsidian
 from src.telegram.bot import send_response
 from src.transcription.service import transcribe_audio
 
@@ -31,6 +32,8 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not text:
         logger.debug("Empty voice message.")
         return
+
+    await save_transcription_to_obsidian(chat_id, text, "telegram", language)
 
     if text.lower().startswith(gpt_command):
         response_kwargs = {

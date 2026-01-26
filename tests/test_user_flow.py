@@ -153,6 +153,7 @@ class TestVoiceMessage:
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
             patch("src.telegram.voice.transcribe_audio", return_value="Hello world"),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -176,6 +177,7 @@ class TestVoiceMessage:
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
             patch("src.telegram.voice.transcribe_audio", return_value="евлампий расскажи анекдот"),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -199,6 +201,7 @@ class TestVoiceMessage:
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
             patch("src.telegram.voice.transcribe_audio", return_value=""),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -270,59 +273,91 @@ class TestHandleCommandInput:
             assert result == ConversationHandler.END
 
 
-class TestSetGithubCommand:
-    """Test /set_github command."""
-
-    async def test_saves_github_settings(self, mock_private_update, mock_context):
-        """GitHub settings are saved with valid input."""
-        from src.telegram.handlers import set_github_command
-
-        mock_private_update.message.text = "/set_github owner repo ghp_token123"
-
-        with patch("src.telegram.handlers.set_github_settings", AsyncMock()) as mock_set_gh:
-            await set_github_command(mock_private_update, mock_context)
-
-            mock_set_gh.assert_called_once_with("u_12345", "owner", "repo", "ghp_token123")
-            mock_private_update.message.reply_text.assert_called_once_with("GitHub settings saved.")
-
-    async def test_shows_usage_for_invalid_input(self, mock_private_update, mock_context):
-        """Usage message is shown for invalid input."""
-        from src.telegram.handlers import set_github_command
-
-        mock_private_update.message.text = "/set_github owner"
-
-        await set_github_command(mock_private_update, mock_context)
-
-        mock_private_update.message.reply_text.assert_called_once()
-        assert "Usage:" in mock_private_update.message.reply_text.call_args[0][0]
-
-    async def test_skips_when_no_message(self, mock_private_update, mock_context):
-        """Skips when no message."""
-        from src.telegram.handlers import set_github_command
-
-        mock_private_update.message = None
-
-        await set_github_command(mock_private_update, mock_context)
-        # No error should occur
-
-    async def test_skips_when_no_text(self, mock_private_update, mock_context):
-        """Skips when no text."""
-        from src.telegram.handlers import set_github_command
-
-        mock_private_update.message.text = None
-
-        await set_github_command(mock_private_update, mock_context)
-        # No error should occur
-
-
 class TestConnectGithub:
     """Test /connect_github command."""
 
-    async def test_calls_authorize_github(self, mock_private_update, mock_context):
-        """Authorize function is called."""
+    async def test_sends_device_code_message(self, mock_private_update, mock_context):
+        """User receives device code and verification URL."""
         from src.telegram.handlers import connect_github
 
-        with patch("src.telegram.handlers.authorize_github_for_user", AsyncMock()) as mock_auth:
+        device_info = {
+            "device_code": "abc123",
+            "user_code": "ABCD-1234",
+            "verification_uri": "https://github.com/login/device",
+            "expires_in": 900,
+            "interval": 5,
+        }
+
+        with (
+            patch(
+                "src.telegram.handlers.get_github_device_code",
+                AsyncMock(return_value=device_info),
+            ),
+            patch("src.telegram.handlers.asyncio.create_task"),
+        ):
             await connect_github(mock_private_update, mock_context)
 
-            mock_auth.assert_called_once_with(mock_private_update, mock_context)
+        mock_private_update.message.reply_text.assert_called_once()
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "ABCD-1234" in reply_text
+        assert "github.com/login/device" in reply_text
+
+    async def test_handles_device_code_error(self, mock_private_update, mock_context):
+        """Error response from device code request."""
+        from src.telegram.handlers import connect_github
+
+        with patch(
+            "src.telegram.handlers.get_github_device_code",
+            AsyncMock(return_value={"error": "unauthorized_client"}),
+        ):
+            await connect_github(mock_private_update, mock_context)
+
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "Failed" in reply_text
+
+
+class TestToggleObsidian:
+    """Test /toggle_obsidian command."""
+
+    async def test_toggles_on(self, mock_private_update, mock_context):
+        """Enables Obsidian sync when currently disabled."""
+        from src.telegram.handlers import toggle_obsidian
+
+        with (
+            patch("src.telegram.handlers.get_save_to_obsidian", AsyncMock(return_value=False)),
+            patch("src.telegram.handlers.set_save_to_obsidian", AsyncMock()) as mock_set,
+        ):
+            await toggle_obsidian(mock_private_update, mock_context)
+
+        mock_set.assert_called_once_with("u_12345", True)
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "enabled" in reply_text
+
+    async def test_toggles_off(self, mock_private_update, mock_context):
+        """Disables Obsidian sync when currently enabled."""
+        from src.telegram.handlers import toggle_obsidian
+
+        with (
+            patch("src.telegram.handlers.get_save_to_obsidian", AsyncMock(return_value=True)),
+            patch("src.telegram.handlers.set_save_to_obsidian", AsyncMock()) as mock_set,
+        ):
+            await toggle_obsidian(mock_private_update, mock_context)
+
+        mock_set.assert_called_once_with("u_12345", False)
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "disabled" in reply_text
+
+
+class TestDisconnectGithub:
+    """Test /disconnect_github command."""
+
+    async def test_clears_settings(self, mock_private_update, mock_context):
+        """GitHub settings are cleared."""
+        from src.telegram.handlers import disconnect_github
+
+        with patch("src.telegram.handlers.clear_github_settings", AsyncMock()) as mock_clear:
+            await disconnect_github(mock_private_update, mock_context)
+
+        mock_clear.assert_called_once_with("u_12345")
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "disconnected" in reply_text.lower()

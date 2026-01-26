@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     wit_es_token: str = ""
     wit_de_token: str = ""
 
+    # GitHub OAuth
+    github_client_id: str = ""
+
     # WhatsApp (Meta Cloud API)
     whatsapp_token: str = ""
     whatsapp_phone_id: str = ""

@@ -40,6 +40,9 @@ COMMAND_HANDLERS = {
     "choose_your_language": handlers.choose_language,
     "enter_your_command": handlers.enter_your_command,
     "evlampiy": evlampiy_command,
+    "connect_github": handlers.connect_github,
+    "toggle_obsidian": handlers.toggle_obsidian,
+    "disconnect_github": handlers.disconnect_github,
 }
 
 

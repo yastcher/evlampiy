@@ -75,3 +75,28 @@ async def get_github_settings(chat_id: str) -> dict:
     if all(user.github_settings.values()):
         return user.github_settings
     return {}
+
+
+async def clear_github_settings(chat_id: str):
+    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
+    if user:
+        user.github_settings = None
+        user.save_to_obsidian = False
+        await user.save()
+
+
+async def set_save_to_obsidian(chat_id: str, enabled: bool):
+    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
+    if not user:
+        user = UserSettings(chat_id=chat_id, save_to_obsidian=enabled)
+        await user.insert()
+    else:
+        user.save_to_obsidian = enabled
+        await user.save()
+
+
+async def get_save_to_obsidian(chat_id: str) -> bool:
+    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
+    if not user:
+        return False
+    return user.save_to_obsidian

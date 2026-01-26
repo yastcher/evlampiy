@@ -1,16 +1,25 @@
+import asyncio
+import logging
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from src.chat_params import get_chat_id, is_private_chat, is_user_admin
-from src.github_tg_oauth import authorize_github_for_user
+from src.github_api import get_or_create_obsidian_repo
+from src.github_oauth import get_github_device_code, poll_github_for_token
 from src.localization import translates
 from src.mongo import (
+    clear_github_settings,
     get_chat_language,
     get_gpt_command,
+    get_save_to_obsidian,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
+    set_save_to_obsidian,
 )
+
+logger = logging.getLogger(__name__)
 
 WAITING_FOR_COMMAND = 1
 
@@ -80,23 +89,83 @@ async def handle_command_input(update: Update, context: ContextTypes.DEFAULT_TYP
     return ConversationHandler.END
 
 
-async def set_github_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    /set_github
-    await response: owner repo token
-    # /set_github MyUser MyRepo ghp_XXXX...
-    """
-    chat_id = get_chat_id(update)
-    if not update.message or not update.message.text:
-        return
-    parts = update.message.text.split()
-    if len(parts) < 4:
-        await update.message.reply_text("Usage: /set_github <owner> <repo> <token>")
-        return
-    _, owner, repo, token = parts
-    await set_github_settings(chat_id, owner, repo, token)
-    await update.message.reply_text("GitHub settings saved.")
-
-
 async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await authorize_github_for_user(update, context)
+    if not await is_user_admin(update, context):
+        return
+
+    chat_id = get_chat_id(update)
+
+    device_info = await get_github_device_code()
+    if "error" in device_info:
+        await update.message.reply_text("Failed to start GitHub authorization.")
+        logger.error("GitHub device code error: %s", device_info)
+        return
+
+    verification_uri = device_info["verification_uri"]
+    user_code = device_info["user_code"]
+    expires_in = device_info["expires_in"]
+    interval = device_info["interval"]
+
+    await update.message.reply_text(
+        f"1) Open: {verification_uri}\n"
+        f"2) Enter code: {user_code}\n\n"
+        f"You have {expires_in} seconds to complete authorization."
+    )
+
+    async def _poll_and_setup():
+        token = await poll_github_for_token(
+            device_code=device_info["device_code"],
+            interval=interval,
+            expires_in=expires_in,
+        )
+        if not token:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="GitHub authorization failed or timed out. Try /connect_github again.",
+            )
+            return
+
+        repo_info = await get_or_create_obsidian_repo(token)
+        if not repo_info:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Failed to create/access GitHub repository.",
+            )
+            return
+
+        await set_github_settings(
+            chat_id, repo_info["owner"], repo_info["repo"], repo_info["token"]
+        )
+        await set_save_to_obsidian(chat_id, True)
+
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=(
+                f"GitHub connected! Repository: {repo_info['owner']}/{repo_info['repo']}\n"
+                "Obsidian sync is now enabled."
+            ),
+        )
+
+    asyncio.create_task(_poll_and_setup())
+
+
+async def toggle_obsidian(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_admin(update, context):
+        return
+
+    chat_id = get_chat_id(update)
+    current = await get_save_to_obsidian(chat_id)
+    new_value = not current
+    await set_save_to_obsidian(chat_id, new_value)
+
+    status = "enabled" if new_value else "disabled"
+    await update.message.reply_text(f"Obsidian sync is now {status}.")
+
+
+async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_admin(update, context):
+        return
+
+    chat_id = get_chat_id(update)
+    await clear_github_settings(chat_id)
+    await update.message.reply_text("GitHub disconnected. Obsidian sync disabled.")

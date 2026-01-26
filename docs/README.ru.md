@@ -1,11 +1,11 @@
 # Evlampiy Notes Bot
 
-[![CI](https://github.com/YastYa/evlampiy_notes_tgbot/actions/workflows/deploy.yml/badge.svg)](https://github.com/YastYa/evlampiy_notes_tgbot/actions)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/YastYa/evlampiy_notes_tgbot)
+[![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
-Русский | [English](../README.md) | [Español](README.es.md) | [Deutsch](README.de.md)
+[English](../README.md) | Русский | [Español](README.es.md) | [Deutsch](README.de.md)
 
 Telegram и WhatsApp бот для транскрипции голосовых сообщений с поддержкой нескольких языков.
 
@@ -18,7 +18,7 @@ Telegram и WhatsApp бот для транскрипции голосовых �
 - **Мультиязычность** — Поддержка английского, немецкого, русского, испанского
 - **Настройки по чатам** — Каждый пользователь/группа может иметь свой язык
 - **Интеграция с GPT** — Вызов GPT голосом (скажите "евлампий" + ваш вопрос)
-- **Экспорт в Obsidian** — Сохранение заметок в Obsidian через GitHub
+- **Интеграция с Obsidian** — Автосохранение транскрипций голосовых в Obsidian через GitHub (OAuth Device Flow)
 
 ## Архитектура
 
@@ -34,6 +34,9 @@ src/
 ├── whatsapp/            # Адаптер WhatsApp
 │   ├── client.py
 │   └── handlers.py
+├── github_oauth.py      # GitHub OAuth Device Flow
+├── github_api.py        # Операции GitHub API
+├── obsidian.py          # Интеграция с Obsidian
 └── main.py              # Точка входа
 ```
 
@@ -45,6 +48,7 @@ src/
 - API токены [Wit.ai](https://wit.ai/)
 - Токен Telegram бота от [@BotFather](https://t.me/BotFather)
 - (Опционально) Данные WhatsApp Business API
+- (Опционально) GitHub OAuth App client ID (для интеграции с Obsidian)
 
 ## Быстрый старт
 
@@ -86,17 +90,23 @@ GPT_TOKEN=ваш_openai_токен
 WHATSAPP_TOKEN=ваш_whatsapp_токен
 WHATSAPP_PHONE_ID=ваш_phone_id
 WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
+
+# Опционально: GitHub OAuth (для интеграции с Obsidian)
+GITHUB_CLIENT_ID=ваш_github_oauth_app_client_id
 ```
 
 Инструкции по настройке WhatsApp: [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
 
 ## Команды бота
 
-| Команда                 | Описание                             |
-|-------------------------|--------------------------------------|
-| `/start`                | Показать справку и текущие настройки |
-| `/choose_your_language` | Выбрать язык распознавания           |
-| `/enter_your_command`   | Задать слово-триггер для GPT         |
+| Команда                 | Описание                                     |
+|-------------------------|----------------------------------------------|
+| `/start`                | Показать справку и текущие настройки         |
+| `/choose_your_language` | Выбрать язык распознавания                   |
+| `/enter_your_command`   | Задать слово-триггер для GPT                 |
+| `/connect_github`       | Подключить GitHub аккаунт (OAuth Device Flow)|
+| `/toggle_obsidian`      | Включить/выключить синхронизацию с Obsidian  |
+| `/disconnect_github`    | Отключить GitHub и синхронизацию             |
 
 ## Разработка
 
@@ -125,7 +135,7 @@ uv run pytest --cov=src --cov-fail-under=85
 - [ ] Интеграция с GPT
 - [x] CI/CD через GitHub Actions
 - [x] Интеграция с WhatsApp
-- [ ] Улучшения экспорта в Obsidian
+- [x] Интеграция с Obsidian через GitHub OAuth
 - [ ] Классификация сообщений по темам
 
 ## Лицензия

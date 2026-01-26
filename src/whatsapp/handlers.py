@@ -8,6 +8,7 @@ from pywa.types import Message
 
 from src.config import settings
 from src.mongo import get_chat_language
+from src.obsidian import save_transcription_to_obsidian
 from src.transcription.service import transcribe_audio
 from src.whatsapp.client import WHATSAPP_CHAT_PREFIX
 
@@ -56,6 +57,8 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
     if not text:
         logger.debug("Empty WhatsApp voice message from %s", phone_number)
         return
+
+    await save_transcription_to_obsidian(chat_id, text, "whatsapp", language)
 
     # Send transcription back
     wa.send_message(to=phone_number, text=text)
