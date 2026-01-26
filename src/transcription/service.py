@@ -5,25 +5,54 @@ from io import BytesIO
 
 from pydub import AudioSegment
 
+from src import const
+from src.transcription.groq_client import transcribe_with_groq
 from src.transcription.wit_client import voice_translators
 
 logger = logging.getLogger(__name__)
 
 CHUNK_LENGTH_MS = 19500  # Wit.ai limit: <20 sec
+MS_PER_SECOND = 1000
 
 
-def transcribe_audio(audio_bytes: bytes, audio_format: str, language: str) -> str:
+def get_audio_duration_seconds(audio_bytes: bytes, audio_format: str) -> int:
+    """Get audio duration in seconds."""
+    audio_stream = BytesIO(audio_bytes)
+    audio = AudioSegment.from_file(audio_stream, format=audio_format)
+    return len(audio) // MS_PER_SECOND
+
+
+async def transcribe_audio(
+    audio_bytes: bytes,
+    audio_format: str,
+    language: str,
+    use_groq: bool = False,
+) -> tuple[str, int]:
     """
-    Transcribe audio to text using Wit.ai.
+    Transcribe audio to text.
 
     Args:
         audio_bytes: Raw audio data
         audio_format: Format hint for pydub (e.g., "ogg", "opus", "mp4")
         language: Language code (en, ru, es, de)
+        use_groq: If True, use Groq Whisper instead of Wit.ai
 
     Returns:
-        Transcribed text or empty string
+        Tuple of (transcribed text, duration in seconds)
     """
+    duration = get_audio_duration_seconds(audio_bytes, audio_format)
+
+    if use_groq:
+        text = await transcribe_with_groq(audio_bytes, language, audio_format)
+    else:
+        text = _transcribe_with_wit(audio_bytes, audio_format, language)
+
+    logger.debug("Transcription result (%s): %s", const.PROVIDER_GROQ if use_groq else const.PROVIDER_WIT, text)
+    return text, duration
+
+
+def _transcribe_with_wit(audio_bytes: bytes, audio_format: str, language: str) -> str:
+    """Original Wit.ai transcription logic."""
     audio_stream = BytesIO(audio_bytes)
     audio = AudioSegment.from_file(audio_stream, format=audio_format)
 
@@ -43,5 +72,4 @@ def transcribe_audio(audio_bytes: bytes, audio_format: str, language: str) -> st
         text = response.get("text", "")
         full_text += text
 
-    logger.debug("Transcription result: %s", full_text)
     return full_text

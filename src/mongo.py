@@ -2,7 +2,9 @@ from beanie import init_beanie
 from motor import motor_asyncio
 
 from src.config import settings
-from src.dto import UserSettings
+from src.dto import MonthlyStats, UsedTrial, UserCredits, UserSettings, WitUsageStats
+
+ALL_DOCUMENT_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats]
 
 
 async def init_beanie_models():
@@ -10,7 +12,7 @@ async def init_beanie_models():
     to call only once
     """
     mongo_client = motor_asyncio.AsyncIOMotorClient(settings.mongo_uri)
-    await init_beanie(database=mongo_client["user_settings"], document_models=[UserSettings])
+    await init_beanie(database=mongo_client["user_settings"], document_models=ALL_DOCUMENT_MODELS)
 
 
 async def set_chat_language(chat_id: str, language: str):

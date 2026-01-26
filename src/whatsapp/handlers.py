@@ -6,6 +6,7 @@ import httpx
 from pywa import WhatsApp
 from pywa.types import Message
 
+from src import const
 from src.config import settings
 from src.mongo import get_chat_language
 from src.obsidian import save_transcription_to_obsidian
@@ -52,13 +53,13 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         return
 
     # WhatsApp voice messages are opus in ogg container
-    text = transcribe_audio(audio_bytes, audio_format="ogg", language=language)
+    text, _ = await transcribe_audio(audio_bytes, audio_format="ogg", language=language)
 
     if not text:
         logger.debug("Empty WhatsApp voice message from %s", phone_number)
         return
 
-    await save_transcription_to_obsidian(chat_id, text, "whatsapp", language)
+    await save_transcription_to_obsidian(chat_id, text, const.SOURCE_WHATSAPP, language)
 
     # Send transcription back
     wa.send_message(to=phone_number, text=text)

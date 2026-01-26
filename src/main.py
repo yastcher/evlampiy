@@ -8,6 +8,7 @@ from telegram.ext import (
     CommandHandler,
     ConversationHandler,
     MessageHandler,
+    PreCheckoutQueryHandler,
     filters,
 )
 
@@ -15,6 +16,12 @@ from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.mongo import init_beanie_models
 from src.telegram import handlers
+from src.telegram.payments import (
+    balance_command,
+    buy_command,
+    handle_pre_checkout,
+    handle_successful_payment,
+)
 from src.telegram.voice import from_voice_to_text
 
 logging.basicConfig(
@@ -43,6 +50,8 @@ COMMAND_HANDLERS = {
     "connect_github": handlers.connect_github,
     "toggle_obsidian": handlers.toggle_obsidian,
     "disconnect_github": handlers.disconnect_github,
+    "buy": buy_command,
+    "balance": balance_command,
 }
 
 
@@ -98,6 +107,11 @@ def main():
     application.add_handler(CallbackQueryHandler(handlers.lang_buttons, pattern="set_lang_"))
 
     application.add_handler(MessageHandler(filters.VOICE, from_voice_to_text))
+
+    application.add_handler(PreCheckoutQueryHandler(handle_pre_checkout))
+    application.add_handler(
+        MessageHandler(filters.SUCCESSFUL_PAYMENT, handle_successful_payment)
+    )
 
     enter_command_handler = ConversationHandler(
         entry_points=[CommandHandler("enter_your_command", handlers.enter_your_command)],

@@ -12,7 +12,9 @@
 - Meta Business account (free)
 - Phone number for WhatsApp (can be a new number, not linked to personal WhatsApp)
 
-### Step 1: Create Meta Developer Account
+###
+
+Step 1: Create Meta Developer Account
 
 1. Go to [developers.facebook.com](https://developers.facebook.com/)
 2. Click "Get Started" and log in with your Facebook account
@@ -37,11 +39,11 @@
 
 In WhatsApp > API Setup, you'll find:
 
-| Credential | Location | Environment Variable |
-|------------|----------|---------------------|
-| **Temporary Access Token** | API Setup page (valid 24h) | `WHATSAPP_TOKEN` |
-| **Phone Number ID** | API Setup > From | `WHATSAPP_PHONE_ID` |
-| **WhatsApp Business Account ID** | API Setup page | (optional) |
+| Credential                       | Location                   | Environment Variable |
+|----------------------------------|----------------------------|----------------------|
+| **Temporary Access Token**       | API Setup page (valid 24h) | `WHATSAPP_TOKEN`     |
+| **Phone Number ID**              | API Setup > From           | `WHATSAPP_PHONE_ID`  |
+| **WhatsApp Business Account ID** | API Setup page             | (optional)           |
 
 ### Step 5: Create Permanent Access Token
 
@@ -51,8 +53,8 @@ Temporary tokens expire in 24 hours. For production:
 2. Create a System User with Admin role
 3. Add your app with full control
 4. Generate token with permissions:
-   - `whatsapp_business_management`
-   - `whatsapp_business_messaging`
+    - `whatsapp_business_management`
+    - `whatsapp_business_messaging`
 
 ### Step 6: Configure Webhook
 
@@ -60,7 +62,7 @@ Temporary tokens expire in 24 hours. For production:
 2. Set Callback URL: `https://your-domain.com/` (pywa handles the path)
 3. Set Verify Token: any string you choose → `WHATSAPP_VERIFY_TOKEN`
 4. Subscribe to fields:
-   - `messages`
+    - `messages`
 
 ### Step 7: Add Phone Number (Production)
 
@@ -132,11 +134,11 @@ WHATSAPP_APP_SECRET=your_app_secret
 
 В WhatsApp > Настройка API вы найдёте:
 
-| Данные | Расположение | Переменная окружения |
-|--------|--------------|---------------------|
-| **Временный токен** | Страница настройки API (24ч) | `WHATSAPP_TOKEN` |
-| **Phone Number ID** | Настройка API > От | `WHATSAPP_PHONE_ID` |
-| **WhatsApp Business Account ID** | Страница настройки | (опционально) |
+| Данные                           | Расположение                 | Переменная окружения |
+|----------------------------------|------------------------------|----------------------|
+| **Временный токен**              | Страница настройки API (24ч) | `WHATSAPP_TOKEN`     |
+| **Phone Number ID**              | Настройка API > От           | `WHATSAPP_PHONE_ID`  |
+| **WhatsApp Business Account ID** | Страница настройки           | (опционально)        |
 
 ### Шаг 5: Создание постоянного токена
 
@@ -146,8 +148,8 @@ WHATSAPP_APP_SECRET=your_app_secret
 2. Создайте системного пользователя с ролью Администратор
 3. Добавьте приложение с полным доступом
 4. Сгенерируйте токен с разрешениями:
-   - `whatsapp_business_management`
-   - `whatsapp_business_messaging`
+    - `whatsapp_business_management`
+    - `whatsapp_business_messaging`
 
 ### Шаг 6: Настройка Webhook
 
@@ -155,7 +157,7 @@ WHATSAPP_APP_SECRET=your_app_secret
 2. URL обратного вызова: `https://ваш-домен.com/` (pywa обрабатывает путь)
 3. Токен подтверждения: любая строка → `WHATSAPP_VERIFY_TOKEN`
 4. Подпишитесь на поля:
-   - `messages`
+    - `messages`
 
 ### Шаг 7: Добавление номера телефона (Продакшен)
 

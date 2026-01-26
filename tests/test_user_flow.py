@@ -151,9 +151,16 @@ class TestVoiceMessage:
         with (
             patch("src.telegram.voice.get_chat_language", AsyncMock(return_value="en")),
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
-            patch("src.telegram.voice.transcribe_audio", return_value="Hello world"),
+            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello world", 5))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
             patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
+            patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
+            patch("src.telegram.voice.is_vip_user", return_value=True),
+            patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
+            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
+            patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
+            patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
+            patch("src.telegram.voice.record_groq_usage", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -175,9 +182,16 @@ class TestVoiceMessage:
         with (
             patch("src.telegram.voice.get_chat_language", AsyncMock(return_value="ru")),
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
-            patch("src.telegram.voice.transcribe_audio", return_value="евлампий расскажи анекдот"),
+            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("евлампий расскажи анекдот", 10))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
             patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
+            patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
+            patch("src.telegram.voice.is_vip_user", return_value=True),
+            patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
+            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
+            patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
+            patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
+            patch("src.telegram.voice.record_groq_usage", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -199,9 +213,16 @@ class TestVoiceMessage:
         with (
             patch("src.telegram.voice.get_chat_language", AsyncMock(return_value="en")),
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
-            patch("src.telegram.voice.transcribe_audio", return_value=""),
+            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("", 0))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
             patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
+            patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
+            patch("src.telegram.voice.is_vip_user", return_value=True),
+            patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
+            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
+            patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
+            patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
+            patch("src.telegram.voice.record_groq_usage", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
