@@ -3,7 +3,7 @@
 [![CI](https://github.com/YastYa/evlampiy_notes_tgbot/actions/workflows/deploy.yml/badge.svg)](https://github.com/YastYa/evlampiy_notes_tgbot/actions)
 [![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/YastYa/evlampiy_notes_tgbot)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
 [Русский](README.ru.md) | Español | [Deutsch](README.de.md) | [English](../README.md)
 
@@ -130,4 +130,4 @@ Consulta [DEPLOY.md](../DEPLOY.md) para instrucciones de despliegue con Docker.
 
 ## Licencia
 
-[GPL-3.0](../LICENSE)
+Propietaria. Todos los derechos reservados. Ver [LICENSE](../LICENSE).
