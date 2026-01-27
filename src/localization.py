@@ -61,4 +61,16 @@ translates = {
             "/choose_your_language - Configura el idioma de voz"
         ),
     },
+    "insufficient_credits": {
+        ENGLISH: "Not enough credits. Use /buy to purchase more.",
+        GERMANY: "Nicht genügend Credits. Verwenden Sie /buy, um mehr zu kaufen.",
+        RUSSIAN: "Недостаточно кредитов. Используйте /buy для покупки.",
+        SPANISH: "No tienes suficientes créditos. Usa /buy para comprar más.",
+    },
+    "service_unavailable": {
+        ENGLISH: "Transcription service is temporarily unavailable. Please try again later.",
+        GERMANY: "Transkriptionsdienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.",
+        RUSSIAN: "Сервис транскрипции временно недоступен. Попробуйте позже.",
+        SPANISH: "El servicio de transcripción no está disponible temporalmente. Inténtalo más tarde.",
+    },
 }

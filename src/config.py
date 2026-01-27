@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENGLISH = "en"
@@ -43,6 +44,28 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = ""
     whatsapp_app_id: str = ""
     whatsapp_app_secret: str = ""
+
+    # Monetization
+    vip_user_ids: set[int] = set()
+    initial_credits: int = 3
+    credit_cost_voice: int = 1
+    credits_per_star: int = 1
+
+    # Groq
+    groq_api_key: str = ""
+    groq_model: str = "whisper-large-v3-turbo"
+
+    # Wit.ai monthly free limit
+    wit_free_monthly_limit: int = 500
+
+    @field_validator("vip_user_ids", mode="before")
+    @classmethod
+    def parse_vip_ids(cls, v):
+        if isinstance(v, str):
+            if not v.strip():
+                return set()
+            return {int(x.strip()) for x in v.split(",") if x.strip()}
+        return v
 
 
 settings: Settings = Settings()
