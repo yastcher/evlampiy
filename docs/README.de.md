@@ -14,6 +14,8 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 ## Funktionen
 
 - **Sprachtranskription** — Wandelt Sprachnachrichten in Text um mit [Wit.ai](https://wit.ai/)
+- **Groq Whisper Fallback** — Automatischer Wechsel zu [Groq](https://groq.com/) Whisper wenn das monatliche Wit.ai-Limit erreicht ist
+- **Kreditsystem** — Monetarisierung über Telegram Stars mit Kreditguthaben pro Benutzer
 - **Multiplattform** — Funktioniert mit Telegram und WhatsApp
 - **Mehrsprachig** — Unterstützt Englisch, Deutsch, Russisch, Spanisch
 - **Chat-Einstellungen** — Jeder Benutzer/Gruppe kann individuelle Spracheinstellungen haben
@@ -26,14 +28,19 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 src/
 ├── transcription/       # Domain-Schicht (plattformunabhängig)
 │   ├── service.py       # Transkriptionslogik
-│   └── wit_client.py    # Wit.ai-Clients
+│   ├── wit_client.py    # Wit.ai-Clients
+│   └── groq_client.py   # Groq Whisper-Client
 ├── telegram/            # Telegram-Adapter
 │   ├── bot.py
 │   ├── handlers.py
-│   └── voice.py
+│   ├── voice.py
+│   └── payments.py      # Telegram Stars Zahlungs-Handler
 ├── whatsapp/            # WhatsApp-Adapter
 │   ├── client.py
 │   └── handlers.py
+├── credits.py           # Kreditsystem & Nutzungsstatistiken
+├── wit_tracking.py      # Monatliche Wit.ai-Nutzungsverfolgung
+├── const.py             # Gemeinsame Konstanten
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # GitHub-API-Operationen
 ├── obsidian.py          # Obsidian-Integration
@@ -49,6 +56,7 @@ src/
 - Telegram Bot-Token von [@BotFather](https://t.me/BotFather)
 - (Optional) WhatsApp Business API-Zugangsdaten
 - (Optional) GitHub OAuth App Client-ID (für Obsidian-Integration)
+- (Optional) [Groq](https://groq.com/) API-Schlüssel (für Whisper-Fallback-Transkription)
 
 ## Schnellstart
 
@@ -93,6 +101,12 @@ WHATSAPP_VERIFY_TOKEN=dein_verify_token
 
 # Optional: GitHub OAuth (für Obsidian-Integration)
 GITHUB_CLIENT_ID=deine_github_oauth_app_client_id
+
+# Optional: Monetarisierung
+GROQ_API_KEY=dein_groq_api_schluessel
+VIP_USER_IDS=123456,789012
+INITIAL_CREDITS=3
+WIT_FREE_MONTHLY_LIMIT=500
 ```
 
 Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
@@ -104,6 +118,8 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 | `/start`                | Hilfe und aktuelle Einstellungen anzeigen     |
 | `/choose_your_language` | Erkennungssprache festlegen                   |
 | `/enter_your_command`   | GPT-Triggerwort festlegen                     |
+| `/buy`                  | Kredite mit Telegram Stars kaufen              |
+| `/balance`              | Aktuelles Kreditguthaben anzeigen             |
 | `/connect_github`       | GitHub-Konto verbinden (OAuth Device Flow)    |
 | `/toggle_obsidian`      | Obsidian-Synchronisierung ein-/ausschalten    |
 | `/disconnect_github`    | GitHub trennen und Synchronisierung deaktivieren |
@@ -136,6 +152,7 @@ Siehe [DEPLOY.md](../DEPLOY.md) für Docker-Deployment-Anweisungen.
 - [x] CI/CD mit GitHub Actions
 - [x] WhatsApp-Integration
 - [x] Obsidian-Integration über GitHub OAuth
+- [x] Monetarisierung (Telegram Stars, Kreditsystem, Groq Whisper)
 - [ ] Nachrichtenklassifizierung nach Themen
 
 ## Lizenz

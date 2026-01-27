@@ -40,6 +40,12 @@ WHATSAPP_PHONE_ID=your_phone_id
 WHATSAPP_VERIFY_TOKEN=your_verify_token
 WHATSAPP_APP_ID=your_app_id
 WHATSAPP_APP_SECRET=your_app_secret
+
+# Optional: Monetization
+GROQ_API_KEY=your_groq_api_key
+VIP_USER_IDS=123456,789012
+INITIAL_CREDITS=3
+WIT_FREE_MONTHLY_LIMIT=500
 ```
 
 ### Local Run
@@ -164,6 +170,12 @@ WHATSAPP_PHONE_ID=ваш_phone_id
 WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
 WHATSAPP_APP_ID=ваш_app_id
 WHATSAPP_APP_SECRET=ваш_app_secret
+
+# Опционально: Монетизация
+GROQ_API_KEY=ваш_groq_api_ключ
+VIP_USER_IDS=123456,789012
+INITIAL_CREDITS=3
+WIT_FREE_MONTHLY_LIMIT=500
 ```
 
 ### Локальный запуск

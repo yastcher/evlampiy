@@ -14,6 +14,8 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 ## Features
 
 - **Voice transcription** — Convert voice messages to text using [Wit.ai](https://wit.ai/)
+- **Groq Whisper fallback** — Automatic fallback to [Groq](https://groq.com/) Whisper when Wit.ai monthly limit is reached
+- **Credit system** — Monetization via Telegram Stars with per-user credit balance
 - **Multi-platform** — Works with Telegram and WhatsApp
 - **Multi-language** — Supports English, German, Russian, Spanish
 - **Per-chat settings** — Each user/group can have individual language preferences
@@ -26,14 +28,19 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 src/
 ├── transcription/       # Domain layer (platform-agnostic)
 │   ├── service.py       # Core transcription logic
-│   └── wit_client.py    # Wit.ai clients
+│   ├── wit_client.py    # Wit.ai clients
+│   └── groq_client.py   # Groq Whisper client
 ├── telegram/            # Telegram adapter
 │   ├── bot.py
 │   ├── handlers.py
-│   └── voice.py
+│   ├── voice.py
+│   └── payments.py      # Telegram Stars payment handlers
 ├── whatsapp/            # WhatsApp adapter
 │   ├── client.py
 │   └── handlers.py
+├── credits.py           # Credit system & usage stats
+├── wit_tracking.py      # Wit.ai monthly usage tracking
+├── const.py             # Shared constants
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # GitHub API operations
 ├── obsidian.py          # Obsidian vault integration
@@ -49,6 +56,7 @@ src/
 - Telegram Bot token from [@BotFather](https://t.me/BotFather)
 - (Optional) WhatsApp Business API credentials
 - (Optional) GitHub OAuth App client ID (for Obsidian integration)
+- (Optional) [Groq](https://groq.com/) API key (for Whisper fallback)
 
 ## Quick Start
 
@@ -93,6 +101,12 @@ WHATSAPP_VERIFY_TOKEN=your_verify_token
 
 # Optional: GitHub OAuth (for Obsidian integration)
 GITHUB_CLIENT_ID=your_github_oauth_app_client_id
+
+# Optional: Monetization
+GROQ_API_KEY=your_groq_api_key
+VIP_USER_IDS=123456,789012
+INITIAL_CREDITS=3
+WIT_FREE_MONTHLY_LIMIT=500
 ```
 
 For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md).
@@ -104,6 +118,8 @@ For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETU
 | `/start`                | Show help and current settings             |
 | `/choose_your_language` | Set voice recognition language             |
 | `/enter_your_command`   | Set custom GPT trigger word                |
+| `/buy`                  | Buy credits with Telegram Stars            |
+| `/balance`              | Show current credit balance                |
 | `/connect_github`       | Connect GitHub account (OAuth Device Flow) |
 | `/toggle_obsidian`      | Enable/disable Obsidian sync               |
 | `/disconnect_github`    | Disconnect GitHub and disable sync         |
@@ -136,6 +152,7 @@ See [DEPLOY.md](DEPLOY.md) for Docker deployment instructions.
 - [x] CI/CD with GitHub Actions
 - [x] WhatsApp integration
 - [x] Obsidian integration via GitHub OAuth
+- [x] Monetization (Telegram Stars, credit system, Groq Whisper fallback)
 - [ ] Message classification by topics
 - [ ] ChatMemberUpdated handler for cleanup
 
