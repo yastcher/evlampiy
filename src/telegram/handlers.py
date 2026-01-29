@@ -4,7 +4,17 @@ import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
+from src import const
 from src.chat_params import get_chat_id, is_private_chat, is_user_admin
+from src.config import settings
+from src.credits import (
+    current_month_key,
+    get_credits,
+    get_monthly_stats,
+    get_user_tier,
+    is_admin_user,
+)
+from src.dto import UserCredits
 from src.github_api import get_or_create_obsidian_repo
 from src.github_oauth import get_github_device_code, poll_github_for_token
 from src.localization import translates
@@ -18,6 +28,7 @@ from src.mongo import (
     set_gpt_command,
     set_save_to_obsidian,
 )
+from src.wit_tracking import get_wit_usage_this_month
 
 logger = logging.getLogger(__name__)
 
@@ -169,3 +180,65 @@ async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = get_chat_id(update)
     await clear_github_settings(chat_id)
     await update.message.reply_text("GitHub disconnected. Obsidian sync disabled.")
+
+
+async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+
+    credits = await get_credits(user_id)
+    tier = await get_user_tier(user_id)
+
+    record = await UserCredits.find_one(UserCredits.user_id == user_id)
+    total_transcriptions = record.total_transcriptions if record else 0
+    total_spent = record.total_credits_spent if record else 0
+    total_purchased = record.total_credits_purchased if record else 0
+
+    text = translates["mystats_message"].get(language, translates["mystats_message"]["en"]).format(
+        credits=credits,
+        tier=tier.value,
+        total_transcriptions=total_transcriptions,
+        total_spent=total_spent,
+        total_purchased=total_purchased,
+    )
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin_user(update.effective_user.id):
+        return
+
+    month = current_month_key()
+    stats = await get_monthly_stats(month)
+    wit_usage = await get_wit_usage_this_month()
+    wit_limit = settings.wit_free_monthly_limit
+
+    total_transcriptions = stats.total_transcriptions if stats else 0
+    total_payments = stats.total_payments if stats else 0
+    total_credits_sold = stats.total_credits_sold if stats else 0
+    groq_audio_seconds = stats.groq_audio_seconds if stats else 0
+
+    revenue = total_credits_sold * const.STAR_TO_DOLLAR
+    groq_cost = groq_audio_seconds / 3600 * 0.04
+
+    wit_status = "OK" if wit_usage < wit_limit * 0.8 else ("Warning" if wit_usage < wit_limit * 0.95 else "CRITICAL")
+    groq_status = "Configured" if settings.groq_api_key else "Not configured"
+
+    text = (
+        f"📊 <b>System Stats ({month})</b>\n\n"
+        f"<b>Users</b>\n"
+        f"• Total transcriptions: {total_transcriptions:,}\n"
+        f"• Payments: {total_payments}\n\n"
+        f"<b>Revenue</b>\n"
+        f"• Stars received: {total_credits_sold}★\n"
+        f"• Credits sold: {total_credits_sold}\n"
+        f"• Revenue: ${revenue:.2f}\n\n"
+        f"<b>Costs</b>\n"
+        f"• Wit.ai: {wit_usage:,} / {wit_limit:,} ({wit_usage/wit_limit*100:.1f}%)\n"
+        f"• Groq: {groq_audio_seconds} sec (${groq_cost:.2f})\n\n"
+        f"<b>Health</b>\n"
+        f"• Wit.ai: {'✅' if wit_status == 'OK' else '⚠️' if wit_status == 'Warning' else '🚨'} {wit_status}\n"
+        f"• Groq: {'✅' if settings.groq_api_key else '❌'} {groq_status}"
+    )
+    await update.message.reply_text(text, parse_mode="HTML")

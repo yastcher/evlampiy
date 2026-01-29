@@ -120,9 +120,12 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 | `/enter_your_command`   | GPT-Triggerwort festlegen                     |
 | `/buy`                  | Kredite mit Telegram Stars kaufen              |
 | `/balance`              | Aktuelles Kreditguthaben anzeigen             |
+| `/mystats`              | Ihre Nutzungsstatistiken anzeigen             |
 | `/connect_github`       | GitHub-Konto verbinden (OAuth Device Flow)    |
 | `/toggle_obsidian`      | Obsidian-Synchronisierung ein-/ausschalten    |
 | `/disconnect_github`    | GitHub trennen und Synchronisierung deaktivieren |
+
+Für Admin-Befehle siehe [ADMIN.md](ADMIN.md).
 
 ## Entwicklung
 

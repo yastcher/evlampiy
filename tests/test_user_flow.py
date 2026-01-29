@@ -22,7 +22,7 @@ class TestStartCommand:
 
             mock_private_update.message.reply_text.assert_called_once()
             reply_text = mock_private_update.message.reply_text.call_args[0][0]
-            assert "translate" in reply_text.lower()
+            assert "voice" in reply_text.lower()
             assert "en" in reply_text
 
     async def test_group_chat_admin_allowed(self, mock_group_update, mock_context):
@@ -155,11 +155,12 @@ class TestVoiceMessage:
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
             patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
             patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
-            patch("src.telegram.voice.is_vip_user", return_value=True),
+            patch("src.telegram.voice.has_unlimited_access", return_value=True),
             patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
             patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
             patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
+            patch("src.telegram.voice.increment_user_stats", AsyncMock()),
             patch("src.telegram.voice.record_groq_usage", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
@@ -186,11 +187,12 @@ class TestVoiceMessage:
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
             patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
             patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
-            patch("src.telegram.voice.is_vip_user", return_value=True),
+            patch("src.telegram.voice.has_unlimited_access", return_value=True),
             patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
             patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
             patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
+            patch("src.telegram.voice.increment_user_stats", AsyncMock()),
             patch("src.telegram.voice.record_groq_usage", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
@@ -217,11 +219,12 @@ class TestVoiceMessage:
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
             patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
             patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
-            patch("src.telegram.voice.is_vip_user", return_value=True),
+            patch("src.telegram.voice.has_unlimited_access", return_value=True),
             patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
             patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
             patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
+            patch("src.telegram.voice.increment_user_stats", AsyncMock()),
             patch("src.telegram.voice.record_groq_usage", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)

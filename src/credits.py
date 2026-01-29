@@ -15,8 +15,16 @@ def is_vip_user(user_id: int) -> bool:
     return user_id in settings.vip_user_ids
 
 
+def is_admin_user(user_id: int) -> bool:
+    return user_id in settings.admin_user_ids
+
+
+def has_unlimited_access(user_id: int) -> bool:
+    return is_vip_user(user_id) or is_admin_user(user_id)
+
+
 async def get_user_tier(user_id: int) -> UserTier:
-    if is_vip_user(user_id):
+    if is_vip_user(user_id) or is_admin_user(user_id):
         return UserTier.VIP
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if record and record.tier == UserTier.PAID:
@@ -34,11 +42,17 @@ async def get_credits(user_id: int) -> int:
 async def add_credits(user_id: int, amount: int) -> int:
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
-        record = UserCredits(user_id=user_id, credits=amount, tier=UserTier.PAID)
+        record = UserCredits(
+            user_id=user_id,
+            credits=amount,
+            tier=UserTier.PAID,
+            total_credits_purchased=amount,
+        )
         await record.insert()
     else:
         record.credits += amount
         record.tier = UserTier.PAID
+        record.total_credits_purchased += amount
         await record.save()
     return record.credits
 
@@ -48,6 +62,7 @@ async def deduct_credits(user_id: int, amount: int) -> bool:
     if not record or record.credits < amount:
         return False
     record.credits -= amount
+    record.total_credits_spent += amount
     await record.save()
     return True
 
@@ -71,7 +86,7 @@ async def grant_initial_credits_if_eligible(user_id: int) -> bool:
 
 
 async def can_perform_operation(user_id: int, cost: int) -> tuple[bool, str]:
-    if is_vip_user(user_id):
+    if has_unlimited_access(user_id):
         return True, ""
 
     credits = await get_credits(user_id)
@@ -79,6 +94,21 @@ async def can_perform_operation(user_id: int, cost: int) -> tuple[bool, str]:
         return True, ""
 
     return False, "insufficient_credits"
+
+
+async def increment_user_stats(user_id: int, audio_seconds: int = 0):
+    record = await UserCredits.find_one(UserCredits.user_id == user_id)
+    if not record:
+        record = UserCredits(
+            user_id=user_id,
+            total_transcriptions=1,
+            total_audio_seconds=audio_seconds,
+        )
+        await record.insert()
+    else:
+        record.total_transcriptions += 1
+        record.total_audio_seconds += audio_seconds
+        await record.save()
 
 
 def current_month_key() -> str:
@@ -111,3 +141,7 @@ async def increment_payment_stats(credits_sold: int):
     record.total_payments += 1
     record.total_credits_sold += credits_sold
     await record.save()
+
+
+async def get_monthly_stats(month: str) -> MonthlyStats | None:
+    return await MonthlyStats.find_one(MonthlyStats.month_key == month)

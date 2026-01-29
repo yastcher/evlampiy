@@ -52,6 +52,8 @@ COMMAND_HANDLERS = {
     "disconnect_github": handlers.disconnect_github,
     "buy": buy_command,
     "balance": balance_command,
+    "mystats": handlers.mystats_command,
+    "stats": handlers.stats_command,
 }
 
 

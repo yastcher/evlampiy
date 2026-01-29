@@ -120,9 +120,12 @@ WIT_FREE_MONTHLY_LIMIT=500
 | `/enter_your_command`   | Задать слово-триггер для GPT                 |
 | `/buy`                  | Купить кредиты за Telegram Stars             |
 | `/balance`              | Показать текущий баланс кредитов             |
+| `/mystats`              | Показать вашу статистику использования       |
 | `/connect_github`       | Подключить GitHub аккаунт (OAuth Device Flow)|
 | `/toggle_obsidian`      | Включить/выключить синхронизацию с Obsidian  |
 | `/disconnect_github`    | Отключить GitHub и синхронизацию             |
+
+Команды администратора см. в [ADMIN.md](ADMIN.md).
 
 ## Разработка
 

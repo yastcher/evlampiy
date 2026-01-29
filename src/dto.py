@@ -1,6 +1,8 @@
+from datetime import datetime, timezone
 from enum import Enum
 
 from beanie import Document
+from pydantic import Field
 
 
 class UserSettings(Document):
@@ -28,6 +30,10 @@ class UserCredits(Document):
     user_id: int
     credits: int = 0
     tier: UserTier = UserTier.FREE
+    total_transcriptions: int = 0
+    total_audio_seconds: int = 0
+    total_credits_spent: int = 0
+    total_credits_purchased: int = 0
 
     class Settings:
         name = "user_credits"
@@ -57,3 +63,16 @@ class MonthlyStats(Document):
 
     class Settings:
         name = "monthly_stats"
+
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+
+class AlertState(Document):
+    alert_type: str
+    month_key: str
+    sent_at: datetime = Field(default_factory=_utc_now)
+
+    class Settings:
+        name = "alert_state"

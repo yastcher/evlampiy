@@ -33,32 +33,44 @@ translates = {
     },
     "start_message": {
         ENGLISH: (
-            "I can translate a voice message to text!\n"
-            "current language are: {chat_language}\n"
-            "current voice command are (you can start voice from): {gpt_command}\n"
-            "/start - Show this message\n"
-            "/choose_your_language - Set the voice language"
+            "Voice-to-text bot. Just send a voice message!\n\n"
+            "Language: {chat_language}\n"
+            "GPT trigger: {gpt_command}\n\n"
+            "Commands:\n"
+            "/choose_your_language - Change language\n"
+            "/buy - Buy credits\n"
+            "/balance - Check balance\n"
+            "/mystats - Your statistics"
         ),
         GERMANY: (
-            "Ich kann eine Sprachnachricht in Text übersetzen!\n"
-            "Aktuelle Sprache: {chat_language}\n"
-            "Aktueller Sprachbefehl ist (Sie können die Spracherkennung starten mit): {gpt_command}\n"
-            "/start - Zeige diese Nachricht\n"
-            "/choose_your_language - Legen Sie die Sprache fest"
+            "Sprache-zu-Text Bot. Sende einfach eine Sprachnachricht!\n\n"
+            "Sprache: {chat_language}\n"
+            "GPT-Trigger: {gpt_command}\n\n"
+            "Befehle:\n"
+            "/choose_your_language - Sprache ändern\n"
+            "/buy - Credits kaufen\n"
+            "/balance - Guthaben prüfen\n"
+            "/mystats - Deine Statistiken"
         ),
         RUSSIAN: (
-            "Я могу перевести голосовое сообщение в текст!\n"
-            "Текущий язык: {chat_language}\n"
-            "Текущая голосовая команда (вы можете начать голос с): {gpt_command}\n"
-            "/start - Показать это сообщение\n"
-            "/choose_your_language - Установить язык голосовых сообщений"
+            "Бот для транскрипции голоса. Просто отправьте голосовое сообщение!\n\n"
+            "Язык: {chat_language}\n"
+            "Триггер GPT: {gpt_command}\n\n"
+            "Команды:\n"
+            "/choose_your_language - Сменить язык\n"
+            "/buy - Купить кредиты\n"
+            "/balance - Проверить баланс\n"
+            "/mystats - Ваша статистика"
         ),
         SPANISH: (
-            "¡Puedo traducir un mensaje de voz a texto!\n"
-            "El idioma actual es: {chat_language}\n"
-            "El comando de voz actual es (puedes iniciar la voz desde): {gpt_command}\n"
-            "/start - Muestra este mensaje\n"
-            "/choose_your_language - Configura el idioma de voz"
+            "Bot de voz a texto. ¡Solo envía un mensaje de voz!\n\n"
+            "Idioma: {chat_language}\n"
+            "Activador GPT: {gpt_command}\n\n"
+            "Comandos:\n"
+            "/choose_your_language - Cambiar idioma\n"
+            "/buy - Comprar créditos\n"
+            "/balance - Ver saldo\n"
+            "/mystats - Tus estadísticas"
         ),
     },
     "insufficient_credits": {
@@ -72,5 +84,43 @@ translates = {
         GERMANY: "Transkriptionsdienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.",
         RUSSIAN: "Сервис транскрипции временно недоступен. Попробуйте позже.",
         SPANISH: "El servicio de transcripción no está disponible temporalmente. Inténtalo más tarde.",
+    },
+    "mystats_message": {
+        ENGLISH: (
+            "📊 <b>Your Statistics</b>\n\n"
+            "Balance: {credits} credits\n"
+            "Tier: {tier}\n\n"
+            "<b>All time:</b>\n"
+            "• Transcriptions: {total_transcriptions}\n"
+            "• Credits spent: {total_spent}\n"
+            "• Credits purchased: {total_purchased}"
+        ),
+        GERMANY: (
+            "📊 <b>Ihre Statistiken</b>\n\n"
+            "Guthaben: {credits} Credits\n"
+            "Stufe: {tier}\n\n"
+            "<b>Insgesamt:</b>\n"
+            "• Transkriptionen: {total_transcriptions}\n"
+            "• Credits ausgegeben: {total_spent}\n"
+            "• Credits gekauft: {total_purchased}"
+        ),
+        RUSSIAN: (
+            "📊 <b>Ваша статистика</b>\n\n"
+            "Баланс: {credits} кредитов\n"
+            "Тариф: {tier}\n\n"
+            "<b>За всё время:</b>\n"
+            "• Транскрипций: {total_transcriptions}\n"
+            "• Потрачено кредитов: {total_spent}\n"
+            "• Куплено кредитов: {total_purchased}"
+        ),
+        SPANISH: (
+            "📊 <b>Tus estadísticas</b>\n\n"
+            "Saldo: {credits} créditos\n"
+            "Nivel: {tier}\n\n"
+            "<b>Total:</b>\n"
+            "• Transcripciones: {total_transcriptions}\n"
+            "• Créditos gastados: {total_spent}\n"
+            "• Créditos comprados: {total_purchased}"
+        ),
     },
 }

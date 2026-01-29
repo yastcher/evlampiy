@@ -6,6 +6,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src import const
+from src.alerts import check_and_send_alerts
 from src.chat_params import get_chat_id
 from src.config import settings
 from src.credits import (
@@ -13,8 +14,9 @@ from src.credits import (
     deduct_credits,
     get_user_tier,
     grant_initial_credits_if_eligible,
+    has_unlimited_access,
     increment_transcription_stats,
-    is_vip_user,
+    increment_user_stats,
     record_groq_usage,
 )
 from src.dto import UserTier
@@ -32,6 +34,7 @@ def _select_provider(tier: UserTier, wit_available: bool) -> str | None:
     """
     Select transcription provider based on user tier and Wit.ai availability.
 
+    VIP and ADMIN users get Groq (if configured) else Wit.
     Returns:
         const.PROVIDER_GROQ, const.PROVIDER_WIT, or None if no provider available
     """
@@ -68,7 +71,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
 
-    if not is_vip_user(user_id):
+    if not has_unlimited_access(user_id):
         ok, msg = await can_perform_operation(user_id, settings.credit_cost_voice)
         if not ok:
             await send_response(
@@ -89,15 +92,17 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.debug("Empty voice message.")
         return
 
-    if not is_vip_user(user_id):
+    if not has_unlimited_access(user_id):
         await deduct_credits(user_id, settings.credit_cost_voice)
 
     if provider == const.PROVIDER_WIT:
         await increment_wit_usage()
+        await check_and_send_alerts(context.bot)
     elif provider == const.PROVIDER_GROQ:
         await record_groq_usage(duration)
 
     await increment_transcription_stats()
+    await increment_user_stats(user_id, audio_seconds=duration)
     await save_transcription_to_obsidian(chat_id, text, const.SOURCE_TELEGRAM, language)
 
     gpt_command = await get_gpt_command(chat_id)

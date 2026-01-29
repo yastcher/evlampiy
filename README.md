@@ -105,6 +105,7 @@ GITHUB_CLIENT_ID=your_github_oauth_app_client_id
 # Optional: Monetization
 GROQ_API_KEY=your_groq_api_key
 VIP_USER_IDS=123456,789012
+ADMIN_USER_IDS=123456789
 INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500
 ```
@@ -120,9 +121,12 @@ For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETU
 | `/enter_your_command`   | Set custom GPT trigger word                |
 | `/buy`                  | Buy credits with Telegram Stars            |
 | `/balance`              | Show current credit balance                |
+| `/mystats`              | Show your personal usage statistics        |
 | `/connect_github`       | Connect GitHub account (OAuth Device Flow) |
 | `/toggle_obsidian`      | Enable/disable Obsidian sync               |
 | `/disconnect_github`    | Disconnect GitHub and disable sync         |
+
+For admin commands, see [docs/ADMIN.md](docs/ADMIN.md).
 
 ## Development
 

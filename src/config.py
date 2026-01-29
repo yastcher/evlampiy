@@ -47,6 +47,7 @@ class Settings(BaseSettings):
 
     # Monetization
     vip_user_ids: set[int] = set()
+    admin_user_ids: set[int] = set()
     initial_credits: int = 3
     credit_cost_voice: int = 1
     credits_per_star: int = 1
@@ -58,9 +59,9 @@ class Settings(BaseSettings):
     # Wit.ai monthly free limit
     wit_free_monthly_limit: int = 500
 
-    @field_validator("vip_user_ids", mode="before")
+    @field_validator("vip_user_ids", "admin_user_ids", mode="before")
     @classmethod
-    def parse_vip_ids(cls, v):
+    def parse_user_id_set(cls, v):
         if isinstance(v, str):
             if not v.strip():
                 return set()
