@@ -1,4 +1,4 @@
-from pydantic import field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENGLISH = "en"
@@ -11,6 +11,12 @@ LANGUAGES = (
     SPANISH,
     GERMANY,
 )
+
+
+def _parse_comma_separated_ids(value: str) -> set[int]:
+    if not value.strip():
+        return set()
+    return {int(x.strip()) for x in value.split(",") if x.strip()}
 
 
 class Settings(BaseSettings):
@@ -46,8 +52,8 @@ class Settings(BaseSettings):
     whatsapp_app_secret: str = ""
 
     # Monetization
-    vip_user_ids: set[int] = set()
-    admin_user_ids: set[int] = set()
+    vip_user_ids_raw: str = Field(default="", validation_alias="VIP_USER_IDS")
+    admin_user_ids_raw: str = Field(default="", validation_alias="ADMIN_USER_IDS")
     initial_credits: int = 3
     credit_cost_voice: int = 1
     credits_per_star: int = 1
@@ -59,14 +65,13 @@ class Settings(BaseSettings):
     # Wit.ai monthly free limit
     wit_free_monthly_limit: int = 500
 
-    @field_validator("vip_user_ids", "admin_user_ids", mode="before")
-    @classmethod
-    def parse_user_id_set(cls, v):
-        if isinstance(v, str):
-            if not v.strip():
-                return set()
-            return {int(x.strip()) for x in v.split(",") if x.strip()}
-        return v
+    @property
+    def vip_user_ids(self) -> set[int]:
+        return _parse_comma_separated_ids(self.vip_user_ids_raw)
+
+    @property
+    def admin_user_ids(self) -> set[int]:
+        return _parse_comma_separated_ids(self.admin_user_ids_raw)
 
 
 settings: Settings = Settings()
