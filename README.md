@@ -1,7 +1,7 @@
 # Evlampiy Notes Bot
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
@@ -14,7 +14,8 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 ## Features
 
 - **Voice transcription** — Convert voice messages to text using [Wit.ai](https://wit.ai/)
-- **Groq Whisper fallback** — Automatic fallback to [Groq](https://groq.com/) Whisper when Wit.ai monthly limit is reached
+- **Groq Whisper fallback** — Automatic fallback to [Groq](https://groq.com/) Whisper when Wit.ai monthly limit is
+  reached
 - **Credit system** — Monetization via Telegram Stars with per-user credit balance
 - **Multi-platform** — Works with Telegram and WhatsApp
 - **Multi-language** — Supports English, German, Russian, Spanish

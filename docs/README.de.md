@@ -1,7 +1,7 @@
 # Evlampiy Notes Bot
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
@@ -14,13 +14,15 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 ## Funktionen
 
 - **Sprachtranskription** — Wandelt Sprachnachrichten in Text um mit [Wit.ai](https://wit.ai/)
-- **Groq Whisper Fallback** — Automatischer Wechsel zu [Groq](https://groq.com/) Whisper wenn das monatliche Wit.ai-Limit erreicht ist
+- **Groq Whisper Fallback** — Automatischer Wechsel zu [Groq](https://groq.com/) Whisper wenn das monatliche
+  Wit.ai-Limit erreicht ist
 - **Kreditsystem** — Monetarisierung über Telegram Stars mit Kreditguthaben pro Benutzer
 - **Multiplattform** — Funktioniert mit Telegram und WhatsApp
 - **Mehrsprachig** — Unterstützt Englisch, Deutsch, Russisch, Spanisch
 - **Chat-Einstellungen** — Jeder Benutzer/Gruppe kann individuelle Spracheinstellungen haben
 - **GPT-Integration** — GPT-Befehle per Sprache auslösen (sag "evlampiy" + deine Frage)
-- **Obsidian-Integration** — Automatische Speicherung von Sprachtranskriptionen in Obsidian über GitHub (OAuth Device Flow)
+- **Obsidian-Integration** — Automatische Speicherung von Sprachtranskriptionen in Obsidian über GitHub (OAuth Device
+  Flow)
 
 ## Architektur
 
@@ -105,6 +107,7 @@ GITHUB_CLIENT_ID=deine_github_oauth_app_client_id
 # Optional: Monetarisierung
 GROQ_API_KEY=dein_groq_api_schluessel
 VIP_USER_IDS=123456,789012
+ADMIN_USER_IDS=123456789
 INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500
 ```
@@ -113,16 +116,16 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 
 ## Bot-Befehle
 
-| Befehl                  | Beschreibung                                  |
-|-------------------------|-----------------------------------------------|
-| `/start`                | Hilfe und aktuelle Einstellungen anzeigen     |
-| `/choose_your_language` | Erkennungssprache festlegen                   |
-| `/enter_your_command`   | GPT-Triggerwort festlegen                     |
-| `/buy`                  | Kredite mit Telegram Stars kaufen              |
-| `/balance`              | Aktuelles Kreditguthaben anzeigen             |
-| `/mystats`              | Ihre Nutzungsstatistiken anzeigen             |
-| `/connect_github`       | GitHub-Konto verbinden (OAuth Device Flow)    |
-| `/toggle_obsidian`      | Obsidian-Synchronisierung ein-/ausschalten    |
+| Befehl                  | Beschreibung                                     |
+|-------------------------|--------------------------------------------------|
+| `/start`                | Hilfe und aktuelle Einstellungen anzeigen        |
+| `/choose_your_language` | Erkennungssprache festlegen                      |
+| `/enter_your_command`   | GPT-Triggerwort festlegen                        |
+| `/buy`                  | Kredite mit Telegram Stars kaufen                |
+| `/balance`              | Aktuelles Kreditguthaben anzeigen                |
+| `/mystats`              | Ihre Nutzungsstatistiken anzeigen                |
+| `/connect_github`       | GitHub-Konto verbinden (OAuth Device Flow)       |
+| `/toggle_obsidian`      | Obsidian-Synchronisierung ein-/ausschalten       |
 | `/disconnect_github`    | GitHub trennen und Synchronisierung deaktivieren |
 
 Für Admin-Befehle siehe [ADMIN.md](ADMIN.md).

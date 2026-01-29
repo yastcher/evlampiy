@@ -63,6 +63,9 @@ jobs:
       WIT_DE_TOKEN: ${{ secrets.WIT_DE_TOKEN }}
       MONGO_URI: ${{ secrets.MONGO_URI }}
       GPT_TOKEN: ${{ secrets.GPT_TOKEN }}
+      VIP_USER_IDS: ${{ secrets.VIP_USER_IDS }}
+      ADMIN_USER_IDS: ${{ secrets.ADMIN_USER_IDS }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       SERVER_IP: ${{ secrets.SERVER_IP }}
       SERVER_USER: ${{ secrets.SERVER_USER }}

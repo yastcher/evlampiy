@@ -13,6 +13,10 @@ x-variables: &variables
     WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
     WHATSAPP_APP_ID: ${WHATSAPP_APP_ID:-}
     WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+    # Monetization (optional)
+    VIP_USER_IDS: ${VIP_USER_IDS:-}
+    ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+    GROQ_API_KEY: ${GROQ_API_KEY:-}
 
 services:
 

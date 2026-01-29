@@ -1,7 +1,7 @@
 # Evlampiy Notes Bot
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
@@ -14,13 +14,15 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 ## Características
 
 - **Transcripción de voz** — Convierte mensajes de voz a texto usando [Wit.ai](https://wit.ai/)
-- **Respaldo Groq Whisper** — Cambio automático a [Groq](https://groq.com/) Whisper cuando se alcanza el límite mensual de Wit.ai
+- **Respaldo Groq Whisper** — Cambio automático a [Groq](https://groq.com/) Whisper cuando se alcanza el límite mensual
+  de Wit.ai
 - **Sistema de créditos** — Monetización mediante Telegram Stars con saldo de créditos por usuario
 - **Multiplataforma** — Funciona con Telegram y WhatsApp
 - **Multilingüe** — Soporta inglés, alemán, ruso, español
 - **Configuración por chat** — Cada usuario/grupo puede tener preferencias de idioma individuales
 - **Integración con GPT** — Activa comandos GPT por voz (di "evlampiy" + tu pregunta)
-- **Integración con Obsidian** — Guardado automático de transcripciones de voz en Obsidian vía GitHub (OAuth Device Flow)
+- **Integración con Obsidian** — Guardado automático de transcripciones de voz en Obsidian vía GitHub (OAuth Device
+  Flow)
 
 ## Arquitectura
 
@@ -105,6 +107,7 @@ GITHUB_CLIENT_ID=tu_github_oauth_app_client_id
 # Opcional: Monetización
 GROQ_API_KEY=tu_groq_api_key
 VIP_USER_IDS=123456,789012
+ADMIN_USER_IDS=123456789
 INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500
 ```
@@ -113,17 +116,17 @@ Para instrucciones de configuración de WhatsApp, consulta [WHATSAPP_SETUP.md](W
 
 ## Comandos del Bot
 
-| Comando                 | Descripción                                      |
-|-------------------------|--------------------------------------------------|
-| `/start`                | Mostrar ayuda y configuración actual             |
-| `/choose_your_language` | Establecer idioma de reconocimiento              |
-| `/enter_your_command`   | Establecer palabra activadora de GPT             |
-| `/buy`                  | Comprar créditos con Telegram Stars              |
-| `/balance`              | Mostrar saldo actual de créditos                 |
-| `/mystats`              | Mostrar tus estadísticas de uso                  |
-| `/connect_github`       | Conectar cuenta de GitHub (OAuth Device Flow)    |
-| `/toggle_obsidian`      | Activar/desactivar sincronización con Obsidian   |
-| `/disconnect_github`    | Desconectar GitHub y desactivar sincronización   |
+| Comando                 | Descripción                                    |
+|-------------------------|------------------------------------------------|
+| `/start`                | Mostrar ayuda y configuración actual           |
+| `/choose_your_language` | Establecer idioma de reconocimiento            |
+| `/enter_your_command`   | Establecer palabra activadora de GPT           |
+| `/buy`                  | Comprar créditos con Telegram Stars            |
+| `/balance`              | Mostrar saldo actual de créditos               |
+| `/mystats`              | Mostrar tus estadísticas de uso                |
+| `/connect_github`       | Conectar cuenta de GitHub (OAuth Device Flow)  |
+| `/toggle_obsidian`      | Activar/desactivar sincronización con Obsidian |
+| `/disconnect_github`    | Desconectar GitHub y desactivar sincronización |
 
 Para comandos de administrador, ver [ADMIN.md](ADMIN.md).
 

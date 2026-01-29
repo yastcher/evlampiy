@@ -179,35 +179,42 @@ class TestAlerts:
 
 
 class TestUserStatsTracking:
-    async def test_track_user_transcription(self):
-        """User transcription count is tracked."""
-        from src.credits import add_credits, increment_user_stats
+    async def test_complete_user_stats_flow(self):
+        """Test complete user stats tracking flow."""
+        from src.credits import add_credits, deduct_credits, increment_user_stats
 
-        user_id = 123
-        await add_credits(user_id, 10)
-        await increment_user_stats(user_id, audio_seconds=30)
+        user_id = 777888
 
-        record = await UserCredits.find_one(UserCredits.user_id == user_id)
-        assert record.total_transcriptions == 1
-        assert record.total_audio_seconds == 30
-
-    async def test_track_credits_spent(self):
-        """Track credits spent by user."""
-        from src.credits import add_credits, deduct_credits
-
-        user_id = 456
-        await add_credits(user_id, 50)
-        await deduct_credits(user_id, 10)
-
-        record = await UserCredits.find_one(UserCredits.user_id == user_id)
-        assert record.total_credits_spent == 10
-
-    async def test_track_credits_purchased(self):
-        """Track credits purchased by user."""
-        from src.credits import add_credits
-
-        user_id = 789
+        # 1. Purchase credits - track total_credits_purchased
         await add_credits(user_id, 100)
-
         record = await UserCredits.find_one(UserCredits.user_id == user_id)
         assert record.total_credits_purchased == 100
+        assert record.credits == 100
+
+        # 2. Add more credits - accumulates
+        await add_credits(user_id, 50)
+        record = await UserCredits.find_one(UserCredits.user_id == user_id)
+        assert record.total_credits_purchased == 150
+        assert record.credits == 150
+
+        # 3. Spend credits - track total_credits_spent
+        await deduct_credits(user_id, 30)
+        record = await UserCredits.find_one(UserCredits.user_id == user_id)
+        assert record.total_credits_spent == 30
+        assert record.credits == 120
+
+        # 4. Track transcription stats
+        await increment_user_stats(user_id, audio_seconds=45)
+        record = await UserCredits.find_one(UserCredits.user_id == user_id)
+        assert record.total_transcriptions == 1
+        assert record.total_audio_seconds == 45
+
+        # 5. Multiple transcriptions accumulate
+        await increment_user_stats(user_id, audio_seconds=60)
+        await increment_user_stats(user_id, audio_seconds=30)
+        record = await UserCredits.find_one(UserCredits.user_id == user_id)
+        assert record.total_transcriptions == 3
+        assert record.total_audio_seconds == 135
+
+        # 6. Credits unchanged by stats tracking
+        assert record.credits == 120

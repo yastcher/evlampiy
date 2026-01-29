@@ -1,7 +1,7 @@
 [project]
 name = "evlampiy"
-version = "0.5.0"
-description = "Bot (Evlampiy) for managing notes"
+version = "0.5.1"
+description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = ["Yast <yastcher@gmail.com>"]
 requires-python = "~=3.12"
@@ -34,6 +34,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 exclude = [
+    ".claude",
     ".github",
 ]
 
