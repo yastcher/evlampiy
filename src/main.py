@@ -54,6 +54,8 @@ COMMAND_HANDLERS = {
     "balance": balance_command,
     "mystats": handlers.mystats_command,
     "stats": handlers.stats_command,
+    "toggle_categorize": handlers.toggle_categorize,
+    "categorize": handlers.categorize_all,
 }
 
 

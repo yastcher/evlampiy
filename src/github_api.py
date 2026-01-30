@@ -101,3 +101,47 @@ async def put_github_file(
             await asyncio.sleep(2**attempt)
 
     return False
+
+
+async def get_repo_contents(token: str, owner: str, repo: str, path: str = "") -> list[dict]:
+    """Get list of files/folders in a repository path."""
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=_github_headers(token))
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                return data
+            return [data]
+        logger.error("Failed to get repo contents, status: %s", response.status_code)
+        return []
+
+
+async def get_github_file(token: str, owner: str, repo: str, path: str) -> tuple[str, str] | None:
+    """Get file content and SHA. Returns (content, sha) or None."""
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=_github_headers(token))
+        if response.status_code == 200:
+            data = response.json()
+            content = base64.b64decode(data["content"]).decode("utf-8")
+            return content, data["sha"]
+        logger.error("Failed to get file, status: %s", response.status_code)
+        return None
+
+
+async def delete_github_file(
+    token: str, owner: str, repo: str, path: str, sha: str, commit_message: str
+) -> bool:
+    """Delete a file from GitHub repository."""
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            url,
+            headers=_github_headers(token),
+            json={"message": commit_message, "sha": sha},
+        )
+        if response.status_code == 200:
+            return True
+        logger.error("Failed to delete file, status: %s", response.status_code)
+        return False

@@ -153,7 +153,8 @@ class TestVoiceMessage:
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
             patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello world", 5))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(True, "test.md"))),
+            patch("src.telegram.voice.get_auto_categorize", AsyncMock(return_value=False)),
             patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
             patch("src.telegram.voice.has_unlimited_access", return_value=True),
             patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
@@ -185,7 +186,8 @@ class TestVoiceMessage:
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
             patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("евлампий расскажи анекдот", 10))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(True, "test.md"))),
+            patch("src.telegram.voice.get_auto_categorize", AsyncMock(return_value=False)),
             patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
             patch("src.telegram.voice.has_unlimited_access", return_value=True),
             patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
@@ -217,7 +219,8 @@ class TestVoiceMessage:
             patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
             patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("", 0))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock()),
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(False, None))),
+            patch("src.telegram.voice.get_auto_categorize", AsyncMock(return_value=False)),
             patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
             patch("src.telegram.voice.has_unlimited_access", return_value=True),
             patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
@@ -385,3 +388,86 @@ class TestDisconnectGithub:
         mock_clear.assert_called_once_with("u_12345")
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "disconnected" in reply_text.lower()
+
+
+class TestToggleCategorize:
+    """Test /toggle_categorize command."""
+
+    async def test_enables_categorization(self, mock_private_update, mock_context):
+        """Enables auto-categorization when currently disabled."""
+        from src.telegram.handlers import toggle_categorize
+
+        with (
+            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
+            patch("src.telegram.handlers.get_auto_categorize", AsyncMock(return_value=False)),
+            patch("src.telegram.handlers.set_auto_categorize", AsyncMock()) as mock_set,
+        ):
+            await toggle_categorize(mock_private_update, mock_context)
+
+        mock_set.assert_called_once_with("u_12345", True)
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "enabled" in reply_text.lower()
+
+    async def test_disables_categorization(self, mock_private_update, mock_context):
+        """Disables auto-categorization when currently enabled."""
+        from src.telegram.handlers import toggle_categorize
+
+        with (
+            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
+            patch("src.telegram.handlers.get_auto_categorize", AsyncMock(return_value=True)),
+            patch("src.telegram.handlers.set_auto_categorize", AsyncMock()) as mock_set,
+        ):
+            await toggle_categorize(mock_private_update, mock_context)
+
+        mock_set.assert_called_once_with("u_12345", False)
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "disabled" in reply_text.lower()
+
+
+class TestCategorizeAll:
+    """Test /categorize command."""
+
+    async def test_categorizes_files(self, mock_private_update, mock_context):
+        """Categorizes all files in income folder."""
+        from src.telegram.handlers import categorize_all
+
+        github_settings = {"owner": "testowner", "repo": "testrepo", "token": "ghp_test"}
+
+        with (
+            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
+            patch("src.telegram.handlers.get_github_settings", AsyncMock(return_value=github_settings)),
+            patch("src.telegram.handlers.categorize_all_income", AsyncMock(return_value=5)),
+        ):
+            await categorize_all(mock_private_update, mock_context)
+
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "5" in reply_text
+
+    async def test_shows_no_files_message(self, mock_private_update, mock_context):
+        """Shows message when no files to categorize."""
+        from src.telegram.handlers import categorize_all
+
+        github_settings = {"owner": "testowner", "repo": "testrepo", "token": "ghp_test"}
+
+        with (
+            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
+            patch("src.telegram.handlers.get_github_settings", AsyncMock(return_value=github_settings)),
+            patch("src.telegram.handlers.categorize_all_income", AsyncMock(return_value=0)),
+        ):
+            await categorize_all(mock_private_update, mock_context)
+
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "no files" in reply_text.lower()
+
+    async def test_requires_github_connection(self, mock_private_update, mock_context):
+        """Shows error when GitHub not connected."""
+        from src.telegram.handlers import categorize_all
+
+        with (
+            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
+            patch("src.telegram.handlers.get_github_settings", AsyncMock(return_value={})),
+        ):
+            await categorize_all(mock_private_update, mock_context)
+
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "GitHub" in reply_text

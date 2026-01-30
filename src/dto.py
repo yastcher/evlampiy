@@ -15,6 +15,7 @@ class UserSettings(Document):
     command: str | None = None
     github_settings: dict[str, str] | None = None
     save_to_obsidian: bool = False
+    auto_categorize: bool = False
 
     class Settings:
         name = "users"

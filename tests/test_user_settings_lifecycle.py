@@ -6,10 +6,12 @@ from src.config import settings
 from src.dto import UserSettings
 from src.mongo import (
     clear_github_settings,
+    get_auto_categorize,
     get_chat_language,
     get_github_settings,
     get_gpt_command,
     get_save_to_obsidian,
+    set_auto_categorize,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
@@ -101,3 +103,22 @@ class TestUserSettingsLifecycle:
     async def test_clear_nonexistent_user_no_error(self):
         """Clearing settings for nonexistent user does nothing."""
         await clear_github_settings("u_nonexistent_12345")
+
+    async def test_auto_categorize_lifecycle(self):
+        """Test auto_categorize setting lifecycle."""
+        chat_id = "u_categorize_test"
+
+        # New user gets default (False)
+        assert await get_auto_categorize(chat_id) is False
+
+        # Enable auto_categorize for new user
+        await set_auto_categorize(chat_id, True)
+        assert await get_auto_categorize(chat_id) is True
+
+        # Disable auto_categorize
+        await set_auto_categorize(chat_id, False)
+        assert await get_auto_categorize(chat_id) is False
+
+        # Re-enable
+        await set_auto_categorize(chat_id, True)
+        assert await get_auto_categorize(chat_id) is True

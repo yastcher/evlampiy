@@ -17,6 +17,8 @@ x-variables: &variables
     VIP_USER_IDS: ${VIP_USER_IDS:-}
     ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
     GROQ_API_KEY: ${GROQ_API_KEY:-}
+    # Auto-categorization (optional)
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
 
 services:
 

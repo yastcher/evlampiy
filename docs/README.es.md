@@ -23,6 +23,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Integración con GPT** — Activa comandos GPT por voz (di "evlampiy" + tu pregunta)
 - **Integración con Obsidian** — Guardado automático de transcripciones de voz en Obsidian vía GitHub (OAuth Device
   Flow)
+- **Auto-categorización** — Clasificación automática de notas con Claude Haiku
 
 ## Arquitectura
 
@@ -46,6 +47,7 @@ src/
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # Operaciones de GitHub API
 ├── obsidian.py          # Integración con Obsidian
+├── categorization.py    # Auto-categorización con Claude
 └── main.py              # Punto de entrada
 ```
 
@@ -59,6 +61,7 @@ src/
 - (Opcional) Credenciales de WhatsApp Business API
 - (Opcional) GitHub OAuth App client ID (para integración con Obsidian)
 - (Opcional) [Groq](https://groq.com/) API key (para transcripción de respaldo Whisper)
+- (Opcional) [Anthropic](https://anthropic.com/) API key (para auto-categorización)
 
 ## Inicio Rápido
 
@@ -126,6 +129,8 @@ Para instrucciones de configuración de WhatsApp, consulta [WHATSAPP_SETUP.md](W
 | `/mystats`              | Mostrar tus estadísticas de uso                |
 | `/connect_github`       | Conectar cuenta de GitHub (OAuth Device Flow)  |
 | `/toggle_obsidian`      | Activar/desactivar sincronización con Obsidian |
+| `/toggle_categorize`    | Activar/desactivar auto-categorización         |
+| `/categorize`           | Categorizar todas las notas en income          |
 | `/disconnect_github`    | Desconectar GitHub y desactivar sincronización |
 
 Para comandos de administrador, ver [ADMIN.md](ADMIN.md).
@@ -159,7 +164,7 @@ Consulta [DEPLOY.md](../DEPLOY.md) para instrucciones de despliegue con Docker.
 - [x] Integración con WhatsApp
 - [x] Integración con Obsidian vía GitHub OAuth
 - [x] Monetización (Telegram Stars, sistema de créditos, Groq Whisper)
-- [ ] Clasificación de mensajes por temas
+- [x] Clasificación de mensajes por temas (auto-categorización con Claude Haiku)
 
 ## Licencia
 

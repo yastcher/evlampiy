@@ -120,21 +120,23 @@ class TestSaveTranscriptionToObsidian:
     """Test transcription saving with YAML frontmatter."""
 
     async def test_returns_false_when_disabled(self):
-        """Returns False when save_to_obsidian is disabled."""
+        """Returns (False, None) when save_to_obsidian is disabled."""
         with patch("src.obsidian.get_save_to_obsidian", AsyncMock(return_value=False)):
-            result = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
+            success, filename = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
 
-        assert result is False
+        assert success is False
+        assert filename is None
 
     async def test_returns_false_when_no_github_settings(self):
-        """Returns False when no GitHub settings configured."""
+        """Returns (False, None) when no GitHub settings configured."""
         with (
             patch("src.obsidian.get_save_to_obsidian", AsyncMock(return_value=True)),
             patch("src.obsidian.get_github_settings", AsyncMock(return_value={})),
         ):
-            result = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
+            success, filename = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
 
-        assert result is False
+        assert success is False
+        assert filename is None
 
     async def test_saves_with_yaml_frontmatter(self):
         """Transcription saved with correct YAML frontmatter."""
@@ -145,11 +147,13 @@ class TestSaveTranscriptionToObsidian:
             patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
             patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put,
         ):
-            result = await save_transcription_to_obsidian(
+            success, filename = await save_transcription_to_obsidian(
                 "u_12345", "Hello world", "telegram", "en"
             )
 
-        assert result is True
+        assert success is True
+        assert filename is not None
+        assert filename.endswith(".md")
         mock_put.assert_called_once()
         call_kwargs = mock_put.call_args.kwargs
         assert call_kwargs["token"] == "ghp_abc"
@@ -174,17 +178,18 @@ class TestSaveTranscriptionToObsidian:
             patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
             patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put,
         ):
-            result = await save_transcription_to_obsidian(
+            success, filename = await save_transcription_to_obsidian(
                 "w_79001234567", "Привет", "whatsapp", "ru"
             )
 
-        assert result is True
+        assert success is True
+        assert filename is not None
         content = mock_put.call_args.kwargs["content"]
         assert "source: whatsapp" in content
         assert "language: ru" in content
 
     async def test_returns_false_on_api_failure(self):
-        """Returns False when GitHub API call fails."""
+        """Returns (False, None) when GitHub API call fails."""
         github_settings = {"owner": "user", "repo": "notes", "token": "ghp_abc"}
 
         with (
@@ -192,6 +197,7 @@ class TestSaveTranscriptionToObsidian:
             patch("src.obsidian.get_github_settings", AsyncMock(return_value=github_settings)),
             patch("src.obsidian.put_github_file", AsyncMock(return_value=False)),
         ):
-            result = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
+            success, filename = await save_transcription_to_obsidian("u_12345", "text", "telegram", "ru")
 
-        assert result is False
+        assert success is False
+        assert filename is None

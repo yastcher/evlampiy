@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 
 from src import const
 from src.alerts import check_and_send_alerts
+from src.categorization import categorize_note
 from src.chat_params import get_chat_id
 from src.config import settings
 from src.credits import (
@@ -21,7 +22,7 @@ from src.credits import (
 )
 from src.dto import UserTier
 from src.localization import translates
-from src.mongo import get_chat_language, get_gpt_command
+from src.mongo import get_auto_categorize, get_chat_language, get_github_settings, get_gpt_command
 from src.obsidian import save_transcription_to_obsidian
 from src.telegram.bot import send_response
 from src.transcription.service import transcribe_audio
@@ -103,7 +104,18 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     await increment_transcription_stats()
     await increment_user_stats(user_id, audio_seconds=duration)
-    await save_transcription_to_obsidian(chat_id, text, const.SOURCE_TELEGRAM, language)
+
+    saved, filename = await save_transcription_to_obsidian(chat_id, text, const.SOURCE_TELEGRAM, language)
+    if saved and filename and await get_auto_categorize(chat_id):
+        github_settings = await get_github_settings(chat_id)
+        if github_settings:
+            await categorize_note(
+                token=github_settings["token"],
+                owner=github_settings["owner"],
+                repo=github_settings["repo"],
+                filename=filename,
+                content=text,
+            )
 
     gpt_command = await get_gpt_command(chat_id)
     if text.lower().startswith(gpt_command):

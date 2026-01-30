@@ -22,6 +22,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Per-chat settings** — Each user/group can have individual language preferences
 - **GPT integration** — Trigger GPT commands via voice (say "evlampiy" + your question)
 - **Obsidian integration** — Auto-save voice transcriptions to Obsidian vault via GitHub (OAuth Device Flow)
+- **Auto-categorization** — Automatically classify notes into categories using Claude Haiku
 
 ## Architecture
 
@@ -45,6 +46,7 @@ src/
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # GitHub API operations
 ├── obsidian.py          # Obsidian vault integration
+├── categorization.py    # Note auto-categorization with Claude
 └── main.py              # Application entry point
 ```
 
@@ -58,6 +60,7 @@ src/
 - (Optional) WhatsApp Business API credentials
 - (Optional) GitHub OAuth App client ID (for Obsidian integration)
 - (Optional) [Groq](https://groq.com/) API key (for Whisper fallback)
+- (Optional) [Anthropic](https://anthropic.com/) API key (for auto-categorization)
 
 ## Quick Start
 
@@ -109,6 +112,9 @@ VIP_USER_IDS=123456,789012
 ADMIN_USER_IDS=123456789
 INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500
+
+# Optional: Auto-categorization (requires Obsidian integration)
+ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
 For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md).
@@ -125,6 +131,8 @@ For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETU
 | `/mystats`              | Show your personal usage statistics        |
 | `/connect_github`       | Connect GitHub account (OAuth Device Flow) |
 | `/toggle_obsidian`      | Enable/disable Obsidian sync               |
+| `/toggle_categorize`    | Enable/disable auto-categorization         |
+| `/categorize`           | Categorize all notes in income folder      |
 | `/disconnect_github`    | Disconnect GitHub and disable sync         |
 
 For admin commands, see [docs/ADMIN.md](docs/ADMIN.md).
@@ -158,7 +166,7 @@ See [DEPLOY.md](DEPLOY.md) for Docker deployment instructions.
 - [x] WhatsApp integration
 - [x] Obsidian integration via GitHub OAuth
 - [x] Monetization (Telegram Stars, credit system, Groq Whisper fallback)
-- [ ] Message classification by topics
+- [x] Message classification by topics (auto-categorization with Claude Haiku)
 - [ ] ChatMemberUpdated handler for cleanup
 
 ## License

@@ -15,14 +15,19 @@ async def init_beanie_models():
     await init_beanie(database=mongo_client["user_settings"], document_models=ALL_DOCUMENT_MODELS)
 
 
-async def set_chat_language(chat_id: str, language: str):
+async def get_or_create_user(chat_id: str) -> UserSettings:
+    """Get existing user or create new one with defaults."""
     user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
     if not user:
-        user = UserSettings(chat_id=chat_id, language=language)
+        user = UserSettings(chat_id=chat_id)
         await user.insert()
-    else:
-        user.language = language
-        await user.save()
+    return user
+
+
+async def set_chat_language(chat_id: str, language: str):
+    user = await get_or_create_user(chat_id)
+    user.language = language
+    await user.save()
 
 
 async def get_chat_language(chat_id: str) -> str:
@@ -33,13 +38,9 @@ async def get_chat_language(chat_id: str) -> str:
 
 
 async def set_gpt_command(chat_id: str, command: str):
-    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
-    if not user:
-        user = UserSettings(chat_id=chat_id, command=command)
-        await user.insert()
-    else:
-        user.command = command
-        await user.save()
+    user = await get_or_create_user(chat_id)
+    user.command = command
+    await user.save()
 
 
 async def get_gpt_command(chat_id: str) -> str:
@@ -50,24 +51,13 @@ async def get_gpt_command(chat_id: str) -> str:
 
 
 async def set_github_settings(chat_id: str, owner: str, repo: str, token: str):
-    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
-    if not user:
-        user = UserSettings(
-            chat_id=chat_id,
-            github_settings={
-                "owner": owner,
-                "repo": repo,
-                "token": token,
-            },
-        )
-        await user.insert()
-    else:
-        user.github_settings = {
-            "owner": owner,
-            "repo": repo,
-            "token": token,
-        }
-        await user.save()
+    user = await get_or_create_user(chat_id)
+    user.github_settings = {
+        "owner": owner,
+        "repo": repo,
+        "token": token,
+    }
+    await user.save()
 
 
 async def get_github_settings(chat_id: str) -> dict:
@@ -88,13 +78,9 @@ async def clear_github_settings(chat_id: str):
 
 
 async def set_save_to_obsidian(chat_id: str, enabled: bool):
-    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
-    if not user:
-        user = UserSettings(chat_id=chat_id, save_to_obsidian=enabled)
-        await user.insert()
-    else:
-        user.save_to_obsidian = enabled
-        await user.save()
+    user = await get_or_create_user(chat_id)
+    user.save_to_obsidian = enabled
+    await user.save()
 
 
 async def get_save_to_obsidian(chat_id: str) -> bool:
@@ -102,3 +88,16 @@ async def get_save_to_obsidian(chat_id: str) -> bool:
     if not user:
         return False
     return user.save_to_obsidian
+
+
+async def set_auto_categorize(chat_id: str, enabled: bool):
+    user = await get_or_create_user(chat_id)
+    user.auto_categorize = enabled
+    await user.save()
+
+
+async def get_auto_categorize(chat_id: str) -> bool:
+    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
+    if not user:
+        return False
+    return user.auto_categorize

@@ -85,6 +85,30 @@ translates = {
         RUSSIAN: "Сервис транскрипции временно недоступен. Попробуйте позже.",
         SPANISH: "El servicio de transcripción no está disponible temporalmente. Inténtalo más tarde.",
     },
+    "categorize_enabled": {
+        ENGLISH: "Auto-categorization enabled.",
+        GERMANY: "Automatische Kategorisierung aktiviert.",
+        RUSSIAN: "Автокатегоризация включена.",
+        SPANISH: "Categorización automática activada.",
+    },
+    "categorize_disabled": {
+        ENGLISH: "Auto-categorization disabled.",
+        GERMANY: "Automatische Kategorisierung deaktiviert.",
+        RUSSIAN: "Автокатегоризация выключена.",
+        SPANISH: "Categorización automática desactivada.",
+    },
+    "categorize_done": {
+        ENGLISH: "Categorized {count} notes.",
+        GERMANY: "{count} Notizen kategorisiert.",
+        RUSSIAN: "Категоризировано заметок: {count}.",
+        SPANISH: "{count} notas categorizadas.",
+    },
+    "categorize_no_files": {
+        ENGLISH: "No files to categorize in income folder.",
+        GERMANY: "Keine Dateien zum Kategorisieren im Eingangsordner.",
+        RUSSIAN: "Нет файлов для категоризации в папке income.",
+        SPANISH: "No hay archivos para categorizar en la carpeta de entrada.",
+    },
     "mystats_message": {
         ENGLISH: (
             "📊 <b>Your Statistics</b>\n\n"

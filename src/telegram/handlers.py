@@ -5,6 +5,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from src import const
+from src.categorization import categorize_all_income
 from src.chat_params import get_chat_id, is_private_chat, is_user_admin
 from src.config import settings
 from src.credits import (
@@ -20,9 +21,12 @@ from src.github_oauth import get_github_device_code, poll_github_for_token
 from src.localization import translates
 from src.mongo import (
     clear_github_settings,
+    get_auto_categorize,
     get_chat_language,
+    get_github_settings,
     get_gpt_command,
     get_save_to_obsidian,
+    set_auto_categorize,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
@@ -203,6 +207,49 @@ async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         total_purchased=total_purchased,
     )
     await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def toggle_categorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_admin(update, context):
+        return
+
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+    current = await get_auto_categorize(chat_id)
+    new_value = not current
+    await set_auto_categorize(chat_id, new_value)
+
+    key = "categorize_enabled" if new_value else "categorize_disabled"
+    text = translates[key].get(language, translates[key]["en"])
+    await update.message.reply_text(text)
+
+
+async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_admin(update, context):
+        return
+
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+    github_settings = await get_github_settings(chat_id)
+
+    if not github_settings:
+        await update.message.reply_text("GitHub not connected. Use /connect_github first.")
+        return
+
+    count = await categorize_all_income(
+        token=github_settings["token"],
+        owner=github_settings["owner"],
+        repo=github_settings["repo"],
+    )
+
+    if count > 0:
+        text = translates["categorize_done"].get(language, translates["categorize_done"]["en"])
+        await update.message.reply_text(text.format(count=count))
+    else:
+        text = translates["categorize_no_files"].get(
+            language, translates["categorize_no_files"]["en"]
+        )
+        await update.message.reply_text(text)
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

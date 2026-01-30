@@ -47,6 +47,9 @@ VIP_USER_IDS=123456,789012
 ADMIN_USER_IDS=123456789
 INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500
+
+# Optional: Auto-categorization
+ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
 ### Local Run
@@ -178,6 +181,9 @@ VIP_USER_IDS=123456,789012
 ADMIN_USER_IDS=123456789
 INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500
+
+# Опционально: Автокатегоризация
+ANTHROPIC_API_KEY=ваш_anthropic_api_ключ
 ```
 
 ### Локальный запуск

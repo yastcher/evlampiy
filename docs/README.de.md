@@ -23,6 +23,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **GPT-Integration** — GPT-Befehle per Sprache auslösen (sag "evlampiy" + deine Frage)
 - **Obsidian-Integration** — Automatische Speicherung von Sprachtranskriptionen in Obsidian über GitHub (OAuth Device
   Flow)
+- **Auto-Kategorisierung** — Automatische Klassifizierung von Notizen mit Claude Haiku
 
 ## Architektur
 
@@ -46,6 +47,7 @@ src/
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # GitHub-API-Operationen
 ├── obsidian.py          # Obsidian-Integration
+├── categorization.py    # Auto-Kategorisierung mit Claude
 └── main.py              # Einstiegspunkt
 ```
 
@@ -59,6 +61,7 @@ src/
 - (Optional) WhatsApp Business API-Zugangsdaten
 - (Optional) GitHub OAuth App Client-ID (für Obsidian-Integration)
 - (Optional) [Groq](https://groq.com/) API-Schlüssel (für Whisper-Fallback-Transkription)
+- (Optional) [Anthropic](https://anthropic.com/) API-Schlüssel (für Auto-Kategorisierung)
 
 ## Schnellstart
 
@@ -126,6 +129,8 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 | `/mystats`              | Ihre Nutzungsstatistiken anzeigen                |
 | `/connect_github`       | GitHub-Konto verbinden (OAuth Device Flow)       |
 | `/toggle_obsidian`      | Obsidian-Synchronisierung ein-/ausschalten       |
+| `/toggle_categorize`    | Auto-Kategorisierung ein-/ausschalten            |
+| `/categorize`           | Alle Notizen im income-Ordner kategorisieren     |
 | `/disconnect_github`    | GitHub trennen und Synchronisierung deaktivieren |
 
 Für Admin-Befehle siehe [ADMIN.md](ADMIN.md).
@@ -159,7 +164,7 @@ Siehe [DEPLOY.md](../DEPLOY.md) für Docker-Deployment-Anweisungen.
 - [x] WhatsApp-Integration
 - [x] Obsidian-Integration über GitHub OAuth
 - [x] Monetarisierung (Telegram Stars, Kreditsystem, Groq Whisper)
-- [ ] Nachrichtenklassifizierung nach Themen
+- [x] Nachrichtenklassifizierung nach Themen (Auto-Kategorisierung mit Claude Haiku)
 
 ## Lizenz
 

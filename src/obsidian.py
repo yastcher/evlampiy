@@ -49,17 +49,24 @@ async def save_transcription_to_obsidian(
     text: str,
     source: str,
     language: str,
-) -> bool:
+) -> tuple[bool, str | None]:
+    """
+    Save transcription to Obsidian vault via GitHub.
+
+    Returns:
+        tuple[bool, str | None]: (success, filename) where filename is just the name without path
+    """
     if not await get_save_to_obsidian(chat_id):
-        return False
+        return False, None
 
     github_settings = await get_github_settings(chat_id)
     if not github_settings:
-        return False
+        return False, None
 
     now = datetime.datetime.now(datetime.UTC)
     now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"{OBSIDIAN_NOTES_FOLDER}/{now_str}.md"
+    filename = f"{now_str}.md"
+    filepath = f"{OBSIDIAN_NOTES_FOLDER}/{filename}"
 
     frontmatter = (
         "---\n"
@@ -75,14 +82,14 @@ async def save_transcription_to_obsidian(
         token=github_settings["token"],
         owner=github_settings["owner"],
         repo=github_settings["repo"],
-        path=filename,
+        path=filepath,
         content=content,
         commit_message=f"Add transcription {now_str}",
     )
 
     if result:
-        logger.info("Saved transcription to %s for %s", filename, chat_id)
+        logger.info("Saved transcription to %s for %s", filepath, chat_id)
     else:
         logger.error("Failed to save transcription for %s", chat_id)
 
-    return result
+    return result, filename if result else None

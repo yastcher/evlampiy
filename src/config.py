@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "whisper-large-v3-turbo"
 
+    # Anthropic
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-3-5-haiku-latest"
+    anthropic_version: str = "2023-06-01"
+
     # Wit.ai monthly free limit
     wit_free_monthly_limit: int = 500
 
