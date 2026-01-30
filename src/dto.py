@@ -27,7 +27,7 @@ class UserTier(str, Enum):
 
 
 class UserCredits(Document):
-    user_id: int
+    user_id: str
     credits: int = 0
     tier: UserTier = UserTier.FREE
     total_transcriptions: int = 0

@@ -15,18 +15,18 @@ class TestAdminRole:
         """Admin bypasses credit checks."""
         from src.credits import has_unlimited_access
 
-        admin_id = 999
-        with patch.object(settings, "admin_user_ids", {admin_id}):
+        admin_id = "999"
+        with patch.object(settings, "admin_user_ids_raw", "999"):
             assert has_unlimited_access(admin_id) is True
 
     async def test_vip_has_unlimited_access(self):
         """VIP also bypasses credit checks."""
         from src.credits import has_unlimited_access
 
-        vip_id = 888
+        vip_id = "888"
         with (
-            patch.object(settings, "vip_user_ids", {vip_id}),
-            patch.object(settings, "admin_user_ids", set()),
+            patch.object(settings, "vip_user_ids_raw", "888"),
+            patch.object(settings, "admin_user_ids_raw", ""),
         ):
             assert has_unlimited_access(vip_id) is True
 
@@ -34,10 +34,10 @@ class TestAdminRole:
         """Regular user does not have unlimited access."""
         from src.credits import has_unlimited_access
 
-        user_id = 123
+        user_id = "123"
         with (
-            patch.object(settings, "admin_user_ids", set()),
-            patch.object(settings, "vip_user_ids", set()),
+            patch.object(settings, "admin_user_ids_raw", ""),
+            patch.object(settings, "vip_user_ids_raw", ""),
         ):
             assert has_unlimited_access(user_id) is False
 
@@ -45,9 +45,9 @@ class TestAdminRole:
         """Test is_admin_user function."""
         from src.credits import is_admin_user
 
-        admin_id = 999
-        regular_id = 123
-        with patch.object(settings, "admin_user_ids", {admin_id}):
+        admin_id = "999"
+        regular_id = "123"
+        with patch.object(settings, "admin_user_ids_raw", "999"):
             assert is_admin_user(admin_id) is True
             assert is_admin_user(regular_id) is False
 
@@ -60,7 +60,7 @@ class TestStatsCommand:
         admin_id = 999
         mock_private_update.effective_user.id = admin_id
 
-        with patch.object(settings, "admin_user_ids", {admin_id}):
+        with patch.object(settings, "admin_user_ids_raw", "999"):
             await stats_command(mock_private_update, mock_context)
 
         mock_private_update.message.reply_text.assert_called_once()
@@ -71,7 +71,7 @@ class TestStatsCommand:
 
         mock_private_update.effective_user.id = 123
 
-        with patch.object(settings, "admin_user_ids", set()):
+        with patch.object(settings, "admin_user_ids_raw", ""):
             await stats_command(mock_private_update, mock_context)
 
         mock_private_update.message.reply_text.assert_not_called()
@@ -83,8 +83,8 @@ class TestMyStatsCommand:
         from src.credits import add_credits
         from src.telegram.handlers import mystats_command
 
-        user_id = 123
-        mock_private_update.effective_user.id = user_id
+        user_id = "123"
+        mock_private_update.effective_user.id = 123
 
         await add_credits(user_id, 50)
 
@@ -99,8 +99,8 @@ class TestMyStatsCommand:
         from src.credits import add_credits
         from src.telegram.handlers import mystats_command
 
-        user_id = 456
-        mock_private_update.effective_user.id = user_id
+        user_id = "456"
+        mock_private_update.effective_user.id = 456
 
         await add_credits(user_id, 10)
 
@@ -119,7 +119,7 @@ class TestAlerts:
         month = current_month_key()
         await MonthlyStats(month_key=month, total_payments=1, total_credits_sold=5).insert()
 
-        with patch.object(settings, "admin_user_ids", {999}):
+        with patch.object(settings, "admin_user_ids_raw", "999"):
             await check_and_send_alerts(mock_context.bot)
 
         mock_context.bot.send_message.assert_called()
@@ -135,7 +135,7 @@ class TestAlerts:
         await WitUsageStats(month_key=month, request_count=450).insert()
 
         with (
-            patch.object(settings, "admin_user_ids", {999}),
+            patch.object(settings, "admin_user_ids_raw", "999"),
             patch.object(settings, "wit_free_monthly_limit", 500),
         ):
             await check_and_send_alerts(mock_context.bot)
@@ -152,7 +152,7 @@ class TestAlerts:
         await WitUsageStats(month_key=month, request_count=480).insert()
 
         with (
-            patch.object(settings, "admin_user_ids", {999}),
+            patch.object(settings, "admin_user_ids_raw", "999"),
             patch.object(settings, "wit_free_monthly_limit", 500),
         ):
             await check_and_send_alerts(mock_context.bot)
@@ -170,7 +170,7 @@ class TestAlerts:
         await AlertState(alert_type="wit_80", month_key=month).insert()
 
         with (
-            patch.object(settings, "admin_user_ids", {999}),
+            patch.object(settings, "admin_user_ids_raw", "999"),
             patch.object(settings, "wit_free_monthly_limit", 500),
         ):
             await check_and_send_alerts(mock_context.bot)
@@ -183,7 +183,7 @@ class TestUserStatsTracking:
         """Test complete user stats tracking flow."""
         from src.credits import add_credits, deduct_credits, increment_user_stats
 
-        user_id = 777888
+        user_id = "777888"
 
         # 1. Purchase credits - track total_credits_purchased
         await add_credits(user_id, 100)

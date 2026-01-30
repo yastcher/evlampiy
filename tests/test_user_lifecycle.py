@@ -1,9 +1,8 @@
 """Integration test for complete user lifecycle."""
 
-from unittest.mock import patch
-
 import pytest
 
+from src.config import settings
 from src.credits import (
     add_credits,
     can_perform_operation,
@@ -20,15 +19,10 @@ pytestmark = [pytest.mark.asyncio]
 class TestUserLifecycle:
     """Full user lifecycle integration test."""
 
-    @patch("src.credits.settings")
-    async def test_complete_user_flow(self, mock_settings):
+    async def test_complete_user_flow(self):
         """Test complete user journey from registration to deletion."""
-        mock_settings.initial_credits = 3
-        mock_settings.vip_user_ids = set()
-        mock_settings.admin_user_ids = set()
-
-        user_id = 999999
-        other_user_id = 888888
+        user_id = "999999"
+        other_user_id = "888888"
 
         # 1. New user has zero balance and FREE tier
         assert await get_credits(user_id) == 0
@@ -37,17 +31,17 @@ class TestUserLifecycle:
         # 2. Grant initial credits succeeds first time
         result = await grant_initial_credits_if_eligible(user_id)
         assert result is True
-        assert await get_credits(user_id) == mock_settings.initial_credits
+        assert await get_credits(user_id) == settings.initial_credits
 
         # 3. Grant initial credits fails second time (abuse protection)
         result = await grant_initial_credits_if_eligible(user_id)
         assert result is False
-        assert await get_credits(user_id) == mock_settings.initial_credits
+        assert await get_credits(user_id) == settings.initial_credits
 
         # 4. Add credits changes tier to PAID
         await add_credits(user_id, 10)
         assert await get_user_tier(user_id) == UserTier.PAID
-        assert await get_credits(user_id) == mock_settings.initial_credits + 10
+        assert await get_credits(user_id) == settings.initial_credits + 10
 
         # 5. Can perform operation with sufficient credits
         ok, msg = await can_perform_operation(user_id, 1)
@@ -57,7 +51,7 @@ class TestUserLifecycle:
         # 6. Deduct credits succeeds
         result = await deduct_credits(user_id, 5)
         assert result is True
-        assert await get_credits(user_id) == mock_settings.initial_credits + 10 - 5
+        assert await get_credits(user_id) == settings.initial_credits + 10 - 5
 
         # 7. Deduct more than available fails
         current_balance = await get_credits(user_id)
@@ -77,4 +71,4 @@ class TestUserLifecycle:
         # 10. Different user_id can get initial credits normally
         result = await grant_initial_credits_if_eligible(other_user_id)
         assert result is True
-        assert await get_credits(other_user_id) == mock_settings.initial_credits
+        assert await get_credits(other_user_id) == settings.initial_credits

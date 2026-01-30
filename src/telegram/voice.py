@@ -55,7 +55,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not update.message.voice:
         return
 
-    user_id = update.effective_user.id
+    user_id = str(update.effective_user.id)
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
 

@@ -7,23 +7,23 @@ from src.config import settings
 from src.dto import MonthlyStats, UsedTrial, UserCredits, UserTier
 
 
-def hash_user_id(user_id: int) -> str:
-    return hashlib.sha256(str(user_id).encode()).hexdigest()
+def hash_user_id(user_id: str) -> str:
+    return hashlib.sha256(user_id.encode()).hexdigest()
 
 
-def is_vip_user(user_id: int) -> bool:
+def is_vip_user(user_id: str) -> bool:
     return user_id in settings.vip_user_ids
 
 
-def is_admin_user(user_id: int) -> bool:
+def is_admin_user(user_id: str) -> bool:
     return user_id in settings.admin_user_ids
 
 
-def has_unlimited_access(user_id: int) -> bool:
+def has_unlimited_access(user_id: str) -> bool:
     return is_vip_user(user_id) or is_admin_user(user_id)
 
 
-async def get_user_tier(user_id: int) -> UserTier:
+async def get_user_tier(user_id: str) -> UserTier:
     if is_vip_user(user_id) or is_admin_user(user_id):
         return UserTier.VIP
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
@@ -32,14 +32,14 @@ async def get_user_tier(user_id: int) -> UserTier:
     return UserTier.FREE
 
 
-async def get_credits(user_id: int) -> int:
+async def get_credits(user_id: str) -> int:
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
         return 0
     return record.credits
 
 
-async def add_credits(user_id: int, amount: int) -> int:
+async def add_credits(user_id: str, amount: int) -> int:
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
         record = UserCredits(
@@ -57,7 +57,7 @@ async def add_credits(user_id: int, amount: int) -> int:
     return record.credits
 
 
-async def deduct_credits(user_id: int, amount: int) -> bool:
+async def deduct_credits(user_id: str, amount: int) -> bool:
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record or record.credits < amount:
         return False
@@ -67,7 +67,7 @@ async def deduct_credits(user_id: int, amount: int) -> bool:
     return True
 
 
-async def grant_initial_credits_if_eligible(user_id: int) -> bool:
+async def grant_initial_credits_if_eligible(user_id: str) -> bool:
     user_hash = hash_user_id(user_id)
     existing = await UsedTrial.find_one(UsedTrial.user_hash == user_hash)
     if existing:
@@ -85,7 +85,7 @@ async def grant_initial_credits_if_eligible(user_id: int) -> bool:
     return True
 
 
-async def can_perform_operation(user_id: int, cost: int) -> tuple[bool, str]:
+async def can_perform_operation(user_id: str, cost: int) -> tuple[bool, str]:
     if has_unlimited_access(user_id):
         return True, ""
 
@@ -96,7 +96,7 @@ async def can_perform_operation(user_id: int, cost: int) -> tuple[bool, str]:
     return False, "insufficient_credits"
 
 
-async def increment_user_stats(user_id: int, audio_seconds: int = 0):
+async def increment_user_stats(user_id: str, audio_seconds: int = 0):
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
         record = UserCredits(

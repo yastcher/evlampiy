@@ -183,7 +183,7 @@ async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+    user_id = str(update.effective_user.id)
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
 
@@ -206,7 +206,7 @@ async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin_user(update.effective_user.id):
+    if not is_admin_user(str(update.effective_user.id)):
         return
 
     month = current_month_key()

@@ -37,7 +37,7 @@ async def handle_pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def handle_successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle successful payment — add credits to user."""
-    user_id = update.effective_user.id
+    user_id = str(update.effective_user.id)
     payment = update.message.successful_payment
     credits_to_add = payment.total_amount * settings.credits_per_star
 
@@ -54,7 +54,7 @@ async def handle_successful_payment(update: Update, context: ContextTypes.DEFAUL
 
 async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show current credit balance."""
-    user_id = update.effective_user.id
+    user_id = str(update.effective_user.id)
     credits = await get_credits(user_id)
 
     await context.bot.send_message(

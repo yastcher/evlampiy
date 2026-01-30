@@ -8,7 +8,6 @@ from src.credits import (
     deduct_credits,
     get_credits,
     get_user_tier,
-    grant_initial_credits_if_eligible,
     hash_user_id,
     is_vip_user,
 )
@@ -17,95 +16,80 @@ from src.wit_tracking import get_wit_usage_this_month, increment_wit_usage, is_w
 
 
 class TestCreditFlow:
-    async def test_new_user_has_zero_credits(self):
-        assert await get_credits(111) == 0
+    async def test_complete_credit_operations_flow(self):
+        """Test complete credit operations: add, deduct, check balance."""
+        user_id = "credit_flow_user"
 
-    async def test_add_credits(self):
-        new_balance = await add_credits(111, 5)
-        assert new_balance == 5
-        assert await get_credits(111) == 5
+        # 1. New user starts with zero credits and FREE tier
+        assert await get_credits(user_id) == 0
+        assert await get_user_tier(user_id) == UserTier.FREE
 
-    async def test_add_credits_sets_paid_tier(self):
-        await add_credits(111, 5)
-        tier = await get_user_tier(111)
-        assert tier == UserTier.PAID
+        # 2. Add credits — balance increases, tier becomes PAID
+        new_balance = await add_credits(user_id, 10)
+        assert new_balance == 10
+        assert await get_credits(user_id) == 10
+        assert await get_user_tier(user_id) == UserTier.PAID
 
-    async def test_deduct_credits_success(self):
-        await add_credits(111, 5)
-        result = await deduct_credits(111, 2)
-        assert result is True
-        assert await get_credits(111) == 3
-
-    async def test_deduct_credits_insufficient(self):
-        await add_credits(111, 1)
-        result = await deduct_credits(111, 2)
-        assert result is False
-        assert await get_credits(111) == 1
-
-    async def test_deduct_credits_zero_balance(self):
-        result = await deduct_credits(111, 1)
-        assert result is False
-
-    @patch("src.credits.settings")
-    async def test_vip_user(self, mock_settings):
-        mock_settings.vip_user_ids = {42}
-        assert is_vip_user(42) is True
-        assert is_vip_user(99) is False
-
-    @patch("src.credits.settings")
-    async def test_vip_tier(self, mock_settings):
-        mock_settings.vip_user_ids = {42}
-        tier = await get_user_tier(42)
-        assert tier == UserTier.VIP
-
-    async def test_free_tier_default(self):
-        tier = await get_user_tier(111)
-        assert tier == UserTier.FREE
-
-    @patch("src.credits.settings")
-    async def test_grant_initial_credits_new_user(self, mock_settings):
-        mock_settings.initial_credits = 3
-        mock_settings.vip_user_ids = set()
-        result = await grant_initial_credits_if_eligible(111)
-        assert result is True
-        assert await get_credits(111) == 3
-
-    @patch("src.credits.settings")
-    async def test_grant_initial_credits_already_used(self, mock_settings):
-        mock_settings.initial_credits = 3
-        mock_settings.vip_user_ids = set()
-        await grant_initial_credits_if_eligible(111)
-        result = await grant_initial_credits_if_eligible(111)
-        assert result is False
-        assert await get_credits(111) == 3
-
-    @patch("src.credits.settings")
-    async def test_trial_abuse_different_accounts_same_hash_impossible(self, mock_settings):
-        """Each user_id produces a unique hash."""
-        mock_settings.initial_credits = 3
-        mock_settings.vip_user_ids = set()
-        hash1 = hash_user_id(111)
-        hash2 = hash_user_id(222)
-        assert hash1 != hash2
-
-    @patch("src.credits.settings")
-    async def test_can_perform_vip_always(self, mock_settings):
-        mock_settings.vip_user_ids = {42}
-        mock_settings.credit_cost_voice = 1
-        ok, msg = await can_perform_operation(42, 1)
+        # 3. Can perform operation with sufficient credits
+        ok, msg = await can_perform_operation(user_id, 5)
         assert ok is True
+        assert msg == ""
 
-    @patch("src.credits.settings")
-    async def test_can_perform_insufficient(self, mock_settings):
-        mock_settings.vip_user_ids = set()
-        ok, msg = await can_perform_operation(111, 1)
+        # 4. Deduct credits succeeds
+        result = await deduct_credits(user_id, 3)
+        assert result is True
+        assert await get_credits(user_id) == 7
+
+        # 5. Deduct more than available fails, balance unchanged
+        result = await deduct_credits(user_id, 100)
+        assert result is False
+        assert await get_credits(user_id) == 7
+
+        # 6. Deduct remaining credits
+        await deduct_credits(user_id, 7)
+        assert await get_credits(user_id) == 0
+
+        # 7. Cannot perform operation without credits
+        ok, msg = await can_perform_operation(user_id, 1)
         assert ok is False
-        assert msg != ""
+        assert msg == "insufficient_credits"
 
-    async def test_can_perform_with_credits(self):
-        await add_credits(111, 5)
-        ok, msg = await can_perform_operation(111, 1)
+        # 8. Deduct from zero balance fails
+        result = await deduct_credits(user_id, 1)
+        assert result is False
+
+    @patch("src.credits.settings")
+    async def test_vip_user_flow(self, mock_settings):
+        """Test VIP user privileges: unlimited access, VIP tier."""
+        vip_id = "42"
+        regular_id = "99"
+
+        mock_settings.vip_user_ids = {vip_id}
+        mock_settings.admin_user_ids = set()
+
+        # 1. VIP check
+        assert is_vip_user(vip_id) is True
+        assert is_vip_user(regular_id) is False
+
+        # 2. VIP has VIP tier (even without credits)
+        assert await get_user_tier(vip_id) == UserTier.VIP
+
+        # 3. VIP can always perform operations (no credits needed)
+        ok, msg = await can_perform_operation(vip_id, 1000)
         assert ok is True
+
+        # 4. Regular user without credits cannot perform
+        ok, msg = await can_perform_operation(regular_id, 1)
+        assert ok is False
+
+    def test_user_hash_uniqueness(self):
+        """Each user_id produces a unique hash."""
+        hash1 = hash_user_id("111")
+        hash2 = hash_user_id("222")
+        hash3 = hash_user_id("111")
+
+        assert hash1 != hash2
+        assert hash1 == hash3
 
 
 class TestWitUsageLimits:
