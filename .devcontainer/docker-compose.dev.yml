@@ -1,0 +1,12 @@
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/app:cached
+    command: sleep infinity
+    depends_on:
+      - mongodb
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/

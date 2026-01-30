@@ -13,10 +13,10 @@ LANGUAGES = (
 )
 
 
-def _parse_comma_separated_ids(value: str) -> set[int]:
+def _parse_comma_separated_ids(value: str) -> set[str]:
     if not value.strip():
         return set()
-    return {int(x.strip()) for x in value.split(",") if x.strip()}
+    return {x.strip() for x in value.split(",") if x.strip()}
 
 
 class Settings(BaseSettings):
@@ -66,11 +66,11 @@ class Settings(BaseSettings):
     wit_free_monthly_limit: int = 500
 
     @property
-    def vip_user_ids(self) -> set[int]:
+    def vip_user_ids(self) -> set[str]:
         return _parse_comma_separated_ids(self.vip_user_ids_raw)
 
     @property
-    def admin_user_ids(self) -> set[int]:
+    def admin_user_ids(self) -> set[str]:
         return _parse_comma_separated_ids(self.admin_user_ids_raw)
 
 

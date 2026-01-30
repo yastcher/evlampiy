@@ -1,6 +1,16 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+@pytest.fixture
+def mock_empty_settings():
+    """Mock settings with empty VIP/admin lists."""
+    with (
+        patch("src.credits.settings.vip_user_ids_raw", ""),
+        patch("src.credits.settings.admin_user_ids_raw", ""),
+    ):
+        yield
 
 
 @pytest.fixture
