@@ -8,7 +8,6 @@ from telegram.ext import ContextTypes
 from src import const
 from src.alerts import check_and_send_alerts
 from src.categorization import categorize_note
-from src.chat_params import get_chat_id
 from src.config import settings
 from src.credits import (
     can_perform_operation,
@@ -25,6 +24,7 @@ from src.localization import translates
 from src.mongo import get_auto_categorize, get_chat_language, get_github_settings, get_gpt_command
 from src.obsidian import save_transcription_to_obsidian
 from src.telegram.bot import send_response
+from src.telegram.chat_params import get_chat_id
 from src.transcription.service import transcribe_audio
 from src.wit_tracking import increment_wit_usage, is_wit_available
 
