@@ -4,12 +4,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 ENGLISH = "en"
 RUSSIAN = "ru"
 SPANISH = "es"
-GERMANY = "de"
+GERMAN = "de"
 LANGUAGES = (
     ENGLISH,
     RUSSIAN,
     SPANISH,
-    GERMANY,
+    GERMAN,
 )
 
 

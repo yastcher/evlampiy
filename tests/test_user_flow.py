@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from telegram.constants import ChatMemberStatus
 
-from src.config import ENGLISH, GERMANY, RUSSIAN, SPANISH
+from src.config import ENGLISH, GERMAN, RUSSIAN, SPANISH
 from src.telegram.handlers import choose_language, lang_buttons, start
 
 pytestmark = [pytest.mark.asyncio]
@@ -92,7 +92,7 @@ class TestLanguageButtons:
             (RUSSIAN, "Русский"),
             (ENGLISH, "English"),
             (SPANISH, "Español"),
-            (GERMANY, "Deutsch"),
+            (GERMAN, "Deutsch"),
         ],
     )
     async def test_language_button_sets_language(

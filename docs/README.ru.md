@@ -36,13 +36,20 @@ src/
 │   ├── bot.py
 │   ├── handlers.py
 │   ├── voice.py
-│   └── payments.py      # Обработчики платежей Telegram Stars
+│   ├── payments.py      # Обработчики платежей Telegram Stars
+│   └── chat_params.py   # Хелперы идентификации чата
 ├── whatsapp/            # Адаптер WhatsApp
 │   ├── client.py
 │   └── handlers.py
-├── credits.py           # Система кредитов и статистика
-├── wit_tracking.py      # Отслеживание месячного лимита Wit.ai
+├── config.py            # Настройки приложения
 ├── const.py             # Общие константы
+├── credits.py           # Система кредитов и статистика
+├── dto.py               # Объекты передачи данных
+├── mongo.py             # Операции MongoDB
+├── wit_tracking.py      # Отслеживание месячного лимита Wit.ai
+├── gpt_commands.py      # Обработчик команд GPT
+├── localization.py      # Мультиязычные переводы
+├── alerts.py            # Сервис уведомлений администратора
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # Операции GitHub API
 ├── obsidian.py          # Интеграция с Obsidian
@@ -97,6 +104,7 @@ WIT_DE_TOKEN=токен_немецкий
 
 # Опционально: интеграция с GPT
 GPT_TOKEN=ваш_openai_токен
+GPT_MODEL=gpt-4o-mini
 
 # Опционально: интеграция с WhatsApp (см. WHATSAPP_SETUP.md)
 WHATSAPP_TOKEN=ваш_whatsapp_токен
@@ -104,6 +112,7 @@ WHATSAPP_PHONE_ID=ваш_phone_id
 WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
 
 # Опционально: GitHub OAuth (для интеграции с Obsidian)
+# Для ручной настройки токена см. docs/GITHUB_TOKEN_SETUP.md
 GITHUB_CLIENT_ID=ваш_github_oauth_app_client_id
 
 # Опционально: Монетизация
@@ -164,6 +173,7 @@ uv run pytest --cov=src --cov-fail-under=85
 - [x] Интеграция с Obsidian через GitHub OAuth
 - [x] Монетизация (Telegram Stars, система кредитов, Groq Whisper)
 - [x] Классификация сообщений по темам (автокатегоризация с Claude Haiku)
+- [ ] ChatMemberUpdated handler для очистки
 
 ## Лицензия
 

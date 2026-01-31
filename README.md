@@ -36,13 +36,20 @@ src/
 │   ├── bot.py
 │   ├── handlers.py
 │   ├── voice.py
-│   └── payments.py      # Telegram Stars payment handlers
+│   ├── payments.py      # Telegram Stars payment handlers
+│   └── chat_params.py   # Chat identification helpers
 ├── whatsapp/            # WhatsApp adapter
 │   ├── client.py
 │   └── handlers.py
-├── credits.py           # Credit system & usage stats
-├── wit_tracking.py      # Wit.ai monthly usage tracking
+├── config.py            # Application settings
 ├── const.py             # Shared constants
+├── credits.py           # Credit system & usage stats
+├── dto.py               # Data transfer objects
+├── mongo.py             # MongoDB operations
+├── wit_tracking.py      # Wit.ai monthly usage tracking
+├── gpt_commands.py      # GPT command handler
+├── localization.py      # Multi-language translations
+├── alerts.py            # Admin alert service
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # GitHub API operations
 ├── obsidian.py          # Obsidian vault integration
@@ -97,6 +104,7 @@ WIT_DE_TOKEN=your_german_token
 
 # Optional: GPT integration
 GPT_TOKEN=your_openai_token
+GPT_MODEL=gpt-4o-mini
 
 # Optional: WhatsApp integration (see docs/WHATSAPP_SETUP.md)
 WHATSAPP_TOKEN=your_whatsapp_token
@@ -104,6 +112,7 @@ WHATSAPP_PHONE_ID=your_phone_id
 WHATSAPP_VERIFY_TOKEN=your_verify_token
 
 # Optional: GitHub OAuth (for Obsidian integration)
+# For manual token setup, see docs/GITHUB_TOKEN_SETUP.md
 GITHUB_CLIENT_ID=your_github_oauth_app_client_id
 
 # Optional: Monetization

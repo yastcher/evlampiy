@@ -26,7 +26,7 @@ async def evlampiy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             temperature=0.7,
         )
 
-        gpt_response = chat_response["choices"][0]["message"]["content"]
+        gpt_response = chat_response.choices[0].message.content
 
         await send_response(update, context, response=gpt_response)
     except Exception as e:

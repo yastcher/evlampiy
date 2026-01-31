@@ -55,3 +55,29 @@ class TestBalanceCommand:
         await balance_command(mock_private_update, mock_context)
 
         mock_context.bot.send_message.assert_called_once()
+
+
+class TestMilestoneAlerts:
+    async def test_milestone_triggers_on_bulk_purchase(self, mock_private_update, mock_context):
+        """Milestone alert triggers when buying multiple credits at once crossing threshold."""
+        from src import const
+        from src.alerts import check_and_send_alerts
+        from src.credits import increment_payment_stats
+
+        credits_for_10_dollars = int(10 / const.STAR_TO_DOLLAR) + 1
+
+        await increment_payment_stats(credits_for_10_dollars)
+
+        alerts_sent = []
+
+        async def capture_alert(bot, message):
+            alerts_sent.append(message)
+
+        with patch("src.alerts.send_admin_alert", capture_alert):
+            with patch("src.alerts.settings") as mock_settings:
+                mock_settings.admin_user_ids = ["123"]
+                mock_settings.wit_free_monthly_limit = 500
+                await check_and_send_alerts(mock_context.bot, credits_just_sold=credits_for_10_dollars)
+
+        milestone_alerts = [a for a in alerts_sent if "$10" in a]
+        assert len(milestone_alerts) == 1

@@ -37,13 +37,20 @@ src/
 │   ├── bot.py
 │   ├── handlers.py
 │   ├── voice.py
-│   └── payments.py      # Telegram Stars Zahlungs-Handler
+│   ├── payments.py      # Telegram Stars Zahlungs-Handler
+│   └── chat_params.py   # Chat-Identifikations-Helfer
 ├── whatsapp/            # WhatsApp-Adapter
 │   ├── client.py
 │   └── handlers.py
-├── credits.py           # Kreditsystem & Nutzungsstatistiken
-├── wit_tracking.py      # Monatliche Wit.ai-Nutzungsverfolgung
+├── config.py            # Anwendungskonfiguration
 ├── const.py             # Gemeinsame Konstanten
+├── credits.py           # Kreditsystem & Nutzungsstatistiken
+├── dto.py               # Datentransferobjekte
+├── mongo.py             # MongoDB-Operationen
+├── wit_tracking.py      # Monatliche Wit.ai-Nutzungsverfolgung
+├── gpt_commands.py      # GPT-Befehl-Handler
+├── localization.py      # Mehrsprachige Übersetzungen
+├── alerts.py            # Admin-Benachrichtigungsdienst
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # GitHub-API-Operationen
 ├── obsidian.py          # Obsidian-Integration
@@ -98,6 +105,7 @@ WIT_DE_TOKEN=dein_deutsch_token
 
 # Optional: GPT-Integration
 GPT_TOKEN=dein_openai_token
+GPT_MODEL=gpt-4o-mini
 
 # Optional: WhatsApp-Integration (siehe WHATSAPP_SETUP.md)
 WHATSAPP_TOKEN=dein_whatsapp_token
@@ -105,6 +113,7 @@ WHATSAPP_PHONE_ID=deine_phone_id
 WHATSAPP_VERIFY_TOKEN=dein_verify_token
 
 # Optional: GitHub OAuth (für Obsidian-Integration)
+# Für manuelle Token-Einrichtung, siehe docs/GITHUB_TOKEN_SETUP.md
 GITHUB_CLIENT_ID=deine_github_oauth_app_client_id
 
 # Optional: Monetarisierung
@@ -165,6 +174,7 @@ Siehe [DEPLOY.md](../DEPLOY.md) für Docker-Deployment-Anweisungen.
 - [x] Obsidian-Integration über GitHub OAuth
 - [x] Monetarisierung (Telegram Stars, Kreditsystem, Groq Whisper)
 - [x] Nachrichtenklassifizierung nach Themen (Auto-Kategorisierung mit Claude Haiku)
+- [ ] ChatMemberUpdated Handler für Bereinigung
 
 ## Lizenz
 

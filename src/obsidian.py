@@ -1,47 +1,43 @@
-import base64
 import datetime
 import logging
 
-import httpx
-
-from telegram import Update
-
-from src.chat_params import get_chat_id
 from src.github_api import OBSIDIAN_NOTES_FOLDER, put_github_file
 from src.mongo import get_github_settings, get_save_to_obsidian
 
 logger = logging.getLogger(__name__)
 
 
-async def add_short_note_to_obsidian(update: Update):
+async def add_short_note_to_obsidian(chat_id: str, text: str) -> bool:
     """
     Creates a short note in the GitHub repository's `income` folder.
     """
-    if not update.message or not update.message.text:
-        return
-    note_text = update.message.text
+    if not text:
+        return False
+
+    github_settings = await get_github_settings(chat_id)
+    if not github_settings:
+        logger.warning("GitHub settings not found for chat %s", chat_id)
+        return False
+
     now_str = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"income/{now_str}.md"
-    content_base64 = base64.b64encode(note_text.encode("utf-8")).decode("utf-8")
     commit_message = f"Add short note {now_str}"
-    chat_id = get_chat_id(update)
-    github_settings = await get_github_settings(chat_id)
-    github_repo = github_settings["owner"] + "/" + github_settings["repo"]
-    github_token = github_settings["token"]
-    url = f"https://api.github.com/repos/{github_repo}/contents/{filename}"
-    headers = {
-        "Authorization": f"Bearer {github_token}",
-        "Accept": "application/vnd.github+json",
-    }
-    data = {"message": commit_message, "content": content_base64}
-    async with httpx.AsyncClient() as client:
-        response = await client.put(url, headers=headers, json=data)
-    if response.status_code in (200, 201):
-        logger.debug(f"Created note {filename} in the repository.")
+
+    result = await put_github_file(
+        token=github_settings["token"],
+        owner=github_settings["owner"],
+        repo=github_settings["repo"],
+        path=filename,
+        content=text,
+        commit_message=commit_message,
+    )
+
+    if result:
+        logger.debug("Created note %s in the repository.", filename)
     else:
-        logger.error(
-            f"Error creating note. Status: {response.status_code}, Details: {response.json()}"
-        )
+        logger.error("Error creating note %s", filename)
+
+    return result
 
 
 async def save_transcription_to_obsidian(

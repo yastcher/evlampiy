@@ -1,33 +1,33 @@
-from src.config import ENGLISH, GERMANY, RUSSIAN, SPANISH
+from src.config import ENGLISH, GERMAN, RUSSIAN, SPANISH
 
 translates = {
     "success": {
         ENGLISH: "Success",
-        GERMANY: "Erfolg",
+        GERMAN: "Erfolg",
         RUSSIAN: "Успешно",
         SPANISH: "Éxito",
     },
     "not_found": {
         ENGLISH: "Not found",
-        GERMANY: "Nicht gefunden",
+        GERMAN: "Nicht gefunden",
         RUSSIAN: "Не найден",
         SPANISH: "No encontrado",
     },
     "error_connection": {
         ENGLISH: "Connection error. Try later",
-        GERMANY: "Verbindungsfehler. Versuchen Sie es später",
+        GERMAN: "Verbindungsfehler. Versuchen Sie es später",
         RUSSIAN: "Ошибка соединения. Попробуйте позднее",
         SPANISH: "Error de conexión. Inténtalo más tarde",
     },
     "bad_data": {
         ENGLISH: "Bad data",
-        GERMANY: "Schlechte Daten",
+        GERMAN: "Schlechte Daten",
         RUSSIAN: "Неверные данные",
         SPANISH: "Datos incorrectos",
     },
     "choose_my_language": {
         ENGLISH: "Selected language: English",
-        GERMANY: "Ausgewählte Sprache: Deutsch",
+        GERMAN: "Ausgewählte Sprache: Deutsch",
         RUSSIAN: "Выбранный язык: Русский",
         SPANISH: "Idioma seleccionado: Español",
     },
@@ -42,7 +42,7 @@ translates = {
             "/balance - Check balance\n"
             "/mystats - Your statistics"
         ),
-        GERMANY: (
+        GERMAN: (
             "Sprache-zu-Text Bot. Sende einfach eine Sprachnachricht!\n\n"
             "Sprache: {chat_language}\n"
             "GPT-Trigger: {gpt_command}\n\n"
@@ -75,37 +75,37 @@ translates = {
     },
     "insufficient_credits": {
         ENGLISH: "Not enough credits. Use /buy to purchase more.",
-        GERMANY: "Nicht genügend Credits. Verwenden Sie /buy, um mehr zu kaufen.",
+        GERMAN: "Nicht genügend Credits. Verwenden Sie /buy, um mehr zu kaufen.",
         RUSSIAN: "Недостаточно кредитов. Используйте /buy для покупки.",
         SPANISH: "No tienes suficientes créditos. Usa /buy para comprar más.",
     },
     "service_unavailable": {
         ENGLISH: "Transcription service is temporarily unavailable. Please try again later.",
-        GERMANY: "Transkriptionsdienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.",
+        GERMAN: "Transkriptionsdienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.",
         RUSSIAN: "Сервис транскрипции временно недоступен. Попробуйте позже.",
         SPANISH: "El servicio de transcripción no está disponible temporalmente. Inténtalo más tarde.",
     },
     "categorize_enabled": {
         ENGLISH: "Auto-categorization enabled.",
-        GERMANY: "Automatische Kategorisierung aktiviert.",
+        GERMAN: "Automatische Kategorisierung aktiviert.",
         RUSSIAN: "Автокатегоризация включена.",
         SPANISH: "Categorización automática activada.",
     },
     "categorize_disabled": {
         ENGLISH: "Auto-categorization disabled.",
-        GERMANY: "Automatische Kategorisierung deaktiviert.",
+        GERMAN: "Automatische Kategorisierung deaktiviert.",
         RUSSIAN: "Автокатегоризация выключена.",
         SPANISH: "Categorización automática desactivada.",
     },
     "categorize_done": {
         ENGLISH: "Categorized {count} notes.",
-        GERMANY: "{count} Notizen kategorisiert.",
+        GERMAN: "{count} Notizen kategorisiert.",
         RUSSIAN: "Категоризировано заметок: {count}.",
         SPANISH: "{count} notas categorizadas.",
     },
     "categorize_no_files": {
         ENGLISH: "No files to categorize in income folder.",
-        GERMANY: "Keine Dateien zum Kategorisieren im Eingangsordner.",
+        GERMAN: "Keine Dateien zum Kategorisieren im Eingangsordner.",
         RUSSIAN: "Нет файлов для категоризации в папке income.",
         SPANISH: "No hay archivos para categorizar en la carpeta de entrada.",
     },
@@ -119,7 +119,7 @@ translates = {
             "• Credits spent: {total_spent}\n"
             "• Credits purchased: {total_purchased}"
         ),
-        GERMANY: (
+        GERMAN: (
             "📊 <b>Ihre Statistiken</b>\n\n"
             "Guthaben: {credits} Credits\n"
             "Stufe: {tier}\n\n"

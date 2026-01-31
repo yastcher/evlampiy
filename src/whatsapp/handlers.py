@@ -1,5 +1,6 @@
 """WhatsApp message handlers."""
 
+import asyncio
 import logging
 
 import httpx
@@ -73,5 +74,5 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
             )
 
     # Send transcription back
-    wa.send_message(to=phone_number, text=text)
+    await asyncio.to_thread(wa.send_message, to=phone_number, text=text)
     logger.info("Sent transcription to WhatsApp user %s", phone_number)

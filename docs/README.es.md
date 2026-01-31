@@ -37,13 +37,20 @@ src/
 │   ├── bot.py
 │   ├── handlers.py
 │   ├── voice.py
-│   └── payments.py      # Manejadores de pagos Telegram Stars
+│   ├── payments.py      # Manejadores de pagos Telegram Stars
+│   └── chat_params.py   # Helpers de identificación de chat
 ├── whatsapp/            # Adaptador WhatsApp
 │   ├── client.py
 │   └── handlers.py
-├── credits.py           # Sistema de créditos y estadísticas
-├── wit_tracking.py      # Seguimiento de uso mensual de Wit.ai
+├── config.py            # Configuración de la aplicación
 ├── const.py             # Constantes compartidas
+├── credits.py           # Sistema de créditos y estadísticas
+├── dto.py               # Objetos de transferencia de datos
+├── mongo.py             # Operaciones MongoDB
+├── wit_tracking.py      # Seguimiento de uso mensual de Wit.ai
+├── gpt_commands.py      # Manejador de comandos GPT
+├── localization.py      # Traducciones multilingües
+├── alerts.py            # Servicio de alertas de administrador
 ├── github_oauth.py      # GitHub OAuth Device Flow
 ├── github_api.py        # Operaciones de GitHub API
 ├── obsidian.py          # Integración con Obsidian
@@ -98,6 +105,7 @@ WIT_DE_TOKEN=tu_token_aleman
 
 # Opcional: integración GPT
 GPT_TOKEN=tu_token_openai
+GPT_MODEL=gpt-4o-mini
 
 # Opcional: integración WhatsApp (ver WHATSAPP_SETUP.md)
 WHATSAPP_TOKEN=tu_token_whatsapp
@@ -105,6 +113,7 @@ WHATSAPP_PHONE_ID=tu_phone_id
 WHATSAPP_VERIFY_TOKEN=tu_verify_token
 
 # Opcional: GitHub OAuth (para integración con Obsidian)
+# Para configuración manual del token, ver docs/GITHUB_TOKEN_SETUP.md
 GITHUB_CLIENT_ID=tu_github_oauth_app_client_id
 
 # Opcional: Monetización
@@ -165,6 +174,7 @@ Consulta [DEPLOY.md](../DEPLOY.md) para instrucciones de despliegue con Docker.
 - [x] Integración con Obsidian vía GitHub OAuth
 - [x] Monetización (Telegram Stars, sistema de créditos, Groq Whisper)
 - [x] Clasificación de mensajes por temas (auto-categorización con Claude Haiku)
+- [ ] ChatMemberUpdated handler para limpieza
 
 ## Licencia
 

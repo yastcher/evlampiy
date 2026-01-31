@@ -1,18 +1,19 @@
+from telegram import Update
 from telegram.constants import ChatMemberStatus
 from telegram.ext import ContextTypes
 
-from telegram import Update
+from src import const
 
 
 def is_private_chat(update: Update) -> bool:
-    return update.effective_chat.type == "private"
+    return update.effective_chat.type == const.PRIVATE_CHAT_TYPE
 
 
 def get_chat_id(update: Update) -> str:
     if is_private_chat(update):
-        return f"u_{update.effective_user.id}"
+        return f"{const.CHAT_PREFIX_USER}{update.effective_user.id}"
     else:
-        return f"g_{update.effective_chat.id}"
+        return f"{const.CHAT_PREFIX_GROUP}{update.effective_chat.id}"
 
 
 async def is_user_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:

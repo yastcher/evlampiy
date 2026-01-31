@@ -41,6 +41,9 @@ WHATSAPP_VERIFY_TOKEN=your_verify_token
 WHATSAPP_APP_ID=your_app_id
 WHATSAPP_APP_SECRET=your_app_secret
 
+# Optional: GitHub OAuth (for Obsidian integration)
+GITHUB_CLIENT_ID=your_github_oauth_app_client_id
+
 # Optional: Monetization
 GROQ_API_KEY=your_groq_api_key
 VIP_USER_IDS=123456,789012
@@ -174,6 +177,9 @@ WHATSAPP_PHONE_ID=ваш_phone_id
 WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
 WHATSAPP_APP_ID=ваш_app_id
 WHATSAPP_APP_SECRET=ваш_app_secret
+
+# Опционально: GitHub OAuth (для интеграции с Obsidian)
+GITHUB_CLIENT_ID=ваш_github_oauth_app_client_id
 
 # Опционально: Монетизация
 GROQ_API_KEY=ваш_groq_api_ключ

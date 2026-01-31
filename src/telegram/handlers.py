@@ -6,7 +6,6 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from src import const
 from src.categorization import categorize_all_income
-from src.chat_params import get_chat_id, is_private_chat, is_user_admin
 from src.config import settings
 from src.credits import (
     current_month_key,
@@ -32,6 +31,7 @@ from src.mongo import (
     set_gpt_command,
     set_save_to_obsidian,
 )
+from src.telegram.chat_params import get_chat_id, is_private_chat, is_user_admin
 from src.wit_tracking import get_wit_usage_this_month
 
 logger = logging.getLogger(__name__)
@@ -80,9 +80,9 @@ async def lang_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang_code = query.data.split("_")[-1]
 
     if is_private_chat(update):
-        chat_id = f"u_{query.from_user.id}"
+        chat_id = f"{const.CHAT_PREFIX_USER}{query.from_user.id}"
     else:
-        chat_id = f"g_{query.message.chat.id}"
+        chat_id = f"{const.CHAT_PREFIX_GROUP}{query.message.chat.id}"
 
     await query.edit_message_text(text=translates["choose_my_language"][lang_code])
     await set_chat_language(chat_id, lang_code)

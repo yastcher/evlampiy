@@ -15,9 +15,7 @@ class TestEvlampiyCommand:
         mock_private_update.message.text = "Tell me a joke"
 
         mock_response = MagicMock()
-        mock_response.__getitem__ = lambda self, key: {
-            "choices": [{"message": {"content": "Why did the chicken..."}}]
-        }[key]
+        mock_response.choices = [MagicMock(message=MagicMock(content="Why did the chicken..."))]
 
         with (
             patch("src.gpt_commands.client.chat.completions.create") as mock_create,
@@ -53,9 +51,7 @@ class TestEvlampiyCommand:
         mock_private_update.message.text = "Test"
 
         mock_response = MagicMock()
-        mock_response.__getitem__ = lambda self, key: {
-            "choices": [{"message": {"content": "Response"}}]
-        }[key]
+        mock_response.choices = [MagicMock(message=MagicMock(content="Response"))]
 
         with (
             patch("src.gpt_commands.client.chat.completions.create") as mock_create,

@@ -35,7 +35,7 @@ async def _mark_alert_sent(alert_type: str, month: str):
     await AlertState(alert_type=alert_type, month_key=month).insert()
 
 
-async def check_and_send_alerts(bot: Bot):
+async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1):
     if not settings.admin_user_ids:
         return
 
@@ -50,7 +50,7 @@ async def check_and_send_alerts(bot: Bot):
 
         revenue = stats.total_credits_sold * const.STAR_TO_DOLLAR
         for milestone in REVENUE_MILESTONES:
-            prev_revenue = (stats.total_credits_sold - 1) * const.STAR_TO_DOLLAR if stats.total_credits_sold > 0 else 0
+            prev_revenue = (stats.total_credits_sold - credits_just_sold) * const.STAR_TO_DOLLAR if stats.total_credits_sold >= credits_just_sold else 0
             if prev_revenue < milestone <= revenue:
                 alert_type = f"revenue_{milestone}"
                 if await _should_send_alert(alert_type, month):

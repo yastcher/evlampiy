@@ -12,9 +12,7 @@
 - Meta Business account (free)
 - Phone number for WhatsApp (can be a new number, not linked to personal WhatsApp)
 
-###
-
-Step 1: Create Meta Developer Account
+### Step 1: Create Meta Developer Account
 
 1. Go to [developers.facebook.com](https://developers.facebook.com/)
 2. Click "Get Started" and log in with your Facebook account
