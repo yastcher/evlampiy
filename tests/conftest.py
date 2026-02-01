@@ -2,9 +2,18 @@ import pytest
 from beanie import init_beanie
 from mongomock_motor import AsyncMongoMockClient
 
-from src.dto import AlertState, MonthlyStats, UsedTrial, UserCredits, UserSettings, WitUsageStats
+from src.dto import (
+    AccountLink,
+    AlertState,
+    LinkCode,
+    MonthlyStats,
+    UsedTrial,
+    UserCredits,
+    UserSettings,
+    WitUsageStats,
+)
 
-ALL_TEST_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState]
+ALL_TEST_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState, AccountLink, LinkCode]
 
 pytest_plugins = [
     "tests.fixtures",

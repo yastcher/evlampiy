@@ -143,6 +143,8 @@ For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETU
 | `/toggle_categorize`    | Enable/disable auto-categorization         |
 | `/categorize`           | Categorize all notes in income folder      |
 | `/disconnect_github`    | Disconnect GitHub and disable sync         |
+| `/link_whatsapp`        | Link your WhatsApp account                 |
+| `/unlink_whatsapp`      | Unlink your WhatsApp account               |
 
 For admin commands, see [docs/ADMIN.md](docs/ADMIN.md).
 

@@ -77,3 +77,20 @@ class AlertState(Document):
 
     class Settings:
         name = "alert_state"
+
+
+class AccountLink(Document):
+    telegram_user_id: str
+    whatsapp_phone: str
+
+    class Settings:
+        name = "account_links"
+
+
+class LinkCode(Document):
+    code: str
+    telegram_user_id: str
+    created_at: datetime = Field(default_factory=_utc_now)
+
+    class Settings:
+        name = "link_codes"

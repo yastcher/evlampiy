@@ -140,6 +140,8 @@ WIT_FREE_MONTHLY_LIMIT=500
 | `/toggle_categorize`    | Включить/выключить автокатегоризацию          |
 | `/categorize`           | Категоризировать все заметки из income        |
 | `/disconnect_github`    | Отключить GitHub и синхронизацию              |
+| `/link_whatsapp`        | Привязать аккаунт WhatsApp                    |
+| `/unlink_whatsapp`      | Отвязать аккаунт WhatsApp                     |
 
 Команды администратора см. в [ADMIN.md](ADMIN.md).
 

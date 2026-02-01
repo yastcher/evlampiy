@@ -141,6 +141,8 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 | `/toggle_categorize`    | Auto-Kategorisierung ein-/ausschalten            |
 | `/categorize`           | Alle Notizen im income-Ordner kategorisieren     |
 | `/disconnect_github`    | GitHub trennen und Synchronisierung deaktivieren |
+| `/link_whatsapp`        | WhatsApp-Konto verknüpfen                        |
+| `/unlink_whatsapp`      | WhatsApp-Konto trennen                           |
 
 Für Admin-Befehle siehe [ADMIN.md](ADMIN.md).
 

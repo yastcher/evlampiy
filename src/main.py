@@ -56,6 +56,8 @@ COMMAND_HANDLERS = {
     "stats": handlers.stats_command,
     "toggle_categorize": handlers.toggle_categorize,
     "categorize": handlers.categorize_all,
+    "link_whatsapp": handlers.link_whatsapp,
+    "unlink_whatsapp": handlers.unlink_whatsapp,
 }
 
 

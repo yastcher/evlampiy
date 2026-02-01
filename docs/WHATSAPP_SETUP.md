@@ -97,6 +97,10 @@ WHATSAPP_APP_SECRET=your_app_secret
 - [Meta Business Help](https://www.facebook.com/business/help)
 - [pywa Documentation](https://pywa.readthedocs.io/)
 
+### Account Linking
+
+To link a WhatsApp account to Telegram for shared credit balance, see [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).
+
 ---
 
 ## Настройка WhatsApp Business API
@@ -191,3 +195,7 @@ WHATSAPP_APP_SECRET=ваш_app_secret
 - [Документация WhatsApp Cloud API](https://developers.facebook.com/docs/whatsapp/cloud-api)
 - [Справка Meta Business](https://www.facebook.com/business/help)
 - [Документация pywa](https://pywa.readthedocs.io/)
+
+### Привязка аккаунтов
+
+Для привязки WhatsApp к Telegram и общего баланса кредитов см. [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).

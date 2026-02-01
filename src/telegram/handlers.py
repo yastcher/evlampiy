@@ -5,6 +5,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from src import const
+from src.account_linking import generate_link_code, unlink
 from src.categorization import categorize_all_income
 from src.config import settings
 from src.credits import (
@@ -250,6 +251,33 @@ async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
             language, translates["categorize_no_files"]["en"]
         )
         await update.message.reply_text(text)
+
+
+async def link_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_private_chat(update):
+        return
+
+    user_id = str(update.effective_user.id)
+    code = await generate_link_code(user_id)
+
+    await update.message.reply_text(
+        f"Send this message to the bot on WhatsApp:\n\n"
+        f"link {code}\n\n"
+        f"Code expires in 5 minutes."
+    )
+
+
+async def unlink_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_private_chat(update):
+        return
+
+    user_id = str(update.effective_user.id)
+    result = await unlink(user_id)
+
+    if result:
+        await update.message.reply_text("WhatsApp account unlinked.")
+    else:
+        await update.message.reply_text("No WhatsApp account linked.")
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

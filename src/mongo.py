@@ -2,9 +2,18 @@ from beanie import init_beanie
 from motor import motor_asyncio
 
 from src.config import settings
-from src.dto import AlertState, MonthlyStats, UsedTrial, UserCredits, UserSettings, WitUsageStats
+from src.dto import (
+    AccountLink,
+    AlertState,
+    LinkCode,
+    MonthlyStats,
+    UsedTrial,
+    UserCredits,
+    UserSettings,
+    WitUsageStats,
+)
 
-ALL_DOCUMENT_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState]
+ALL_DOCUMENT_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState, AccountLink, LinkCode]
 
 
 async def init_beanie_models():

@@ -8,6 +8,7 @@ from pywa import WhatsApp
 from pywa.types import Message
 
 from src import const
+from src.account_linking import confirm_link
 from src.categorization import categorize_note
 from src.config import settings
 from src.mongo import get_auto_categorize, get_chat_language, get_github_settings
@@ -24,8 +25,29 @@ def register_handlers(wa: WhatsApp) -> None:
     @wa.on_message()
     async def handle_message(client: WhatsApp, message: Message):
         """Handle incoming WhatsApp messages."""
-        if message.audio or message.voice:
+        if message.text and message.text.strip().lower().startswith("link "):
+            await handle_link_command(client, message)
+        elif message.audio or message.voice:
             await handle_voice_message(client, message)
+
+
+async def handle_link_command(wa: WhatsApp, message: Message) -> None:
+    """Handle account linking command from WhatsApp."""
+    phone = message.from_user.wa_id
+    parts = message.text.strip().split(maxsplit=1)
+    code = parts[1] if len(parts) > 1 else ""
+
+    if not code:
+        await asyncio.to_thread(wa.send_message, to=phone, text="Usage: link <code>")
+        return
+
+    result = await confirm_link(code, phone)
+    if result:
+        await asyncio.to_thread(wa.send_message, to=phone, text="Account linked successfully!")
+    else:
+        await asyncio.to_thread(
+            wa.send_message, to=phone, text="Invalid or expired code. Try /link_whatsapp in Telegram."
+        )
 
 
 async def handle_voice_message(wa: WhatsApp, message: Message) -> None:

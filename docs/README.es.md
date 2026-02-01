@@ -141,6 +141,8 @@ Para instrucciones de configuración de WhatsApp, consulta [WHATSAPP_SETUP.md](W
 | `/toggle_categorize`    | Activar/desactivar auto-categorización         |
 | `/categorize`           | Categorizar todas las notas en income          |
 | `/disconnect_github`    | Desconectar GitHub y desactivar sincronización |
+| `/link_whatsapp`        | Vincular tu cuenta de WhatsApp                 |
+| `/unlink_whatsapp`      | Desvincular tu cuenta de WhatsApp              |
 
 Para comandos de administrador, ver [ADMIN.md](ADMIN.md).
 
