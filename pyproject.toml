@@ -1,6 +1,6 @@
 [project]
 name = "evlampiy"
-version = "0.6.1"
+version = "0.6.2"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = ["Yast <yastcher@gmail.com>"]

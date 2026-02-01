@@ -42,8 +42,12 @@ async def handle_link_command(wa: WhatsApp, message: Message) -> None:
         return
 
     result = await confirm_link(code, phone)
-    if result:
+    if result == "success":
         await asyncio.to_thread(wa.send_message, to=phone, text="Account linked successfully!")
+    elif result == "rate_limited":
+        await asyncio.to_thread(
+            wa.send_message, to=phone, text="Too many attempts. Please wait 5 minutes and try again."
+        )
     else:
         await asyncio.to_thread(
             wa.send_message, to=phone, text="Invalid or expired code. Try /link_whatsapp in Telegram."

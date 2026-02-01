@@ -5,6 +5,7 @@ from src.config import settings
 from src.dto import (
     AccountLink,
     AlertState,
+    LinkAttempt,
     LinkCode,
     MonthlyStats,
     UsedTrial,
@@ -13,7 +14,7 @@ from src.dto import (
     WitUsageStats,
 )
 
-ALL_DOCUMENT_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState, AccountLink, LinkCode]
+ALL_DOCUMENT_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState, AccountLink, LinkCode, LinkAttempt]
 
 
 async def init_beanie_models():

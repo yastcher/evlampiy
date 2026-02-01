@@ -8,13 +8,14 @@ import pytest
 from src.account_linking import (
     LINK_CODE_LENGTH,
     LINK_CODE_TTL_SECONDS,
+    LINK_MAX_ATTEMPTS,
     confirm_link,
     generate_link_code,
     get_linked_telegram_id,
     get_linked_whatsapp,
     unlink,
 )
-from src.dto import LinkCode
+from src.dto import LinkAttempt, LinkCode
 
 pytestmark = [pytest.mark.asyncio]
 
@@ -38,7 +39,7 @@ class TestAccountLinking:
 
         # 3. Confirm link
         result = await confirm_link(code, whatsapp_phone)
-        assert result is True
+        assert result == "success"
 
         # 4. Link exists both ways
         assert await get_linked_telegram_id(whatsapp_phone) == telegram_user_id
@@ -53,9 +54,9 @@ class TestAccountLinking:
         assert await get_linked_whatsapp(telegram_user_id) is None
 
     async def test_invalid_code_rejected(self):
-        """Invalid code returns False."""
+        """Invalid code returns 'invalid'."""
         result = await confirm_link("000000", "79001234567")
-        assert result is False
+        assert result == "invalid"
 
     async def test_expired_code_rejected(self):
         """Expired code returns False."""
@@ -68,7 +69,7 @@ class TestAccountLinking:
         await record.save()
 
         result = await confirm_link(code, "79009999999")
-        assert result is False
+        assert result == "invalid"
 
     async def test_new_code_invalidates_old(self):
         """Generating new code invalidates previous one."""
@@ -79,11 +80,11 @@ class TestAccountLinking:
 
         # Old code should not work
         result = await confirm_link(old_code, "79001111111")
-        assert result is False
+        assert result == "invalid"
 
         # New code works
         result = await confirm_link(new_code, "79001111111")
-        assert result is True
+        assert result == "success"
 
     async def test_relinking_replaces_old_link(self):
         """New link replaces existing one for the same Telegram user."""
@@ -217,3 +218,93 @@ class TestWhatsAppLinkHandler:
 
         call_text = mock_wa.send_message.call_args.kwargs["text"]
         assert "invalid" in call_text.lower() or "expired" in call_text.lower()
+
+
+class TestRateLimiting:
+    """Test rate limiting for link confirmation."""
+
+    async def test_locks_after_max_attempts(self):
+        """Phone gets locked after LINK_MAX_ATTEMPTS failed attempts."""
+        phone = "79005555555"
+
+        for i in range(LINK_MAX_ATTEMPTS):
+            result = await confirm_link("000000", phone)
+            assert result == "invalid", f"Attempt {i + 1} should return invalid"
+
+        # Next attempt should be rate limited
+        result = await confirm_link("000000", phone)
+        assert result == "rate_limited"
+
+    async def test_rate_limit_blocks_valid_code(self):
+        """Even valid code is rejected when rate limited."""
+        phone = "79006666666"
+        user_id = "rate_limit_user"
+
+        # Exhaust attempts
+        for _ in range(LINK_MAX_ATTEMPTS):
+            await confirm_link("000000", phone)
+
+        # Generate valid code
+        code = await generate_link_code(user_id)
+
+        # Valid code should still be rejected
+        result = await confirm_link(code, phone)
+        assert result == "rate_limited"
+
+        # Link should not exist
+        assert await get_linked_telegram_id(phone) is None
+
+    async def test_rate_limit_clears_after_lockout(self):
+        """Rate limit clears after lockout period."""
+        phone = "79007777777"
+        user_id = "lockout_user"
+
+        # Exhaust attempts
+        for _ in range(LINK_MAX_ATTEMPTS):
+            await confirm_link("000000", phone)
+
+        # Manually expire the lockout
+        attempt = await LinkAttempt.find_one(LinkAttempt.whatsapp_phone == phone)
+        attempt.locked_until = datetime.now(timezone.utc) - timedelta(seconds=1)
+        await attempt.save()
+
+        # Generate valid code and confirm
+        code = await generate_link_code(user_id)
+        result = await confirm_link(code, phone)
+        assert result == "success"
+
+    async def test_success_clears_rate_limit(self):
+        """Successful link clears rate limit record."""
+        phone = "79008888888"
+        user_id = "clear_user"
+
+        # Make some failed attempts (but not enough to lock)
+        await confirm_link("000000", phone)
+        await confirm_link("000000", phone)
+
+        # Now succeed
+        code = await generate_link_code(user_id)
+        result = await confirm_link(code, phone)
+        assert result == "success"
+
+        # Rate limit record should be deleted
+        attempt = await LinkAttempt.find_one(LinkAttempt.whatsapp_phone == phone)
+        assert attempt is None
+
+    async def test_different_phones_independent(self):
+        """Rate limiting is per-phone, not global."""
+        phone_a = "79009999991"
+        phone_b = "79009999992"
+        user_id = "multi_phone_user"
+
+        # Exhaust attempts on phone_a
+        for _ in range(LINK_MAX_ATTEMPTS):
+            await confirm_link("000000", phone_a)
+
+        # phone_a is locked
+        assert await confirm_link("000000", phone_a) == "rate_limited"
+
+        # phone_b should still work
+        code = await generate_link_code(user_id)
+        result = await confirm_link(code, phone_b)
+        assert result == "success"

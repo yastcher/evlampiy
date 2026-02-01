@@ -5,6 +5,7 @@ from mongomock_motor import AsyncMongoMockClient
 from src.dto import (
     AccountLink,
     AlertState,
+    LinkAttempt,
     LinkCode,
     MonthlyStats,
     UsedTrial,
@@ -13,7 +14,7 @@ from src.dto import (
     WitUsageStats,
 )
 
-ALL_TEST_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState, AccountLink, LinkCode]
+ALL_TEST_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState, AccountLink, LinkCode, LinkAttempt]
 
 pytest_plugins = [
     "tests.fixtures",

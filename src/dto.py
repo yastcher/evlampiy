@@ -94,3 +94,13 @@ class LinkCode(Document):
 
     class Settings:
         name = "link_codes"
+
+
+class LinkAttempt(Document):
+    whatsapp_phone: str
+    attempt_count: int = 0
+    first_attempt_at: datetime = Field(default_factory=_utc_now)
+    locked_until: datetime | None = None
+
+    class Settings:
+        name = "link_attempts"
