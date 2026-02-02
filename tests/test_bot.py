@@ -1,13 +1,10 @@
 from unittest.mock import MagicMock
 
-import pytest
 from telegram.constants import ParseMode
 
 from telegram import InlineKeyboardMarkup
 
 from src.telegram.bot import MAX_TELEGRAM_MESSAGE_LENGTH, send_response
-
-pytestmark = [pytest.mark.asyncio]
 
 
 class TestSendResponse:

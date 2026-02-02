@@ -1,6 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import AsyncMock, patch
 
 from src.categorization import (
     categorize_all_income,
@@ -9,21 +7,6 @@ from src.categorization import (
     get_existing_categories,
     move_github_file,
 )
-
-pytestmark = [pytest.mark.asyncio]
-
-
-def _mock_httpx_response(json_data=None, status_code=200):
-    response = MagicMock()
-    response.json.return_value = json_data or {}
-    response.status_code = status_code
-    return response
-
-
-def _setup_async_client(mock_client_cls, mock_client):
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-    mock_client_cls.return_value = mock_client
 
 
 class TestGetExistingCategories:
@@ -61,7 +44,7 @@ class TestGetExistingCategories:
 class TestClassifyNote:
     """Test note classification with Claude API."""
 
-    async def test_returns_existing_category(self):
+    async def test_returns_existing_category(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns existing category when note matches."""
         api_response = {
             "content": [{"text": "work"}],
@@ -71,15 +54,14 @@ class TestClassifyNote:
             patch("src.categorization.settings.anthropic_api_key", "test-key"),
             patch("src.categorization.httpx.AsyncClient") as mock_client_cls,
         ):
-            mock_client = AsyncMock()
-            mock_client.post.return_value = _mock_httpx_response(api_response, 200)
-            _setup_async_client(mock_client_cls, mock_client)
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.post.return_value = mock_httpx_response_factory(api_response, 200)
 
             result = await classify_note("Meeting notes about project X", ["work", "personal"])
 
         assert result == "work"
 
-    async def test_suggests_new_category(self):
+    async def test_suggests_new_category(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Suggests new category name when no match."""
         api_response = {
             "content": [{"text": "health_fitness"}],
@@ -89,9 +71,8 @@ class TestClassifyNote:
             patch("src.categorization.settings.anthropic_api_key", "test-key"),
             patch("src.categorization.httpx.AsyncClient") as mock_client_cls,
         ):
-            mock_client = AsyncMock()
-            mock_client.post.return_value = _mock_httpx_response(api_response, 200)
-            _setup_async_client(mock_client_cls, mock_client)
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.post.return_value = mock_httpx_response_factory(api_response, 200)
 
             result = await classify_note("Gym workout plan", ["work", "personal"])
 
@@ -104,7 +85,7 @@ class TestClassifyNote:
 
         assert result is None
 
-    async def test_normalizes_category_name(self):
+    async def test_normalizes_category_name(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Converts spaces to underscores and lowercases."""
         api_response = {
             "content": [{"text": "Health Fitness"}],
@@ -114,23 +95,21 @@ class TestClassifyNote:
             patch("src.categorization.settings.anthropic_api_key", "test-key"),
             patch("src.categorization.httpx.AsyncClient") as mock_client_cls,
         ):
-            mock_client = AsyncMock()
-            mock_client.post.return_value = _mock_httpx_response(api_response, 200)
-            _setup_async_client(mock_client_cls, mock_client)
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.post.return_value = mock_httpx_response_factory(api_response, 200)
 
             result = await classify_note("Workout notes", [])
 
         assert result == "health_fitness"
 
-    async def test_returns_none_on_api_error(self):
+    async def test_returns_none_on_api_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns None when Anthropic API fails."""
         with (
             patch("src.categorization.settings.anthropic_api_key", "test-key"),
             patch("src.categorization.httpx.AsyncClient") as mock_client_cls,
         ):
-            mock_client = AsyncMock()
-            mock_client.post.return_value = _mock_httpx_response(status_code=500)
-            _setup_async_client(mock_client_cls, mock_client)
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.post.return_value = mock_httpx_response_factory(status_code=500)
 
             result = await classify_note("Some text", ["work"])
 

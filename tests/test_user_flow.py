@@ -2,11 +2,36 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from telegram.constants import ChatMemberStatus
+from telegram.ext import ConversationHandler
 
 from src.config import ENGLISH, GERMAN, RUSSIAN, SPANISH
-from src.telegram.handlers import choose_language, lang_buttons, start
-
-pytestmark = [pytest.mark.asyncio]
+from src.credits import add_credits
+from src.mongo import (
+    get_auto_categorize,
+    get_chat_language,
+    get_github_settings,
+    get_gpt_command,
+    get_save_to_obsidian,
+    set_auto_categorize,
+    set_chat_language,
+    set_github_settings,
+    set_gpt_command,
+    set_save_to_obsidian,
+)
+from src.telegram.handlers import (
+    WAITING_FOR_COMMAND,
+    categorize_all,
+    choose_language,
+    connect_github,
+    disconnect_github,
+    enter_your_command,
+    handle_command_input,
+    lang_buttons,
+    start,
+    toggle_categorize,
+    toggle_obsidian,
+)
+from src.telegram.voice import from_voice_to_text
 
 
 class TestStartCommand:
@@ -14,42 +39,42 @@ class TestStartCommand:
 
     async def test_private_chat_new_user(self, mock_private_update, mock_context):
         """New user sends /start in private chat."""
-        with (
-            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
-            patch("src.telegram.handlers.get_gpt_command", AsyncMock(return_value="евлампий")),
-        ):
-            await start(mock_private_update, mock_context)
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_gpt_command(chat_id, "евлампий")
 
-            mock_private_update.message.reply_text.assert_called_once()
-            reply_text = mock_private_update.message.reply_text.call_args[0][0]
-            assert "voice" in reply_text.lower()
-            assert "en" in reply_text
+        await start(mock_private_update, mock_context)
+
+        mock_private_update.message.reply_text.assert_called_once()
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "voice" in reply_text.lower()
+        assert "en" in reply_text
 
     async def test_group_chat_admin_allowed(self, mock_group_update, mock_context):
         """Admin sends /start in group chat."""
+        chat_id = "g_-100123456"
+        await set_chat_language(chat_id, "ru")
+        await set_gpt_command(chat_id, "евлампий")
+
         mock_context.bot.get_chat_member.return_value = MagicMock(
             status=ChatMemberStatus.ADMINISTRATOR
         )
 
-        with (
-            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="ru")),
-            patch("src.telegram.handlers.get_gpt_command", AsyncMock(return_value="евлампий")),
-        ):
-            await start(mock_group_update, mock_context)
+        await start(mock_group_update, mock_context)
 
-            mock_group_update.message.reply_text.assert_called_once()
+        mock_group_update.message.reply_text.assert_called_once()
 
     async def test_group_chat_owner_allowed(self, mock_group_update, mock_context):
         """Owner sends /start in group chat."""
+        chat_id = "g_-100123456"
+        await set_chat_language(chat_id, "ru")
+        await set_gpt_command(chat_id, "евлампий")
+
         mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.OWNER)
 
-        with (
-            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="ru")),
-            patch("src.telegram.handlers.get_gpt_command", AsyncMock(return_value="евлампий")),
-        ):
-            await start(mock_group_update, mock_context)
+        await start(mock_group_update, mock_context)
 
-            mock_group_update.message.reply_text.assert_called_once()
+        mock_group_update.message.reply_text.assert_called_once()
 
     async def test_group_chat_member_blocked(self, mock_group_update, mock_context):
         """Regular member sends /start in group chat - ignored."""
@@ -103,23 +128,26 @@ class TestLanguageButtons:
         lang_code,
         expected_text,
     ):
-        """User clicks language button - language is saved."""
+        """User clicks language button - language is saved to DB."""
+        chat_id = "u_12345"
         mock_callback_query.data = f"set_lang_{lang_code}"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
 
-        with patch("src.telegram.handlers.set_chat_language", AsyncMock()) as mock_set_lang:
-            await lang_buttons(mock_private_update, mock_context)
+        await lang_buttons(mock_private_update, mock_context)
 
-            mock_set_lang.assert_called_once_with("u_12345", lang_code)
-            mock_callback_query.answer.assert_called_once()
-            mock_callback_query.edit_message_text.assert_called_once()
+        # Verify language was saved to real DB
+        saved_language = await get_chat_language(chat_id)
+        assert saved_language == lang_code
+        mock_callback_query.answer.assert_called_once()
+        mock_callback_query.edit_message_text.assert_called_once()
 
     async def test_group_chat_language_button(
         self, mock_group_update, mock_context, mock_callback_query
     ):
         """Admin clicks language button in group chat."""
+        chat_id = "g_-100123456"
         mock_callback_query.data = "set_lang_en"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = -100123456
@@ -128,41 +156,148 @@ class TestLanguageButtons:
             status=ChatMemberStatus.ADMINISTRATOR
         )
 
-        with patch("src.telegram.handlers.set_chat_language", AsyncMock()) as mock_set_lang:
-            await lang_buttons(mock_group_update, mock_context)
+        await lang_buttons(mock_group_update, mock_context)
 
-            mock_set_lang.assert_called_once_with("g_-100123456", "en")
+        # Verify language was saved to real DB
+        saved_language = await get_chat_language(chat_id)
+        assert saved_language == "en"
 
 
-class TestVoiceMessage:
-    """Test voice message processing."""
+class TestVoiceMessageFlow:
+    """Test voice message processing flow with real DB operations."""
 
-    async def test_voice_message_translated(self, mock_private_update, mock_context):
-        """Voice message is translated to text."""
-        from src.telegram.voice import from_voice_to_text
+    async def test_no_voice_message_returns_early(self, mock_private_update, mock_context):
+        """Handler returns early when no voice message attached."""
+        mock_private_update.message.voice = None
 
-        mock_voice = MagicMock()
-        mock_voice.get_file = AsyncMock()
-        mock_voice.get_file.return_value.download_as_bytearray = AsyncMock(
-            return_value=b"fake_audio_data"
-        )
-        mock_private_update.message.voice = mock_voice
+        await from_voice_to_text(mock_private_update, mock_context)
+
+        # No errors, no responses
+        mock_private_update.message.reply_text.assert_not_called()
+
+    async def test_service_unavailable_when_no_provider(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
+        """Shows service unavailable when no transcription provider available."""
+        chat_id = "u_12350"
+        mock_private_update.effective_user.id = 12350
+        mock_private_update.effective_chat.id = 12350
+
+        await set_chat_language(chat_id, "en")
+        mock_private_update.message.voice = mock_telegram_voice
 
         with (
-            patch("src.telegram.voice.get_chat_language", AsyncMock(return_value="en")),
-            patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
+            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=False)),
+            patch("src.telegram.voice.settings.groq_api_key", ""),
+            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
+        ):
+            await from_voice_to_text(mock_private_update, mock_context)
+
+            mock_send.assert_called_once()
+            call_kwargs = mock_send.call_args.kwargs
+            assert "unavailable" in call_kwargs["response"].lower()
+
+    async def test_insufficient_credits_message(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
+        """Shows insufficient credits when user has no credits."""
+        chat_id = "u_12351"
+        mock_private_update.effective_user.id = 12351
+        mock_private_update.effective_chat.id = 12351
+
+        await set_chat_language(chat_id, "en")
+        mock_private_update.message.voice = mock_telegram_voice
+
+        with (
+            patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock(return_value=False)),
+            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
+            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
+        ):
+            await from_voice_to_text(mock_private_update, mock_context)
+
+            mock_send.assert_called_once()
+            call_kwargs = mock_send.call_args.kwargs
+            assert "credit" in call_kwargs["response"].lower()
+
+    async def test_groq_provider_records_usage(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
+        """Groq provider usage is recorded in stats."""
+        from src.dto import MonthlyStats
+
+        user_id = "12352"
+        chat_id = "u_12352"
+        mock_private_update.effective_user.id = 12352
+        mock_private_update.effective_chat.id = 12352
+
+        await set_chat_language(chat_id, "en")
+        await add_credits(user_id, 100)
+        mock_private_update.message.voice = mock_telegram_voice
+
+        with (
+            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=False)),
+            patch("src.telegram.voice.settings.groq_api_key", "test-key"),
+            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello", 10))),
+            patch("src.telegram.voice.send_response", AsyncMock()),
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(False, None))),
+            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
+        ):
+            await from_voice_to_text(mock_private_update, mock_context)
+
+        # Verify groq usage was recorded
+        from src.credits import current_month_key
+
+        month_key = current_month_key()
+        stats = await MonthlyStats.find_one(MonthlyStats.month_key == month_key)
+        assert stats is not None
+        assert stats.groq_audio_seconds >= 10
+
+    async def test_voice_message_with_auto_categorize(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
+        """Voice message triggers auto-categorization when enabled."""
+        user_id = "12353"
+        chat_id = "u_12353"
+        mock_private_update.effective_user.id = 12353
+        mock_private_update.effective_chat.id = 12353
+
+        await set_chat_language(chat_id, "en")
+        await set_gpt_command(chat_id, "евлампий")
+        await add_credits(user_id, 100)
+        await set_github_settings(chat_id, "owner", "repo", "token")
+        await set_auto_categorize(chat_id, True)
+
+        mock_private_update.message.voice = mock_telegram_voice
+
+        with (
+            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Note content", 5))),
+            patch("src.telegram.voice.send_response", AsyncMock()),
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(True, "note.md"))),
+            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
+            patch("src.telegram.voice.categorize_note", AsyncMock(return_value="work")) as mock_categorize,
+        ):
+            await from_voice_to_text(mock_private_update, mock_context)
+
+            mock_categorize.assert_called_once()
+
+    async def test_voice_message_flow(self, mock_private_update, mock_context, mock_telegram_voice):
+        """Complete voice message flow: setup user -> transcribe -> response."""
+        user_id = "12345"
+        chat_id = "u_12345"
+
+        # =Y Setup user in real DB
+        await set_chat_language(chat_id, "en")
+        await set_gpt_command(chat_id, "евлампий")
+        await add_credits(user_id, 100)
+
+        mock_private_update.message.voice = mock_telegram_voice
+
+        # Mock only external boundaries
+        with (
             patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello world", 5))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(True, "test.md"))),
-            patch("src.telegram.voice.get_auto_categorize", AsyncMock(return_value=False)),
-            patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
-            patch("src.telegram.voice.has_unlimited_access", return_value=True),
-            patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
-            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
-            patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
-            patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
-            patch("src.telegram.voice.increment_user_stats", AsyncMock()),
-            patch("src.telegram.voice.record_groq_usage", AsyncMock()),
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(False, None))),
+            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -170,32 +305,28 @@ class TestVoiceMessage:
             call_kwargs = mock_send.call_args.kwargs
             assert call_kwargs["response"] == "Hello world"
 
-    async def test_voice_message_with_command_prefix(self, mock_private_update, mock_context):
-        """Voice message starting with command triggers GPT response."""
-        from src.telegram.voice import from_voice_to_text
+    async def test_voice_message_with_command_prefix(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
+        """Voice message starting with command triggers GPT response indicator."""
+        user_id = "12346"
+        chat_id = "u_12346"
+        mock_private_update.effective_user.id = 12346
+        mock_private_update.effective_chat.id = 12346
 
-        mock_voice = MagicMock()
-        mock_voice.get_file = AsyncMock()
-        mock_voice.get_file.return_value.download_as_bytearray = AsyncMock(
-            return_value=b"fake_audio_data"
-        )
-        mock_private_update.message.voice = mock_voice
+        # =Y Setup user in real DB
+        await set_chat_language(chat_id, "ru")
+        await set_gpt_command(chat_id, "евлампий")
+        await add_credits(user_id, 100)
 
+        mock_private_update.message.voice = mock_telegram_voice
+
+        # Mock only external boundaries
         with (
-            patch("src.telegram.voice.get_chat_language", AsyncMock(return_value="ru")),
-            patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
             patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("евлампий расскажи анекдот", 10))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(True, "test.md"))),
-            patch("src.telegram.voice.get_auto_categorize", AsyncMock(return_value=False)),
-            patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
-            patch("src.telegram.voice.has_unlimited_access", return_value=True),
-            patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
-            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
-            patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
-            patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
-            patch("src.telegram.voice.increment_user_stats", AsyncMock()),
-            patch("src.telegram.voice.record_groq_usage", AsyncMock()),
+            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(False, None))),
+            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -203,53 +334,30 @@ class TestVoiceMessage:
             call_kwargs = mock_send.call_args.kwargs
             assert "Command" in call_kwargs["response"]
 
-    async def test_empty_voice_message_ignored(self, mock_private_update, mock_context):
+    async def test_empty_voice_message_ignored(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
         """Empty voice transcription produces no response."""
-        from src.telegram.voice import from_voice_to_text
+        user_id = "12347"
+        chat_id = "u_12347"
+        mock_private_update.effective_user.id = 12347
+        mock_private_update.effective_chat.id = 12347
 
-        mock_voice = MagicMock()
-        mock_voice.get_file = AsyncMock()
-        mock_voice.get_file.return_value.download_as_bytearray = AsyncMock(
-            return_value=b"fake_audio_data"
-        )
-        mock_private_update.message.voice = mock_voice
+        # =Y Setup user in real DB
+        await set_chat_language(chat_id, "en")
+        await add_credits(user_id, 100)
 
+        mock_private_update.message.voice = mock_telegram_voice
+
+        # Mock only external boundaries
         with (
-            patch("src.telegram.voice.get_chat_language", AsyncMock(return_value="en")),
-            patch("src.telegram.voice.get_gpt_command", AsyncMock(return_value="евлампий")),
             patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("", 0))),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(False, None))),
-            patch("src.telegram.voice.get_auto_categorize", AsyncMock(return_value=False)),
-            patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock()),
-            patch("src.telegram.voice.has_unlimited_access", return_value=True),
-            patch("src.telegram.voice.get_user_tier", AsyncMock(return_value="vip")),
-            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
-            patch("src.telegram.voice.increment_wit_usage", AsyncMock()),
-            patch("src.telegram.voice.increment_transcription_stats", AsyncMock()),
-            patch("src.telegram.voice.increment_user_stats", AsyncMock()),
-            patch("src.telegram.voice.record_groq_usage", AsyncMock()),
+            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
             mock_send.assert_not_called()
-
-
-class TestBotRemoval:
-    """Test scenarios when user removes/blocks the bot.
-
-    TODO: ChatMemberUpdated handler is not implemented in current codebase.
-    """
-
-    @pytest.mark.skip(reason="ChatMemberUpdated handler not implemented")
-    async def test_user_blocks_bot_in_private_chat(self):
-        """User blocks bot - cleanup user data."""
-        pass
-
-    @pytest.mark.skip(reason="ChatMemberUpdated handler not implemented")
-    async def test_bot_removed_from_group(self):
-        """Bot removed from group - cleanup group data."""
-        pass
 
 
 class TestEnterYourCommand:
@@ -257,8 +365,6 @@ class TestEnterYourCommand:
 
     async def test_prompts_for_command_input(self, mock_private_update, mock_context):
         """User is prompted to enter custom command."""
-        from src.telegram.handlers import WAITING_FOR_COMMAND, enter_your_command
-
         result = await enter_your_command(mock_private_update, mock_context)
 
         mock_private_update.message.reply_text.assert_called_once_with(
@@ -268,10 +374,6 @@ class TestEnterYourCommand:
 
     async def test_non_admin_blocked_in_group(self, mock_group_update, mock_context):
         """Non-admin in group chat - returns END."""
-        from telegram.ext import ConversationHandler
-
-        from src.telegram.handlers import enter_your_command
-
         mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
         result = await enter_your_command(mock_group_update, mock_context)
@@ -281,23 +383,21 @@ class TestEnterYourCommand:
 
 
 class TestHandleCommandInput:
-    """Test command input handler."""
+    """Test command input handler with real DB."""
 
     async def test_saves_custom_command(self, mock_private_update, mock_context):
-        """Custom command is saved."""
-        from telegram.ext import ConversationHandler
-
-        from src.telegram.handlers import handle_command_input
-
+        """Custom command is saved to real DB."""
+        chat_id = "u_12345"
         mock_private_update.message.text = "my_custom_command"
 
-        with patch("src.telegram.handlers.set_gpt_command", AsyncMock()) as mock_set_cmd:
-            result = await handle_command_input(mock_private_update, mock_context)
+        result = await handle_command_input(mock_private_update, mock_context)
 
-            mock_set_cmd.assert_called_once_with("u_12345", "my_custom_command")
-            mock_private_update.message.reply_text.assert_called_once()
-            assert "my_custom_command" in mock_private_update.message.reply_text.call_args[0][0]
-            assert result == ConversationHandler.END
+        # Verify command was saved to real DB
+        saved_command = await get_gpt_command(chat_id)
+        assert saved_command == "my_custom_command"
+        mock_private_update.message.reply_text.assert_called_once()
+        assert "my_custom_command" in mock_private_update.message.reply_text.call_args[0][0]
+        assert result == ConversationHandler.END
 
 
 class TestConnectGithub:
@@ -305,8 +405,6 @@ class TestConnectGithub:
 
     async def test_sends_device_code_message(self, mock_private_update, mock_context):
         """User receives device code and verification URL."""
-        from src.telegram.handlers import connect_github
-
         device_info = {
             "device_code": "abc123",
             "user_code": "ABCD-1234",
@@ -331,8 +429,6 @@ class TestConnectGithub:
 
     async def test_handles_device_code_error(self, mock_private_update, mock_context):
         """Error response from device code request."""
-        from src.telegram.handlers import connect_github
-
         with patch(
             "src.telegram.handlers.get_github_device_code",
             AsyncMock(return_value={"error": "unauthorized_client"}),
@@ -344,100 +440,94 @@ class TestConnectGithub:
 
 
 class TestToggleObsidian:
-    """Test /toggle_obsidian command."""
+    """Test /toggle_obsidian command with real DB."""
 
     async def test_toggles_on(self, mock_private_update, mock_context):
         """Enables Obsidian sync when currently disabled."""
-        from src.telegram.handlers import toggle_obsidian
+        chat_id = "u_12345"
+        # Ensure initially disabled
+        await set_save_to_obsidian(chat_id, False)
 
-        with (
-            patch("src.telegram.handlers.get_save_to_obsidian", AsyncMock(return_value=False)),
-            patch("src.telegram.handlers.set_save_to_obsidian", AsyncMock()) as mock_set,
-        ):
-            await toggle_obsidian(mock_private_update, mock_context)
+        await toggle_obsidian(mock_private_update, mock_context)
 
-        mock_set.assert_called_once_with("u_12345", True)
+        # Verify state changed in real DB
+        assert await get_save_to_obsidian(chat_id) is True
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "enabled" in reply_text
 
     async def test_toggles_off(self, mock_private_update, mock_context):
         """Disables Obsidian sync when currently enabled."""
-        from src.telegram.handlers import toggle_obsidian
+        chat_id = "u_12345"
+        # Ensure initially enabled
+        await set_save_to_obsidian(chat_id, True)
 
-        with (
-            patch("src.telegram.handlers.get_save_to_obsidian", AsyncMock(return_value=True)),
-            patch("src.telegram.handlers.set_save_to_obsidian", AsyncMock()) as mock_set,
-        ):
-            await toggle_obsidian(mock_private_update, mock_context)
+        await toggle_obsidian(mock_private_update, mock_context)
 
-        mock_set.assert_called_once_with("u_12345", False)
+        # Verify state changed in real DB
+        assert await get_save_to_obsidian(chat_id) is False
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "disabled" in reply_text
 
 
 class TestDisconnectGithub:
-    """Test /disconnect_github command."""
+    """Test /disconnect_github command with real DB."""
 
     async def test_clears_settings(self, mock_private_update, mock_context):
-        """GitHub settings are cleared."""
-        from src.telegram.handlers import disconnect_github
+        """GitHub settings are cleared in real DB."""
+        chat_id = "u_12345"
+        # Setup GitHub settings first
+        await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
+        await set_save_to_obsidian(chat_id, True)
 
-        with patch("src.telegram.handlers.clear_github_settings", AsyncMock()) as mock_clear:
-            await disconnect_github(mock_private_update, mock_context)
+        await disconnect_github(mock_private_update, mock_context)
 
-        mock_clear.assert_called_once_with("u_12345")
+        # Verify settings cleared in real DB
+        assert await get_github_settings(chat_id) == {}
+        assert await get_save_to_obsidian(chat_id) is False
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "disconnected" in reply_text.lower()
 
 
 class TestToggleCategorize:
-    """Test /toggle_categorize command."""
+    """Test /toggle_categorize command with real DB."""
 
     async def test_enables_categorization(self, mock_private_update, mock_context):
         """Enables auto-categorization when currently disabled."""
-        from src.telegram.handlers import toggle_categorize
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_auto_categorize(chat_id, False)
 
-        with (
-            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
-            patch("src.telegram.handlers.get_auto_categorize", AsyncMock(return_value=False)),
-            patch("src.telegram.handlers.set_auto_categorize", AsyncMock()) as mock_set,
-        ):
-            await toggle_categorize(mock_private_update, mock_context)
+        await toggle_categorize(mock_private_update, mock_context)
 
-        mock_set.assert_called_once_with("u_12345", True)
+        # Verify state changed in real DB
+        assert await get_auto_categorize(chat_id) is True
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "enabled" in reply_text.lower()
 
     async def test_disables_categorization(self, mock_private_update, mock_context):
         """Disables auto-categorization when currently enabled."""
-        from src.telegram.handlers import toggle_categorize
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_auto_categorize(chat_id, True)
 
-        with (
-            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
-            patch("src.telegram.handlers.get_auto_categorize", AsyncMock(return_value=True)),
-            patch("src.telegram.handlers.set_auto_categorize", AsyncMock()) as mock_set,
-        ):
-            await toggle_categorize(mock_private_update, mock_context)
+        await toggle_categorize(mock_private_update, mock_context)
 
-        mock_set.assert_called_once_with("u_12345", False)
+        # Verify state changed in real DB
+        assert await get_auto_categorize(chat_id) is False
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "disabled" in reply_text.lower()
 
 
 class TestCategorizeAll:
-    """Test /categorize command."""
+    """Test /categorize command with real DB for settings."""
 
     async def test_categorizes_files(self, mock_private_update, mock_context):
         """Categorizes all files in income folder."""
-        from src.telegram.handlers import categorize_all
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
-        github_settings = {"owner": "testowner", "repo": "testrepo", "token": "ghp_test"}
-
-        with (
-            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
-            patch("src.telegram.handlers.get_github_settings", AsyncMock(return_value=github_settings)),
-            patch("src.telegram.handlers.categorize_all_income", AsyncMock(return_value=5)),
-        ):
+        with patch("src.telegram.handlers.categorize_all_income", AsyncMock(return_value=5)):
             await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
@@ -445,15 +535,11 @@ class TestCategorizeAll:
 
     async def test_shows_no_files_message(self, mock_private_update, mock_context):
         """Shows message when no files to categorize."""
-        from src.telegram.handlers import categorize_all
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
-        github_settings = {"owner": "testowner", "repo": "testrepo", "token": "ghp_test"}
-
-        with (
-            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
-            patch("src.telegram.handlers.get_github_settings", AsyncMock(return_value=github_settings)),
-            patch("src.telegram.handlers.categorize_all_income", AsyncMock(return_value=0)),
-        ):
+        with patch("src.telegram.handlers.categorize_all_income", AsyncMock(return_value=0)):
             await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
@@ -461,13 +547,13 @@ class TestCategorizeAll:
 
     async def test_requires_github_connection(self, mock_private_update, mock_context):
         """Shows error when GitHub not connected."""
-        from src.telegram.handlers import categorize_all
+        chat_id = "u_categorize_no_gh"
+        mock_private_update.effective_chat.id = 999999
+        mock_private_update.effective_user.id = 999999
+        await set_chat_language(chat_id, "en")
+        # No GitHub settings configured
 
-        with (
-            patch("src.telegram.handlers.get_chat_language", AsyncMock(return_value="en")),
-            patch("src.telegram.handlers.get_github_settings", AsyncMock(return_value={})),
-        ):
-            await categorize_all(mock_private_update, mock_context)
+        await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "GitHub" in reply_text
