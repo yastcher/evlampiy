@@ -1,6 +1,5 @@
 """Integration test for complete user lifecycle."""
 
-import pytest
 
 from src.config import settings
 from src.credits import (
@@ -12,8 +11,6 @@ from src.credits import (
     grant_initial_credits_if_eligible,
 )
 from src.dto import UserCredits, UserTier
-
-pytestmark = [pytest.mark.asyncio]
 
 
 class TestUserLifecycle:

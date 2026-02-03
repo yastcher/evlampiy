@@ -1,16 +1,6 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
-
-@pytest.fixture
-def mock_empty_settings():
-    """Mock settings with empty VIP/admin lists."""
-    with (
-        patch("src.credits.settings.vip_user_ids_raw", ""),
-        patch("src.credits.settings.admin_user_ids_raw", ""),
-    ):
-        yield
 
 
 @pytest.fixture
@@ -63,3 +53,68 @@ def mock_callback_query():
     query.answer = AsyncMock()
     query.edit_message_text = AsyncMock()
     return query
+
+
+@pytest.fixture
+def mock_telegram_voice():
+    """Mock Telegram voice file with download capability."""
+    voice = MagicMock()
+    voice.get_file = AsyncMock()
+    voice.get_file.return_value.download_as_bytearray = AsyncMock(return_value=b"fake_audio_data")
+    return voice
+
+
+@pytest.fixture
+def mock_httpx_response_factory():
+    """Factory for creating mocked httpx responses."""
+
+    def _create(json_data=None, status_code=200):
+        response = MagicMock()
+        response.json.return_value = json_data or {}
+        response.status_code = status_code
+        return response
+
+    return _create
+
+
+@pytest.fixture
+def mock_httpx_download_response():
+    """Mock httpx response for file download (WhatsApp audio)."""
+    response = MagicMock()
+    response.content = b"fake_audio_data"
+    response.raise_for_status = MagicMock()
+    return response
+
+
+@pytest.fixture
+def mock_httpx_client_factory():
+    """Factory for creating configured httpx AsyncClient mock."""
+
+    def _create(mock_client_cls):
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+        return mock_client
+
+    return _create
+
+
+@pytest.fixture
+def mock_whatsapp_message():
+    """Mock WhatsApp incoming message."""
+    message = MagicMock()
+    message.from_user.wa_id = "1234567890"
+    message.voice = MagicMock()
+    message.voice.id = "media_123"
+    message.audio = None
+    return message
+
+
+@pytest.fixture
+def mock_whatsapp_client():
+    """Mock WhatsApp client."""
+    wa = MagicMock()
+    wa.get_media_url.return_value = "https://example.com/audio.ogg"
+    wa.send_message = MagicMock()
+    return wa

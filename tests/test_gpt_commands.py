@@ -1,10 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from src.gpt_commands import evlampiy_command
-
-pytestmark = [pytest.mark.asyncio]
 
 
 class TestEvlampiyCommand:

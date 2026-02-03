@@ -1,6 +1,5 @@
 """Integration test for complete user settings lifecycle."""
 
-import pytest
 
 from src.config import settings
 from src.dto import UserSettings
@@ -17,8 +16,6 @@ from src.mongo import (
     set_gpt_command,
     set_save_to_obsidian,
 )
-
-pytestmark = [pytest.mark.asyncio]
 
 
 class TestUserSettingsLifecycle:

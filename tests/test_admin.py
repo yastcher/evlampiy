@@ -2,27 +2,32 @@
 
 from unittest.mock import patch
 
-import pytest
-
+from src.alerts import check_and_send_alerts
 from src.config import settings
+from src.credits import (
+    add_credits,
+    current_month_key,
+    deduct_credits,
+    has_unlimited_access,
+    increment_payment_stats,
+    increment_transcription_stats,
+    increment_user_stats,
+    is_admin_user,
+    record_groq_usage,
+)
 from src.dto import AlertState, MonthlyStats, UserCredits, WitUsageStats
-
-pytestmark = [pytest.mark.asyncio]
+from src.telegram.handlers import mystats_command, stats_command
 
 
 class TestAdminRole:
     async def test_admin_has_unlimited_access(self):
         """Admin bypasses credit checks."""
-        from src.credits import has_unlimited_access
-
         admin_id = "999"
         with patch.object(settings, "admin_user_ids_raw", "999"):
             assert has_unlimited_access(admin_id) is True
 
     async def test_vip_has_unlimited_access(self):
         """VIP also bypasses credit checks."""
-        from src.credits import has_unlimited_access
-
         vip_id = "888"
         with (
             patch.object(settings, "vip_user_ids_raw", "888"),
@@ -32,8 +37,6 @@ class TestAdminRole:
 
     async def test_regular_user_limited(self):
         """Regular user does not have unlimited access."""
-        from src.credits import has_unlimited_access
-
         user_id = "123"
         with (
             patch.object(settings, "admin_user_ids_raw", ""),
@@ -43,8 +46,6 @@ class TestAdminRole:
 
     async def test_is_admin_user(self):
         """Test is_admin_user function."""
-        from src.credits import is_admin_user
-
         admin_id = "999"
         regular_id = "123"
         with patch.object(settings, "admin_user_ids_raw", "999"):
@@ -54,21 +55,26 @@ class TestAdminRole:
 
 class TestStatsCommand:
     async def test_admin_sees_stats(self, mock_private_update, mock_context):
-        """Admin can view system stats."""
-        from src.telegram.handlers import stats_command
-
+        """Admin can view system stats with real data from DB."""
         admin_id = 999
         mock_private_update.effective_user.id = admin_id
+
+        await increment_transcription_stats()
+        await increment_transcription_stats()
+        await increment_transcription_stats()
+        await increment_payment_stats(50)
 
         with patch.object(settings, "admin_user_ids_raw", "999"):
             await stats_command(mock_private_update, mock_context)
 
         mock_private_update.message.reply_text.assert_called_once()
+        call_text = mock_private_update.message.reply_text.call_args[0][0]
+        # Verify real stats are shown in response
+        assert "3" in call_text  # transcriptions count
+        assert "50" in call_text  # credits sold
 
     async def test_non_admin_ignored(self, mock_private_update, mock_context):
         """Non-admin cannot view system stats."""
-        from src.telegram.handlers import stats_command
-
         mock_private_update.effective_user.id = 123
 
         with patch.object(settings, "admin_user_ids_raw", ""):
@@ -80,9 +86,6 @@ class TestStatsCommand:
 class TestMyStatsCommand:
     async def test_user_sees_own_stats(self, mock_private_update, mock_context):
         """User can view their own stats."""
-        from src.credits import add_credits
-        from src.telegram.handlers import mystats_command
-
         user_id = "123"
         mock_private_update.effective_user.id = 123
 
@@ -96,9 +99,6 @@ class TestMyStatsCommand:
 
     async def test_mystats_shows_tier(self, mock_private_update, mock_context):
         """Personal stats show user tier."""
-        from src.credits import add_credits
-        from src.telegram.handlers import mystats_command
-
         user_id = "456"
         mock_private_update.effective_user.id = 456
 
@@ -113,9 +113,6 @@ class TestMyStatsCommand:
 class TestAlerts:
     async def test_first_payment_alert_sent(self, mock_context):
         """First payment triggers celebration alert."""
-        from src.alerts import check_and_send_alerts
-        from src.credits import current_month_key
-
         month = current_month_key()
         await MonthlyStats(month_key=month, total_payments=1, total_credits_sold=5).insert()
 
@@ -128,9 +125,6 @@ class TestAlerts:
 
     async def test_wit_warning_at_80_percent(self, mock_context):
         """Wit.ai warning sent at 80% usage."""
-        from src.alerts import check_and_send_alerts
-        from src.credits import current_month_key
-
         month = current_month_key()
         await WitUsageStats(month_key=month, request_count=450).insert()
 
@@ -145,9 +139,6 @@ class TestAlerts:
 
     async def test_wit_critical_at_95_percent(self, mock_context):
         """Wit.ai critical alert sent at 95% usage."""
-        from src.alerts import check_and_send_alerts
-        from src.credits import current_month_key
-
         month = current_month_key()
         await WitUsageStats(month_key=month, request_count=480).insert()
 
@@ -162,9 +153,6 @@ class TestAlerts:
 
     async def test_alert_not_duplicated(self, mock_context):
         """Same alert not sent twice in same month."""
-        from src.alerts import check_and_send_alerts
-        from src.credits import current_month_key
-
         month = current_month_key()
         await WitUsageStats(month_key=month, request_count=450).insert()
         await AlertState(alert_type="wit_80", month_key=month).insert()
@@ -179,10 +167,33 @@ class TestAlerts:
 
 
 class TestUserStatsTracking:
+    async def test_increment_user_stats_new_user(self):
+        """Increment stats creates record for new user."""
+        user_id = "new_stats_user_999"
+
+        # Ensure user doesn't exist
+        existing = await UserCredits.find_one(UserCredits.user_id == user_id)
+        if existing:
+            await existing.delete()
+
+        await increment_user_stats(user_id, audio_seconds=30)
+
+        record = await UserCredits.find_one(UserCredits.user_id == user_id)
+        assert record is not None
+        assert record.total_transcriptions == 1
+        assert record.total_audio_seconds == 30
+
+    async def test_record_groq_usage(self):
+        """Groq audio usage is recorded in monthly stats."""
+        await record_groq_usage(45)
+
+        month_key = current_month_key()
+        stats = await MonthlyStats.find_one(MonthlyStats.month_key == month_key)
+        assert stats is not None
+        assert stats.groq_audio_seconds >= 45
+
     async def test_complete_user_stats_flow(self):
         """Test complete user stats tracking flow."""
-        from src.credits import add_credits, deduct_credits, increment_user_stats
-
         user_id = "777888"
 
         # 1. Purchase credits - track total_credits_purchased

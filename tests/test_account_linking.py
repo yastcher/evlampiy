@@ -3,8 +3,6 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
-import pytest
-
 from src.account_linking import (
     LINK_CODE_LENGTH,
     LINK_CODE_TTL_SECONDS,
@@ -16,8 +14,6 @@ from src.account_linking import (
     unlink,
 )
 from src.dto import LinkAttempt, LinkCode
-
-pytestmark = [pytest.mark.asyncio]
 
 
 class TestAccountLinking:
