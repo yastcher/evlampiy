@@ -1,7 +1,7 @@
 # Evlampiy Notes Bot
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
@@ -13,49 +13,34 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 
 ## Features
 
-- **Voice transcription** — Convert voice messages to text using [Wit.ai](https://wit.ai/)
-- **Groq Whisper fallback** — Automatic fallback to [Groq](https://groq.com/) Whisper when Wit.ai monthly limit is
-  reached
-- **Credit system** — Monetization via Telegram Stars with per-user credit balance
-- **Multi-platform** — Works with Telegram and WhatsApp
-- **Multi-language** — Supports English, German, Russian, Spanish
-- **Per-chat settings** — Each user/group can have individual language preferences
-- **GPT integration** — Trigger GPT commands via voice (say "evlampiy" + your question)
-- **Obsidian integration** — Auto-save voice transcriptions to Obsidian vault via GitHub (OAuth Device Flow)
-- **Auto-categorization** — Automatically classify notes into categories using Claude Haiku
+### Core
+- **Voice transcription** — Convert voice messages to text instantly
+- **Multi-platform** — Telegram and WhatsApp support
+- **Multi-language** — English, German, Russian, Spanish
+- **Per-chat settings** — Individual language and trigger preferences
 
-## Architecture
+### Transcription Providers
+- **Wit.ai** — Free tier with monthly limit tracking
+- **Groq Whisper** — Automatic fallback when Wit.ai limit reached
 
-```
-src/
-├── transcription/       # Domain layer (platform-agnostic)
-│   ├── service.py       # Core transcription logic
-│   ├── wit_client.py    # Wit.ai clients
-│   └── groq_client.py   # Groq Whisper client
-├── telegram/            # Telegram adapter
-│   ├── bot.py
-│   ├── handlers.py
-│   ├── voice.py
-│   ├── payments.py      # Telegram Stars payment handlers
-│   └── chat_params.py   # Chat identification helpers
-├── whatsapp/            # WhatsApp adapter
-│   ├── client.py
-│   └── handlers.py
-├── config.py            # Application settings
-├── const.py             # Shared constants
-├── credits.py           # Credit system & usage stats
-├── dto.py               # Data transfer objects
-├── mongo.py             # MongoDB operations
-├── wit_tracking.py      # Wit.ai monthly usage tracking
-├── gpt_commands.py      # GPT command handler
-├── localization.py      # Multi-language translations
-├── alerts.py            # Admin alert service
-├── github_oauth.py      # GitHub OAuth Device Flow
-├── github_api.py        # GitHub API operations
-├── obsidian.py          # Obsidian vault integration
-├── categorization.py    # Note auto-categorization with Claude
-└── main.py              # Application entry point
-```
+### Monetization
+- **Credit system** — Per-user balance with usage tracking
+- **Telegram Stars** — Native payment integration
+- **User tiers** — Free, Standard, VIP, Admin
+
+### Obsidian Integration
+- **GitHub sync** — Auto-save transcriptions to your vault via GitHub API
+- **OAuth Device Flow** — Secure authentication without exposing tokens
+- **Auto-categorization** — AI-powered note classification using Claude Haiku
+
+### Account Linking
+- **Telegram ↔ WhatsApp** — Link accounts with one-time codes
+- **Rate limiting** — Protection against brute-force attacks
+
+### Administration
+- **Usage stats** — Monthly transcriptions, revenue, costs
+- **Health monitoring** — Wit.ai/Groq usage alerts
+- **VIP management** — Configurable user tiers
 
 ## Requirements
 
@@ -130,25 +115,24 @@ For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETU
 
 ## Bot Commands
 
-| Command                 | Description                                |
-|-------------------------|--------------------------------------------|
-| `/start`                | Show help and current settings             |
-| `/choose_your_language` | Set voice recognition language             |
-| `/enter_your_command`   | Set custom GPT trigger word                |
-| `/buy`                  | Buy credits with Telegram Stars            |
-| `/balance`              | Show current credit balance                |
-| `/mystats`              | Show your personal usage statistics        |
-| `/connect_github`       | Connect GitHub account (OAuth Device Flow) |
-| `/toggle_obsidian`      | Enable/disable Obsidian sync               |
-| `/toggle_categorize`    | Enable/disable auto-categorization         |
-| `/categorize`           | Categorize all notes in income folder      |
-| `/disconnect_github`    | Disconnect GitHub and disable sync         |
-| `/link_whatsapp`        | Link your WhatsApp account                 |
-| `/unlink_whatsapp`      | Unlink your WhatsApp account               |
+| Command     | Description                              |
+|-------------|------------------------------------------|
+| `/start`    | Show help and current settings           |
+| `/settings` | Language & GPT command settings          |
+| `/obsidian` | Notes sync to GitHub (Obsidian vault)    |
+| `/account`  | Balance, credits & WhatsApp linking      |
 
 For admin commands, see [docs/ADMIN.md](docs/ADMIN.md).
 
 ## Development
+
+### Approach
+
+- **DDD** — Domain-driven design with clear module boundaries (`transcription/`, `telegram/`, `whatsapp/`)
+- **TDD** — Tests first, implementation second
+- **Trophy Testing** — Integration tests with real DB (mongomock), mocks only at external boundaries
+
+### Commands
 
 ```bash
 # Install dev dependencies
@@ -167,18 +151,6 @@ uv run pytest --cov=src --cov-fail-under=85
 ## Deployment
 
 See [DEPLOY.md](DEPLOY.md) for Docker deployment instructions.
-
-## Roadmap
-
-- [x] Voice-to-text transcription
-- [x] Multi-language support (EN, RU, ES, DE)
-- [ ] GPT command integration
-- [x] CI/CD with GitHub Actions
-- [x] WhatsApp integration
-- [x] Obsidian integration via GitHub OAuth
-- [x] Monetization (Telegram Stars, credit system, Groq Whisper fallback)
-- [x] Message classification by topics (auto-categorization with Claude Haiku)
-- [ ] ChatMemberUpdated handler for cleanup
 
 ## License
 

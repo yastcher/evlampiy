@@ -5,7 +5,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from src import const
-from src.account_linking import generate_link_code, unlink
+from src.account_linking import generate_link_code, get_linked_whatsapp, unlink
 from src.categorization import categorize_all_income
 from src.config import settings
 from src.credits import (
@@ -51,7 +51,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_language=chat_language,
         gpt_command=gpt_command,
     )
-    await update.message.reply_text(text_to_send)
+    await update.message.reply_text(text_to_send, parse_mode="HTML")
 
 
 async def choose_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -317,3 +317,103 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• Groq: {'✅' if settings.groq_api_key else '❌'} {groq_status}"
     )
     await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def settings_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_admin(update, context):
+        return
+
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+
+    keyboard = [
+        [InlineKeyboardButton(translates["btn_language"][language], callback_data="hub_language")],
+        [InlineKeyboardButton(translates["btn_gpt_command"][language], callback_data="hub_gpt_command")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    title = translates["settings_hub_title"][language]
+    await update.message.reply_text(title, reply_markup=reply_markup)
+
+
+async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_admin(update, context):
+        return
+
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+    github_settings = await get_github_settings(chat_id)
+
+    if not github_settings:
+        keyboard = [
+            [InlineKeyboardButton(translates["btn_connect_github"][language], callback_data="hub_connect_github")],
+        ]
+    else:
+        sync_on = await get_save_to_obsidian(chat_id)
+        sort_on = await get_auto_categorize(chat_id)
+
+        sync_label = translates["btn_toggle_sync_on" if sync_on else "btn_toggle_sync_off"][language]
+        sort_label = translates["btn_toggle_sort_on" if sort_on else "btn_toggle_sort_off"][language]
+
+        keyboard = [
+            [InlineKeyboardButton(sync_label, callback_data="hub_toggle_obsidian")],
+            [InlineKeyboardButton(sort_label, callback_data="hub_toggle_categorize")],
+            [InlineKeyboardButton(translates["btn_categorize_all"][language], callback_data="hub_categorize")],
+            [InlineKeyboardButton(translates["btn_disconnect_github"][language], callback_data="hub_disconnect_github")],
+        ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    title = translates["obsidian_hub_title"][language]
+    await update.message.reply_text(title, reply_markup=reply_markup)
+
+
+async def account_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_private_chat(update):
+        return
+
+    chat_id = get_chat_id(update)
+    user_id = str(update.effective_user.id)
+    language = await get_chat_language(chat_id)
+
+    whatsapp_linked = await get_linked_whatsapp(user_id)
+
+    keyboard = [
+        [InlineKeyboardButton(translates["btn_buy"][language], callback_data="hub_buy")],
+        [InlineKeyboardButton(translates["btn_balance"][language], callback_data="hub_balance")],
+        [InlineKeyboardButton(translates["btn_mystats"][language], callback_data="hub_mystats")],
+    ]
+
+    if whatsapp_linked:
+        keyboard.append([InlineKeyboardButton(translates["btn_unlink_whatsapp"][language], callback_data="hub_unlink_whatsapp")])
+    else:
+        keyboard.append([InlineKeyboardButton(translates["btn_link_whatsapp"][language], callback_data="hub_link_whatsapp")])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    title = translates["account_hub_title"][language]
+    await update.message.reply_text(title, reply_markup=reply_markup)
+
+
+async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    action = query.data.replace("hub_", "")
+
+    if action == "language":
+        keyboard = [
+            [InlineKeyboardButton("Русский", callback_data="set_lang_ru")],
+            [InlineKeyboardButton("English", callback_data="set_lang_en")],
+            [InlineKeyboardButton("Español", callback_data="set_lang_es")],
+            [InlineKeyboardButton("Deutsch", callback_data="set_lang_de")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            "Please choose your preferred language:",
+            reply_markup=reply_markup,
+        )
+
+
+async def enter_your_command_from_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.message.reply_text("Please enter your command for GPT:")
+    return WAITING_FOR_COMMAND

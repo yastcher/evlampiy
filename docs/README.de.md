@@ -1,7 +1,7 @@
 # Evlampiy Notes Bot
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
@@ -13,50 +13,34 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 
 ## Funktionen
 
-- **Sprachtranskription** — Wandelt Sprachnachrichten in Text um mit [Wit.ai](https://wit.ai/)
-- **Groq Whisper Fallback** — Automatischer Wechsel zu [Groq](https://groq.com/) Whisper wenn das monatliche
-  Wit.ai-Limit erreicht ist
-- **Kreditsystem** — Monetarisierung über Telegram Stars mit Kreditguthaben pro Benutzer
-- **Multiplattform** — Funktioniert mit Telegram und WhatsApp
-- **Mehrsprachig** — Unterstützt Englisch, Deutsch, Russisch, Spanisch
-- **Chat-Einstellungen** — Jeder Benutzer/Gruppe kann individuelle Spracheinstellungen haben
-- **GPT-Integration** — GPT-Befehle per Sprache auslösen (sag "evlampiy" + deine Frage)
-- **Obsidian-Integration** — Automatische Speicherung von Sprachtranskriptionen in Obsidian über GitHub (OAuth Device
-  Flow)
-- **Auto-Kategorisierung** — Automatische Klassifizierung von Notizen mit Claude Haiku
+### Kern
+- **Sprachtranskription** — Sofortige Umwandlung von Sprachnachrichten in Text
+- **Multiplattform** — Telegram und WhatsApp
+- **Mehrsprachig** — Englisch, Deutsch, Russisch, Spanisch
+- **Chat-Einstellungen** — Individuelle Sprache und Trigger für jeden Chat
 
-## Architektur
+### Transkriptionsanbieter
+- **Wit.ai** — Kostenloses Kontingent mit monatlicher Limitüberwachung
+- **Groq Whisper** — Automatischer Wechsel bei Erreichen des Wit.ai-Limits
 
-```
-src/
-├── transcription/       # Domain-Schicht (plattformunabhängig)
-│   ├── service.py       # Transkriptionslogik
-│   ├── wit_client.py    # Wit.ai-Clients
-│   └── groq_client.py   # Groq Whisper-Client
-├── telegram/            # Telegram-Adapter
-│   ├── bot.py
-│   ├── handlers.py
-│   ├── voice.py
-│   ├── payments.py      # Telegram Stars Zahlungs-Handler
-│   └── chat_params.py   # Chat-Identifikations-Helfer
-├── whatsapp/            # WhatsApp-Adapter
-│   ├── client.py
-│   └── handlers.py
-├── config.py            # Anwendungskonfiguration
-├── const.py             # Gemeinsame Konstanten
-├── credits.py           # Kreditsystem & Nutzungsstatistiken
-├── dto.py               # Datentransferobjekte
-├── mongo.py             # MongoDB-Operationen
-├── wit_tracking.py      # Monatliche Wit.ai-Nutzungsverfolgung
-├── gpt_commands.py      # GPT-Befehl-Handler
-├── localization.py      # Mehrsprachige Übersetzungen
-├── alerts.py            # Admin-Benachrichtigungsdienst
-├── github_oauth.py      # GitHub OAuth Device Flow
-├── github_api.py        # GitHub-API-Operationen
-├── obsidian.py          # Obsidian-Integration
-├── categorization.py    # Auto-Kategorisierung mit Claude
-└── main.py              # Einstiegspunkt
-```
+### Monetarisierung
+- **Kreditsystem** — Guthaben pro Benutzer mit Nutzungsverfolgung
+- **Telegram Stars** — Native Zahlungsintegration
+- **Benutzerstufen** — Free, Standard, VIP, Admin
+
+### Obsidian-Integration
+- **GitHub-Synchronisierung** — Automatisches Speichern von Transkriptionen in Ihrem Vault über GitHub API
+- **OAuth Device Flow** — Sichere Authentifizierung ohne Token-Offenlegung
+- **Auto-Kategorisierung** — KI-gestützte Notizklassifizierung mit Claude Haiku
+
+### Kontoverknüpfung
+- **Telegram ↔ WhatsApp** — Konten mit Einmalcodes verknüpfen
+- **Rate Limiting** — Schutz gegen Brute-Force-Angriffe
+
+### Administration
+- **Nutzungsstatistiken** — Monatliche Transkriptionen, Einnahmen, Kosten
+- **Gesundheitsüberwachung** — Wit.ai/Groq-Nutzungsalarme
+- **VIP-Verwaltung** — Konfigurierbare Benutzerstufen
 
 ## Voraussetzungen
 
@@ -128,25 +112,24 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 
 ## Bot-Befehle
 
-| Befehl                  | Beschreibung                                     |
-|-------------------------|--------------------------------------------------|
-| `/start`                | Hilfe und aktuelle Einstellungen anzeigen        |
-| `/choose_your_language` | Erkennungssprache festlegen                      |
-| `/enter_your_command`   | GPT-Triggerwort festlegen                        |
-| `/buy`                  | Kredite mit Telegram Stars kaufen                |
-| `/balance`              | Aktuelles Kreditguthaben anzeigen                |
-| `/mystats`              | Ihre Nutzungsstatistiken anzeigen                |
-| `/connect_github`       | GitHub-Konto verbinden (OAuth Device Flow)       |
-| `/toggle_obsidian`      | Obsidian-Synchronisierung ein-/ausschalten       |
-| `/toggle_categorize`    | Auto-Kategorisierung ein-/ausschalten            |
-| `/categorize`           | Alle Notizen im income-Ordner kategorisieren     |
-| `/disconnect_github`    | GitHub trennen und Synchronisierung deaktivieren |
-| `/link_whatsapp`        | WhatsApp-Konto verknüpfen                        |
-| `/unlink_whatsapp`      | WhatsApp-Konto trennen                           |
+| Befehl      | Beschreibung                             |
+|-------------|------------------------------------------|
+| `/start`    | Hilfe und aktuelle Einstellungen         |
+| `/settings` | Sprache und GPT-Befehl                   |
+| `/obsidian` | Notizen-Synchronisierung mit GitHub      |
+| `/account`  | Guthaben, Credits und WhatsApp-Verknüpfung |
 
 Für Admin-Befehle siehe [ADMIN.md](ADMIN.md).
 
 ## Entwicklung
+
+### Ansatz
+
+- **DDD** — Domain-Driven Design mit klaren Modulgrenzen (`transcription/`, `telegram/`, `whatsapp/`)
+- **TDD** — Erst Tests, dann Implementierung
+- **Trophy Testing** — Integrationstests mit echter DB (mongomock), Mocks nur an externen Grenzen
+
+### Befehle
 
 ```bash
 # Dev-Abhängigkeiten installieren
@@ -165,18 +148,6 @@ uv run pytest --cov=src --cov-fail-under=85
 ## Deployment
 
 Siehe [DEPLOY.md](../DEPLOY.md) für Docker-Deployment-Anweisungen.
-
-## Roadmap
-
-- [x] Sprache-zu-Text Transkription
-- [x] Mehrsprachige Unterstützung (EN, RU, ES, DE)
-- [ ] GPT-Integration
-- [x] CI/CD mit GitHub Actions
-- [x] WhatsApp-Integration
-- [x] Obsidian-Integration über GitHub OAuth
-- [x] Monetarisierung (Telegram Stars, Kreditsystem, Groq Whisper)
-- [x] Nachrichtenklassifizierung nach Themen (Auto-Kategorisierung mit Claude Haiku)
-- [ ] ChatMemberUpdated Handler für Bereinigung
 
 ## Lizenz
 

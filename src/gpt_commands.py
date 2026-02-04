@@ -1,9 +1,8 @@
 import logging
 
 import openai
-from telegram.ext import ContextTypes
-
 from telegram import Update
+from telegram.ext import ContextTypes
 
 from src.config import settings
 from src.telegram.bot import send_response

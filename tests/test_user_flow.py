@@ -557,3 +557,170 @@ class TestCategorizeAll:
 
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "GitHub" in reply_text
+
+
+class TestHubCommands:
+    """Test hub commands (/settings, /obsidian, /account)."""
+
+    async def test_settings_hub_shows_keyboard(self, mock_private_update, mock_context):
+        """Settings hub shows inline keyboard with 2 buttons."""
+        from src.telegram.handlers import settings_hub
+
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+
+        await settings_hub(mock_private_update, mock_context)
+
+        mock_private_update.message.reply_text.assert_called_once()
+        call_args = mock_private_update.message.reply_text.call_args
+        assert "reply_markup" in call_args.kwargs
+
+        keyboard = call_args.kwargs["reply_markup"].inline_keyboard
+        # Should have 2 buttons: Language and GPT command
+        assert len(keyboard) == 2
+        assert "hub_language" in keyboard[0][0].callback_data
+        assert "hub_gpt_command" in keyboard[1][0].callback_data
+
+    async def test_settings_hub_blocked_for_non_admin_in_group(
+        self, mock_group_update, mock_context
+    ):
+        """Non-admin in group chat cannot use settings hub."""
+        from src.telegram.handlers import settings_hub
+
+        mock_context.bot.get_chat_member.return_value = MagicMock(
+            status=ChatMemberStatus.MEMBER
+        )
+
+        await settings_hub(mock_group_update, mock_context)
+
+        mock_group_update.message.reply_text.assert_not_called()
+
+    async def test_obsidian_hub_without_github(self, mock_private_update, mock_context):
+        """Obsidian hub shows only 'Connect GitHub' when not connected."""
+        from src.telegram.handlers import obsidian_hub
+
+        chat_id = "u_obsidian_no_gh"
+        mock_private_update.effective_chat.id = 888888
+        mock_private_update.effective_user.id = 888888
+        await set_chat_language(chat_id, "en")
+        # No GitHub settings
+
+        await obsidian_hub(mock_private_update, mock_context)
+
+        mock_private_update.message.reply_text.assert_called_once()
+        call_args = mock_private_update.message.reply_text.call_args
+        keyboard = call_args.kwargs["reply_markup"].inline_keyboard
+
+        # Only one button: Connect GitHub
+        assert len(keyboard) == 1
+        assert "hub_connect_github" in keyboard[0][0].callback_data
+
+    async def test_obsidian_hub_with_github(self, mock_private_update, mock_context):
+        """Obsidian hub shows all buttons except 'Connect' when GitHub connected."""
+        from src.telegram.handlers import obsidian_hub
+
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_github_settings(chat_id, "owner", "repo", "token")
+        await set_save_to_obsidian(chat_id, True)
+        await set_auto_categorize(chat_id, False)
+
+        await obsidian_hub(mock_private_update, mock_context)
+
+        mock_private_update.message.reply_text.assert_called_once()
+        call_args = mock_private_update.message.reply_text.call_args
+        keyboard = call_args.kwargs["reply_markup"].inline_keyboard
+
+        # Should have: toggle_sync, toggle_sort, categorize, disconnect
+        callback_datas = [row[0].callback_data for row in keyboard]
+        assert "hub_toggle_obsidian" in callback_datas
+        assert "hub_toggle_categorize" in callback_datas
+        assert "hub_categorize" in callback_datas
+        assert "hub_disconnect_github" in callback_datas
+        assert "hub_connect_github" not in callback_datas
+
+    async def test_account_hub_shows_balance_buttons(self, mock_private_update, mock_context):
+        """Account hub shows buy, balance, mystats buttons."""
+        from src.telegram.handlers import account_hub
+
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+
+        await account_hub(mock_private_update, mock_context)
+
+        mock_private_update.message.reply_text.assert_called_once()
+        call_args = mock_private_update.message.reply_text.call_args
+        keyboard = call_args.kwargs["reply_markup"].inline_keyboard
+
+        callback_datas = [row[0].callback_data for row in keyboard]
+        assert "hub_buy" in callback_datas
+        assert "hub_balance" in callback_datas
+        assert "hub_mystats" in callback_datas
+
+    async def test_account_hub_shows_link_whatsapp(self, mock_private_update, mock_context):
+        """Account hub shows 'Link WhatsApp' when not linked."""
+        from src.telegram.handlers import account_hub
+
+        chat_id = "u_account_no_wa"
+        mock_private_update.effective_chat.id = 777777
+        mock_private_update.effective_user.id = 777777
+        await set_chat_language(chat_id, "en")
+        # No WhatsApp linked
+
+        await account_hub(mock_private_update, mock_context)
+
+        call_args = mock_private_update.message.reply_text.call_args
+        keyboard = call_args.kwargs["reply_markup"].inline_keyboard
+
+        callback_datas = [row[0].callback_data for row in keyboard]
+        assert "hub_link_whatsapp" in callback_datas
+        assert "hub_unlink_whatsapp" not in callback_datas
+
+    async def test_account_hub_shows_unlink_whatsapp(self, mock_private_update, mock_context):
+        """Account hub shows 'Unlink WhatsApp' when linked."""
+        from src.account_linking import confirm_link, generate_link_code
+        from src.telegram.handlers import account_hub
+
+        user_id = "12345"
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+
+        # Link WhatsApp
+        code = await generate_link_code(user_id)
+        await confirm_link(code, "+1234567890")
+
+        await account_hub(mock_private_update, mock_context)
+
+        call_args = mock_private_update.message.reply_text.call_args
+        keyboard = call_args.kwargs["reply_markup"].inline_keyboard
+
+        callback_datas = [row[0].callback_data for row in keyboard]
+        assert "hub_unlink_whatsapp" in callback_datas
+        assert "hub_link_whatsapp" not in callback_datas
+
+    async def test_account_hub_private_only(self, mock_group_update, mock_context):
+        """Account hub only works in private chats."""
+        from src.telegram.handlers import account_hub
+
+        await account_hub(mock_group_update, mock_context)
+
+        mock_group_update.message.reply_text.assert_not_called()
+
+    async def test_hub_callback_triggers_language(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """Clicking language button in hub opens language selection."""
+        from src.telegram.handlers import hub_callback_router
+
+        mock_callback_query.data = "hub_language"
+        mock_callback_query.from_user.id = 12345
+        mock_callback_query.message.chat.id = 12345
+        mock_private_update.callback_query = mock_callback_query
+
+        await hub_callback_router(mock_private_update, mock_context)
+
+        mock_callback_query.answer.assert_called_once()
+        mock_callback_query.edit_message_text.assert_called_once()
+        # Should show language keyboard
+        call_args = mock_callback_query.edit_message_text.call_args
+        assert "reply_markup" in call_args.kwargs

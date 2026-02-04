@@ -1,6 +1,6 @@
 [project]
 name = "evlampiy"
-version = "0.6.3"
+version = "0.6.4"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = ["Yast <yastcher@gmail.com>"]
@@ -47,6 +47,7 @@ ignore = [
 fixable = ["ALL"]
 
 [tool.ruff.lint.isort]
+known-third-party = ["telegram"]
 known-local-folder = [
     "src",
     "tests",
