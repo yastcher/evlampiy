@@ -2,7 +2,9 @@ import asyncio
 import logging
 import threading
 
+from telegram import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 from telegram.ext import (
+    Application,
     ApplicationBuilder,
     CallbackQueryHandler,
     CommandHandler,
@@ -44,6 +46,9 @@ logger = logging.getLogger(__name__)
 
 COMMAND_HANDLERS = {
     "start": handlers.start,
+    "settings": handlers.settings_hub,
+    "obsidian": handlers.obsidian_hub,
+    "account": handlers.account_hub,
     "choose_your_language": handlers.choose_language,
     "enter_your_command": handlers.enter_your_command,
     "evlampiy": evlampiy_command,
@@ -59,6 +64,55 @@ COMMAND_HANDLERS = {
     "link_whatsapp": handlers.link_whatsapp,
     "unlink_whatsapp": handlers.unlink_whatsapp,
 }
+
+BOT_COMMANDS = {
+    "en": [
+        BotCommand("start", "Start work"),
+        BotCommand("settings", "⚙️ Settings"),
+        BotCommand("obsidian", "📝 Notes"),
+        BotCommand("account", "💰 Account"),
+    ],
+    "ru": [
+        BotCommand("start", "Начать работу"),
+        BotCommand("settings", "⚙️ Настройки"),
+        BotCommand("obsidian", "📝 Заметки"),
+        BotCommand("account", "💰 Аккаунт"),
+    ],
+    "es": [
+        BotCommand("start", "Iniciar"),
+        BotCommand("settings", "⚙️ Configuración"),
+        BotCommand("obsidian", "📝 Notas"),
+        BotCommand("account", "💰 Cuenta"),
+    ],
+    "de": [
+        BotCommand("start", "Starten"),
+        BotCommand("settings", "⚙️ Einstellungen"),
+        BotCommand("obsidian", "📝 Notizen"),
+        BotCommand("account", "💰 Konto"),
+    ],
+}
+
+ADMIN_COMMANDS = [
+    BotCommand("stats", "📊 System stats"),
+]
+
+
+async def post_init(application: Application):
+    bot = application.bot
+
+    for lang_code, commands in BOT_COMMANDS.items():
+        await bot.set_my_commands(
+            commands,
+            scope=BotCommandScopeAllPrivateChats(),
+            language_code=lang_code if lang_code != "en" else None,
+        )
+
+    for admin_id in settings.admin_user_ids:
+        admin_commands = BOT_COMMANDS["en"] + ADMIN_COMMANDS
+        await bot.set_my_commands(
+            admin_commands,
+            scope=BotCommandScopeChat(chat_id=int(admin_id)),
+        )
 
 
 def create_fastapi_app():
@@ -105,12 +159,13 @@ def main():
         api_thread.start()
         logger.info("FastAPI server started for WhatsApp webhook")
 
-    application = ApplicationBuilder().token(settings.telegram_bot_token).build()
+    application = ApplicationBuilder().token(settings.telegram_bot_token).post_init(post_init).build()
 
     for command_name, command_handler in COMMAND_HANDLERS.items():
         application.add_handler(CommandHandler(command_name, command_handler))
 
-    application.add_handler(CallbackQueryHandler(handlers.lang_buttons, pattern="set_lang_"))
+    application.add_handler(CallbackQueryHandler(handlers.lang_buttons, pattern="^set_lang_"))
+    application.add_handler(CallbackQueryHandler(handlers.hub_callback_router, pattern="^hub_"))
 
     application.add_handler(MessageHandler(filters.VOICE, from_voice_to_text))
 
@@ -120,7 +175,10 @@ def main():
     )
 
     enter_command_handler = ConversationHandler(
-        entry_points=[CommandHandler("enter_your_command", handlers.enter_your_command)],
+        entry_points=[
+            CommandHandler("enter_your_command", handlers.enter_your_command),
+            CallbackQueryHandler(handlers.enter_your_command_from_hub, pattern="^hub_gpt_command$"),
+        ],
         states={
             handlers.WAITING_FOR_COMMAND: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.handle_command_input)

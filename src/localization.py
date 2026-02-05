@@ -33,44 +33,68 @@ translates = {
     },
     "start_message": {
         ENGLISH: (
-            "Voice-to-text bot. Just send a voice message!\n\n"
+            "🎙 <b>Voice-to-Text Bot</b>\n\n"
+            "Send a voice message — get text back instantly.\n\n"
+            "<b>Features:</b>\n"
+            "• Multi-language transcription (en, ru, es, de)\n"
+            "• Sync notes to Obsidian via GitHub\n"
+            "• AI categorization of notes\n"
+            "• Link your WhatsApp account\n\n"
+            "<b>Current settings:</b>\n"
             "Language: {chat_language}\n"
             "GPT trigger: {gpt_command}\n\n"
-            "Commands:\n"
-            "/choose_your_language - Change language\n"
-            "/buy - Buy credits\n"
-            "/balance - Check balance\n"
-            "/mystats - Your statistics"
+            "<b>Menu:</b>\n"
+            "/settings - Language & GPT command\n"
+            "/obsidian - Notes sync to GitHub\n"
+            "/account - Balance, credits & WhatsApp"
         ),
         GERMAN: (
-            "Sprache-zu-Text Bot. Sende einfach eine Sprachnachricht!\n\n"
+            "🎙 <b>Sprache-zu-Text Bot</b>\n\n"
+            "Sende eine Sprachnachricht — erhalte sofort Text.\n\n"
+            "<b>Funktionen:</b>\n"
+            "• Mehrsprachige Transkription (en, ru, es, de)\n"
+            "• Notizen mit Obsidian über GitHub synchronisieren\n"
+            "• KI-Kategorisierung von Notizen\n"
+            "• WhatsApp-Konto verknüpfen\n\n"
+            "<b>Aktuelle Einstellungen:</b>\n"
             "Sprache: {chat_language}\n"
             "GPT-Trigger: {gpt_command}\n\n"
-            "Befehle:\n"
-            "/choose_your_language - Sprache ändern\n"
-            "/buy - Credits kaufen\n"
-            "/balance - Guthaben prüfen\n"
-            "/mystats - Deine Statistiken"
+            "<b>Menü:</b>\n"
+            "/settings - Sprache & GPT-Befehl\n"
+            "/obsidian - Notizen-Sync mit GitHub\n"
+            "/account - Guthaben, Credits & WhatsApp"
         ),
         RUSSIAN: (
-            "Бот для транскрипции голоса. Просто отправьте голосовое сообщение!\n\n"
+            "🎙 <b>Голос в текст</b>\n\n"
+            "Отправьте голосовое сообщение — получите текст мгновенно.\n\n"
+            "<b>Возможности:</b>\n"
+            "• Транскрипция на 4 языках (en, ru, es, de)\n"
+            "• Синхронизация заметок в Obsidian через GitHub\n"
+            "• ИИ-категоризация заметок\n"
+            "• Привязка WhatsApp аккаунта\n\n"
+            "<b>Текущие настройки:</b>\n"
             "Язык: {chat_language}\n"
             "Триггер GPT: {gpt_command}\n\n"
-            "Команды:\n"
-            "/choose_your_language - Сменить язык\n"
-            "/buy - Купить кредиты\n"
-            "/balance - Проверить баланс\n"
-            "/mystats - Ваша статистика"
+            "<b>Меню:</b>\n"
+            "/settings - Язык и GPT команда\n"
+            "/obsidian - Синхронизация с GitHub\n"
+            "/account - Баланс, кредиты и WhatsApp"
         ),
         SPANISH: (
-            "Bot de voz a texto. ¡Solo envía un mensaje de voz!\n\n"
+            "🎙 <b>Bot de Voz a Texto</b>\n\n"
+            "Envía un mensaje de voz — recibe texto al instante.\n\n"
+            "<b>Funciones:</b>\n"
+            "• Transcripción multilingüe (en, ru, es, de)\n"
+            "• Sincronizar notas con Obsidian vía GitHub\n"
+            "• Categorización de notas con IA\n"
+            "• Vincular tu cuenta de WhatsApp\n\n"
+            "<b>Configuración actual:</b>\n"
             "Idioma: {chat_language}\n"
             "Activador GPT: {gpt_command}\n\n"
-            "Comandos:\n"
-            "/choose_your_language - Cambiar idioma\n"
-            "/buy - Comprar créditos\n"
-            "/balance - Ver saldo\n"
-            "/mystats - Tus estadísticas"
+            "<b>Menú:</b>\n"
+            "/settings - Idioma y comando GPT\n"
+            "/obsidian - Sincronización con GitHub\n"
+            "/account - Saldo, créditos y WhatsApp"
         ),
     },
     "insufficient_credits": {
@@ -146,5 +170,109 @@ translates = {
             "• Créditos gastados: {total_spent}\n"
             "• Créditos comprados: {total_purchased}"
         ),
+    },
+    # Hub titles
+    "settings_hub_title": {
+        ENGLISH: "⚙️ Settings",
+        GERMAN: "⚙️ Einstellungen",
+        RUSSIAN: "⚙️ Настройки",
+        SPANISH: "⚙️ Configuración",
+    },
+    "obsidian_hub_title": {
+        ENGLISH: "📝 Notes",
+        GERMAN: "📝 Notizen",
+        RUSSIAN: "📝 Заметки",
+        SPANISH: "📝 Notas",
+    },
+    "account_hub_title": {
+        ENGLISH: "💰 Account",
+        GERMAN: "💰 Konto",
+        RUSSIAN: "💰 Аккаунт",
+        SPANISH: "💰 Cuenta",
+    },
+    # Hub button labels
+    "btn_language": {
+        ENGLISH: "🌐 Language",
+        GERMAN: "🌐 Sprache",
+        RUSSIAN: "🌐 Язык",
+        SPANISH: "🌐 Idioma",
+    },
+    "btn_gpt_command": {
+        ENGLISH: "🤖 GPT command",
+        GERMAN: "🤖 GPT-Befehl",
+        RUSSIAN: "🤖 GPT команда",
+        SPANISH: "🤖 Comando GPT",
+    },
+    "btn_connect_github": {
+        ENGLISH: "🔗 Connect GitHub",
+        GERMAN: "🔗 GitHub verbinden",
+        RUSSIAN: "🔗 Подключить GitHub",
+        SPANISH: "🔗 Conectar GitHub",
+    },
+    "btn_toggle_sync_on": {
+        ENGLISH: "🔄 Sync: ON",
+        GERMAN: "🔄 Sync: AN",
+        RUSSIAN: "🔄 Синхр.: ВКЛ",
+        SPANISH: "🔄 Sincr.: SÍ",
+    },
+    "btn_toggle_sync_off": {
+        ENGLISH: "🔄 Sync: OFF",
+        GERMAN: "🔄 Sync: AUS",
+        RUSSIAN: "🔄 Синхр.: ВЫКЛ",
+        SPANISH: "🔄 Sincr.: NO",
+    },
+    "btn_toggle_sort_on": {
+        ENGLISH: "📂 Auto-sort: ON",
+        GERMAN: "📂 Auto-Sort: AN",
+        RUSSIAN: "📂 Авто-сорт.: ВКЛ",
+        SPANISH: "📂 Auto-orden: SÍ",
+    },
+    "btn_toggle_sort_off": {
+        ENGLISH: "📂 Auto-sort: OFF",
+        GERMAN: "📂 Auto-Sort: AUS",
+        RUSSIAN: "📂 Авто-сорт.: ВЫКЛ",
+        SPANISH: "📂 Auto-orden: NO",
+    },
+    "btn_categorize_all": {
+        ENGLISH: "📂 Categorize all",
+        GERMAN: "📂 Alle kategorisieren",
+        RUSSIAN: "📂 Категоризировать всё",
+        SPANISH: "📂 Categorizar todo",
+    },
+    "btn_disconnect_github": {
+        ENGLISH: "❌ Disconnect GitHub",
+        GERMAN: "❌ GitHub trennen",
+        RUSSIAN: "❌ Отключить GitHub",
+        SPANISH: "❌ Desconectar GitHub",
+    },
+    "btn_buy": {
+        ENGLISH: "💳 Buy credits",
+        GERMAN: "💳 Credits kaufen",
+        RUSSIAN: "💳 Купить кредиты",
+        SPANISH: "💳 Comprar créditos",
+    },
+    "btn_balance": {
+        ENGLISH: "💰 Balance",
+        GERMAN: "💰 Guthaben",
+        RUSSIAN: "💰 Баланс",
+        SPANISH: "💰 Saldo",
+    },
+    "btn_mystats": {
+        ENGLISH: "📊 My stats",
+        GERMAN: "📊 Meine Statistiken",
+        RUSSIAN: "📊 Моя статистика",
+        SPANISH: "📊 Mis estadísticas",
+    },
+    "btn_link_whatsapp": {
+        ENGLISH: "📱 Link WhatsApp",
+        GERMAN: "📱 WhatsApp verknüpfen",
+        RUSSIAN: "📱 Привязать WhatsApp",
+        SPANISH: "📱 Vincular WhatsApp",
+    },
+    "btn_unlink_whatsapp": {
+        ENGLISH: "📱 Unlink WhatsApp",
+        GERMAN: "📱 WhatsApp trennen",
+        RUSSIAN: "📱 Отвязать WhatsApp",
+        SPANISH: "📱 Desvincular WhatsApp",
     },
 }
