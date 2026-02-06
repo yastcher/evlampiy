@@ -19,5 +19,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
-.claude
 .agents
+*.session
+.claude/tasks
+.claude/settings.local.json

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from telegram import InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
@@ -11,7 +9,7 @@ async def send_response(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     response: str,
-    keyboard: Optional[InlineKeyboardMarkup] = None,
+    keyboard: InlineKeyboardMarkup | None = None,
     **kwargs,
 ) -> None:
     chunks = [

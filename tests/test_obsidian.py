@@ -122,7 +122,9 @@ class TestSaveTranscriptionToObsidian:
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
         with patch("src.obsidian.put_github_file", AsyncMock(return_value=False)):
-            success, filename = await save_transcription_to_obsidian(chat_id, "text", "telegram", "ru")
+            success, filename = await save_transcription_to_obsidian(
+                chat_id, "text", "telegram", "ru"
+            )
 
         assert success is False
         assert filename is None

@@ -64,7 +64,9 @@ class TestAccountLinking:
 
         # Manually expire the code in DB
         record = await LinkCode.find_one(LinkCode.code == code)
-        record.created_at = datetime.now(timezone.utc) - timedelta(seconds=LINK_CODE_TTL_SECONDS + 1)
+        record.created_at = datetime.now(timezone.utc) - timedelta(
+            seconds=LINK_CODE_TTL_SECONDS + 1
+        )
         await record.save()
 
         result = await confirm_link(code, "79009999999")
@@ -129,7 +131,6 @@ class TestLinkWhatsAppCommand:
     """Test /link_whatsapp Telegram handler."""
 
     async def test_generates_code_in_private_chat(self, mock_private_update, mock_context):
-
         mock_private_update.effective_user.id = 12345
 
         await link_whatsapp(mock_private_update, mock_context)
@@ -140,7 +141,6 @@ class TestLinkWhatsAppCommand:
         assert "WhatsApp" in reply_text
 
     async def test_ignored_in_group_chat(self, mock_group_update, mock_context):
-
         await link_whatsapp(mock_group_update, mock_context)
 
         mock_group_update.message.reply_text.assert_not_called()
@@ -150,7 +150,6 @@ class TestUnlinkWhatsAppCommand:
     """Test /unlink_whatsapp Telegram handler."""
 
     async def test_unlinks_existing(self, mock_private_update, mock_context):
-
         user_id = "12345"
         mock_private_update.effective_user.id = 12345
         await set_chat_language("u_12345", "en")
@@ -166,7 +165,6 @@ class TestUnlinkWhatsAppCommand:
         assert "unlinked" in reply_text.lower()
 
     async def test_handles_no_link(self, mock_private_update, mock_context):
-
         mock_private_update.effective_user.id = 99999
         await set_chat_language("u_99999", "en")
 
@@ -180,7 +178,6 @@ class TestWhatsAppLinkHandler:
     """Test WhatsApp link command handling."""
 
     async def test_links_with_valid_code(self):
-
         user_id = "tg_user_42"
         phone = "79001234567"
         code = await generate_link_code(user_id)
@@ -196,12 +193,13 @@ class TestWhatsAppLinkHandler:
 
         mock_wa.send_message.assert_called_once()
         call_kwargs = mock_wa.send_message.call_args
-        assert "success" in call_kwargs.kwargs["text"].lower() or "success" in str(call_kwargs).lower()
+        assert (
+            "success" in call_kwargs.kwargs["text"].lower() or "success" in str(call_kwargs).lower()
+        )
 
         assert await get_linked_telegram_id(phone) == user_id
 
     async def test_rejects_invalid_code(self):
-
         mock_wa = MagicMock()
         mock_wa.send_message = MagicMock()
 

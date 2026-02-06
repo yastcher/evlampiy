@@ -68,15 +68,23 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if provider is None:
         await send_response(
-            update, context, response=translates["service_unavailable"].get(language, translates["service_unavailable"]["en"])
+            update,
+            context,
+            response=translates["service_unavailable"].get(
+                language, translates["service_unavailable"]["en"]
+            ),
         )
         return
 
     if not has_unlimited_access(user_id):
-        ok, msg = await can_perform_operation(user_id, settings.credit_cost_voice)
+        ok, _msg = await can_perform_operation(user_id, settings.credit_cost_voice)
         if not ok:
             await send_response(
-                update, context, response=translates["insufficient_credits"].get(language, translates["insufficient_credits"]["en"])
+                update,
+                context,
+                response=translates["insufficient_credits"].get(
+                    language, translates["insufficient_credits"]["en"]
+                ),
             )
             return
 
@@ -105,7 +113,12 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await increment_transcription_stats()
     await increment_user_stats(user_id, audio_seconds=duration)
 
-    saved, filename = await save_transcription_to_obsidian(chat_id, text, const.SOURCE_TELEGRAM, language)
+    saved, filename = await save_transcription_to_obsidian(
+        chat_id,
+        text,
+        const.SOURCE_TELEGRAM,
+        language,
+    )
     if saved and filename and await get_auto_categorize(chat_id):
         github_settings = await get_github_settings(chat_id)
         if github_settings:

@@ -1,5 +1,6 @@
 """Note categorization using Claude Haiku."""
 
+import http
 import logging
 
 import httpx
@@ -40,7 +41,8 @@ async def classify_note(text: str, existing_categories: list[str]) -> str | None
         f"Note text:\n{text}\n\n"
         f"Rules:\n"
         f"1. If the note fits an existing category, return that category name exactly.\n"
-        f"2. If no existing category fits, suggest a new short category name (1-2 words, lowercase, no spaces, use underscores).\n"
+        f"2. If no existing category fits, suggest a new short category name "
+        f"(1-2 words, lowercase, no spaces, use underscores).\n"
         f"3. Return ONLY the category name, nothing else."
     )
 
@@ -64,7 +66,7 @@ async def classify_note(text: str, existing_categories: list[str]) -> str | None
                 json=payload,
                 timeout=30.0,
             )
-            if response.status_code == 200:
+            if response.status_code == http.HTTPStatus.OK:
                 data = response.json()
                 category = data["content"][0]["text"].strip().lower()
                 category = category.replace(" ", "_")
@@ -76,9 +78,7 @@ async def classify_note(text: str, existing_categories: list[str]) -> str | None
         return None
 
 
-async def move_github_file(
-    token: str, owner: str, repo: str, old_path: str, new_path: str
-) -> bool:
+async def move_github_file(token: str, owner: str, repo: str, old_path: str, new_path: str) -> bool:
     """Move a file in GitHub by copying content and deleting original."""
     file_data = await get_github_file(token, owner, repo, old_path)
     if not file_data:

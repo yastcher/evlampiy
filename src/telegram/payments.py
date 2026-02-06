@@ -47,7 +47,9 @@ async def handle_successful_payment(update: Update, context: ContextTypes.DEFAUL
     new_balance = await add_credits(user_id, credits_to_add)
     await increment_payment_stats(credits_to_add)
     await check_and_send_alerts(context.bot, credits_just_sold=credits_to_add)
-    logger.info("User %s purchased %s credits, new balance: %s", user_id, credits_to_add, new_balance)
+    logger.info(
+        "User %s purchased %s credits, new balance: %s", user_id, credits_to_add, new_balance
+    )
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -62,7 +64,11 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     credits = await get_credits(user_id)
 
-    text = translates["balance_message"].get(language, translates["balance_message"]["en"]).format(credits=credits)
+    text = (
+        translates["balance_message"]
+        .get(language, translates["balance_message"]["en"])
+        .format(credits=credits)
+    )
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=text,

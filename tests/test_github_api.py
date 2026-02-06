@@ -13,7 +13,9 @@ from src.github_api import (
 class TestGetOrCreateObsidianRepo:
     """Test repo creation/check."""
 
-    async def test_returns_existing_repo(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_existing_repo(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns info when repo already exists."""
         user_response = mock_httpx_response_factory({"login": "testuser"}, 200)
         repo_response = mock_httpx_response_factory(status_code=200)
@@ -45,7 +47,9 @@ class TestGetOrCreateObsidianRepo:
         mock_client.post.assert_called_once()
         mock_client.put.assert_called_once()
 
-    async def test_returns_none_on_invalid_token(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_none_on_invalid_token(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns None when GitHub token is invalid."""
         user_response = mock_httpx_response_factory({"message": "Bad credentials"}, 401)
 
@@ -61,7 +65,9 @@ class TestGetOrCreateObsidianRepo:
 class TestPutGithubFile:
     """Test file creation in GitHub."""
 
-    async def test_creates_file_successfully(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_creates_file_successfully(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """File is created in GitHub repo."""
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
@@ -78,7 +84,9 @@ class TestPutGithubFile:
 
         assert result is True
 
-    async def test_returns_false_on_auth_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_false_on_auth_error(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns False on 401 without retry."""
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
@@ -100,7 +108,9 @@ class TestPutGithubFile:
 class TestGetRepoContents:
     """Test repo contents listing."""
 
-    async def test_returns_list_of_contents(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_list_of_contents(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns list of files and folders."""
         contents = [
             {"name": "income", "type": "dir"},
@@ -116,7 +126,9 @@ class TestGetRepoContents:
         assert len(result) == 2
         assert result[0]["name"] == "income"
 
-    async def test_returns_single_item_as_list(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_single_item_as_list(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns single item wrapped in list."""
         single_file = {"name": "README.md", "type": "file"}
 
@@ -128,7 +140,9 @@ class TestGetRepoContents:
 
         assert len(result) == 1
 
-    async def test_returns_empty_list_on_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_empty_list_on_error(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns empty list on error."""
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
@@ -142,7 +156,9 @@ class TestGetRepoContents:
 class TestGetGithubFile:
     """Test file content retrieval."""
 
-    async def test_returns_content_and_sha(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_content_and_sha(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns decoded content and SHA."""
         content = "Hello World"
         encoded = base64.b64encode(content.encode()).decode()
@@ -158,7 +174,9 @@ class TestGetGithubFile:
         assert result[0] == "Hello World"
         assert result[1] == "abc123"
 
-    async def test_returns_none_on_not_found(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_none_on_not_found(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns None when file not found."""
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
@@ -172,7 +190,9 @@ class TestGetGithubFile:
 class TestDeleteGithubFile:
     """Test file deletion."""
 
-    async def test_deletes_file_successfully(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_deletes_file_successfully(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns True on successful delete."""
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
@@ -184,7 +204,9 @@ class TestDeleteGithubFile:
 
         assert result is True
 
-    async def test_returns_false_on_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_false_on_error(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns False on error."""
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)

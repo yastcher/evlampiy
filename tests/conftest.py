@@ -14,7 +14,17 @@ from src.dto import (
     WitUsageStats,
 )
 
-ALL_TEST_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState, AccountLink, LinkCode, LinkAttempt]
+ALL_TEST_MODELS = [
+    UserSettings,
+    UserCredits,
+    UsedTrial,
+    WitUsageStats,
+    MonthlyStats,
+    AlertState,
+    AccountLink,
+    LinkCode,
+    LinkAttempt,
+]
 
 pytest_plugins = [
     "tests.fixtures",

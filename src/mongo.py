@@ -14,7 +14,17 @@ from src.dto import (
     WitUsageStats,
 )
 
-ALL_DOCUMENT_MODELS = [UserSettings, UserCredits, UsedTrial, WitUsageStats, MonthlyStats, AlertState, AccountLink, LinkCode, LinkAttempt]
+ALL_DOCUMENT_MODELS = [
+    UserSettings,
+    UserCredits,
+    UsedTrial,
+    WitUsageStats,
+    MonthlyStats,
+    AlertState,
+    AccountLink,
+    LinkCode,
+    LinkAttempt,
+]
 
 
 async def init_beanie_models():

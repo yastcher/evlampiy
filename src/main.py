@@ -2,6 +2,8 @@ import asyncio
 import logging
 import threading
 
+import uvicorn
+from fastapi import FastAPI
 from telegram import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 from telegram.ext import (
     Application,
@@ -25,6 +27,8 @@ from src.telegram.payments import (
     handle_successful_payment,
 )
 from src.telegram.voice import from_voice_to_text
+from src.whatsapp.client import get_whatsapp_client
+from src.whatsapp.handlers import register_handlers
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -117,11 +121,6 @@ async def post_init(application: Application):
 
 def create_fastapi_app():
     """Create FastAPI application with WhatsApp webhook."""
-    from fastapi import FastAPI
-
-    from src.whatsapp.client import get_whatsapp_client
-    from src.whatsapp.handlers import register_handlers
-
     app = FastAPI(title="Evlampiy Bot API")
 
     wa = get_whatsapp_client()
@@ -139,10 +138,13 @@ def create_fastapi_app():
 
 def run_fastapi_server():
     """Run FastAPI server in a separate thread."""
-    import uvicorn
-
     app = create_fastapi_app()
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")
+    uvicorn.run(
+        app,
+        host=settings.fastapi_host,
+        port=settings.fastapi_port,
+        log_level="warning",
+    )
 
 
 def main():
@@ -159,7 +161,9 @@ def main():
         api_thread.start()
         logger.info("FastAPI server started for WhatsApp webhook")
 
-    application = ApplicationBuilder().token(settings.telegram_bot_token).post_init(post_init).build()
+    application = (
+        ApplicationBuilder().token(settings.telegram_bot_token).post_init(post_init).build()
+    )
 
     for command_name, command_handler in COMMAND_HANDLERS.items():
         application.add_handler(CommandHandler(command_name, command_handler))
@@ -170,9 +174,7 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, from_voice_to_text))
 
     application.add_handler(PreCheckoutQueryHandler(handle_pre_checkout))
-    application.add_handler(
-        MessageHandler(filters.SUCCESSFUL_PAYMENT, handle_successful_payment)
-    )
+    application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, handle_successful_payment))
 
     enter_command_handler = ConversationHandler(
         entry_points=[

@@ -8,7 +8,6 @@ from src.transcription.groq_client import transcribe_with_groq
 
 
 class TestGroqClient:
-
     async def test_transcribes_audio_successfully(self):
         """Successful transcription returns text."""
         mock_response = MagicMock()
@@ -21,9 +20,7 @@ class TestGroqClient:
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
-            mock_client_class.return_value.__aenter__.return_value.post.return_value = (
-                mock_response
-            )
+            mock_client_class.return_value.__aenter__.return_value.post.return_value = mock_response
 
             result = await transcribe_with_groq(b"audio", "en")
 
@@ -43,9 +40,7 @@ class TestGroqClient:
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
             mock_client_class.return_value.__aenter__.return_value.post.side_effect = (
-                httpx.HTTPStatusError(
-                    "Error", request=mock_request, response=mock_response
-                )
+                httpx.HTTPStatusError("Error", request=mock_request, response=mock_response)
             )
 
             result = await transcribe_with_groq(b"audio", "en")

@@ -29,5 +29,5 @@ async def evlampiy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await send_response(update, context, response=gpt_response)
     except Exception as e:
-        logger.error(f"Error occurred: {e}")
+        logger.error("Error occurred: %s", e)
         await send_response(update, context, response=str(e))

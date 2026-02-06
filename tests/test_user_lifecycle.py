@@ -1,6 +1,5 @@
 """Integration test for complete user lifecycle."""
 
-
 from src.config import settings
 from src.credits import (
     add_credits,

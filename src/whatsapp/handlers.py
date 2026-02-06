@@ -46,11 +46,15 @@ async def handle_link_command(wa: WhatsApp, message: Message) -> None:
         await asyncio.to_thread(wa.send_message, to=phone, text="Account linked successfully!")
     elif result == "rate_limited":
         await asyncio.to_thread(
-            wa.send_message, to=phone, text="Too many attempts. Please wait 5 minutes and try again."
+            wa.send_message,
+            to=phone,
+            text="Too many attempts. Please wait 5 minutes and try again.",
         )
     else:
         await asyncio.to_thread(
-            wa.send_message, to=phone, text="Invalid or expired code. Try /link_whatsapp in Telegram."
+            wa.send_message,
+            to=phone,
+            text="Invalid or expired code. Try /link_whatsapp in Telegram.",
         )
 
 
@@ -87,7 +91,12 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         logger.debug("Empty WhatsApp voice message from %s", phone_number)
         return
 
-    saved, filename = await save_transcription_to_obsidian(chat_id, text, const.SOURCE_WHATSAPP, language)
+    saved, filename = await save_transcription_to_obsidian(
+        chat_id,
+        text,
+        const.SOURCE_WHATSAPP,
+        language,
+    )
     if saved and filename and await get_auto_categorize(chat_id):
         github_settings = await get_github_settings(chat_id)
         if github_settings:
