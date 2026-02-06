@@ -1,7 +1,7 @@
 """Account linking between Telegram and WhatsApp."""
 
 import logging
-import random
+import secrets
 import typing
 from datetime import datetime, timedelta, timezone
 
@@ -21,7 +21,7 @@ async def generate_link_code(telegram_user_id: str) -> str:
     """Generate a one-time code for linking WhatsApp account."""
     await LinkCode.find(LinkCode.telegram_user_id == telegram_user_id).delete()
 
-    code = "".join(str(random.randint(0, 9)) for _ in range(LINK_CODE_LENGTH))
+    code = "".join(secrets.choice("0123456789") for _ in range(LINK_CODE_LENGTH))
     await LinkCode(code=code, telegram_user_id=telegram_user_id).insert()
 
     return code
@@ -66,7 +66,11 @@ async def _record_failed_attempt(attempt: LinkAttempt) -> None:
     attempt.attempt_count += 1
     if attempt.attempt_count >= LINK_MAX_ATTEMPTS:
         attempt.locked_until = datetime.now(timezone.utc) + timedelta(seconds=LINK_LOCKOUT_SECONDS)
-        logger.warning("Phone %s locked after %d failed attempts", attempt.whatsapp_phone, attempt.attempt_count)
+        logger.warning(
+            "Phone %s locked after %d failed attempts",
+            attempt.whatsapp_phone,
+            attempt.attempt_count,
+        )
     await attempt.save()
 
 

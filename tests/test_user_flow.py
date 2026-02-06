@@ -215,7 +215,10 @@ class TestVoiceMessageFlow:
         mock_private_update.message.voice = mock_telegram_voice
 
         with (
-            patch("src.telegram.voice.grant_initial_credits_if_eligible", AsyncMock(return_value=False)),
+            patch(
+                "src.telegram.voice.grant_initial_credits_if_eligible",
+                AsyncMock(return_value=False),
+            ),
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
         ):
@@ -244,7 +247,10 @@ class TestVoiceMessageFlow:
             patch("src.telegram.voice.settings.groq_api_key", "test-key"),
             patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello", 10))),
             patch("src.telegram.voice.send_response", AsyncMock()),
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(False, None))),
+            patch(
+                "src.telegram.voice.save_transcription_to_obsidian",
+                AsyncMock(return_value=(False, None)),
+            ),
             patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
@@ -274,11 +280,18 @@ class TestVoiceMessageFlow:
         mock_private_update.message.voice = mock_telegram_voice
 
         with (
-            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Note content", 5))),
+            patch(
+                "src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Note content", 5))
+            ),
             patch("src.telegram.voice.send_response", AsyncMock()),
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(True, "note.md"))),
+            patch(
+                "src.telegram.voice.save_transcription_to_obsidian",
+                AsyncMock(return_value=(True, "note.md")),
+            ),
             patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
-            patch("src.telegram.voice.categorize_note", AsyncMock(return_value="work")) as mock_categorize,
+            patch(
+                "src.telegram.voice.categorize_note", AsyncMock(return_value="work")
+            ) as mock_categorize,
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -298,9 +311,14 @@ class TestVoiceMessageFlow:
 
         # Mock only external boundaries
         with (
-            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello world", 5))),
+            patch(
+                "src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello world", 5))
+            ),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(False, None))),
+            patch(
+                "src.telegram.voice.save_transcription_to_obsidian",
+                AsyncMock(return_value=(False, None)),
+            ),
             patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
@@ -327,9 +345,15 @@ class TestVoiceMessageFlow:
 
         # Mock only external boundaries
         with (
-            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("евлампий расскажи анекдот", 10))),
+            patch(
+                "src.telegram.voice.transcribe_audio",
+                AsyncMock(return_value=("евлампий расскажи анекдот", 10)),
+            ),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.save_transcription_to_obsidian", AsyncMock(return_value=(False, None))),
+            patch(
+                "src.telegram.voice.save_transcription_to_obsidian",
+                AsyncMock(return_value=(False, None)),
+            ),
             patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
@@ -594,9 +618,7 @@ class TestHubCommands:
     ):
         """Non-admin in group chat cannot use settings hub."""
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(
-            status=ChatMemberStatus.MEMBER
-        )
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
         await settings_hub(mock_group_update, mock_context)
 

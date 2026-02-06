@@ -1,6 +1,5 @@
 """Integration test for complete user settings lifecycle."""
 
-
 from src.config import settings
 from src.dto import UserSettings
 from src.mongo import (

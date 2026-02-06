@@ -9,7 +9,9 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - DDD: modular by domain in src/, each module: router.py, schemas.py, models.py, service.py, dependencies.py,
   exceptions.py
 - Constants: src/const.py, import as `from src import const`, use as `const.PROVIDER_GROQ`
-- Imports: `import datetime`, `import typing` (module-level only, no `from` for stdlib)
+- Stdlib imports: `import datetime`, `import typing` — import the module, not names from it.
+  Use `datetime.datetime`, `datetime.timezone.utc`, `typing.Optional`, etc.
+  Never use `from datetime import UTC` — use `datetime.UTC` instead.
 - Settings: split BaseSettings per module
 - Max 500 lines per file — decompose if exceeded
 - FastAPI conventions: see .claude/skills/fastapi.md
@@ -38,6 +40,8 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 
 - Conventional commits (feat:, fix:, docs:, refactoring:)
 - Always PR, never push to main
+- Max ~500 lines of diff per commit — split large tasks into logical commits
+- When accumulated uncommitted changes approach ~500 lines, stop and propose a commit before continuing
 
 ## Security review
 

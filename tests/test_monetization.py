@@ -75,11 +75,11 @@ class TestCreditFlow:
         assert await get_user_tier(vip_id) == UserTier.VIP
 
         # 3. VIP can always perform operations (no credits needed)
-        ok, msg = await can_perform_operation(vip_id, 1000)
+        ok, _msg = await can_perform_operation(vip_id, 1000)
         assert ok is True
 
         # 4. Regular user without credits cannot perform
-        ok, msg = await can_perform_operation(regular_id, 1)
+        ok, _msg = await can_perform_operation(regular_id, 1)
         assert ok is False
 
     def test_user_hash_uniqueness(self):

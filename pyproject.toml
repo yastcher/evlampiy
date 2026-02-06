@@ -3,7 +3,7 @@ name = "evlampiy"
 version = "0.7.0"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
-authors = ["Yast <yastcher@gmail.com>"]
+authors = [{ name = "Yast", email = "yastcher@gmail.com" }]
 requires-python = "~=3.12"
 dependencies = [
     "python-telegram-bot~=21.11.1",
@@ -40,12 +40,33 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "N", "I"]
+select = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "I", # isort
+    "G", # flake8-logging-format (logger %s not f-string)
+    "PLC", # pylint convention (PLC0415 — no local imports)
+    "PLR", # pylint refactor (PLR2004 — magic numbers)
+    "SIM", # flake8-simplify
+    "S", # flake8-bandit (security)
+    "RUF", # ruff-specific
+]
 ignore = [
-    "E203", "E501", "E731",
-    "N802", "N803", "N805", "N806",
+    "UP017", # datetime.UTC alias — conflicts with `import datetime` convention
 ]
 fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "PLR2004", "S105", "S106"]
+"src/localization.py" = ["RUF001", "E501"]
+"src/github_oauth.py" = ["S105"]
+"src/config.py" = ["S104"]
+
+[tool.ruff.lint.pylint]
+max-args = 6
 
 [tool.ruff.lint.isort]
 known-third-party = ["telegram"]

@@ -38,6 +38,7 @@ from src.wit_tracking import get_wit_usage_this_month
 
 logger = logging.getLogger(__name__)
 
+_background_tasks: set[asyncio.Task] = set()
 WAITING_FOR_COMMAND = 1
 
 
@@ -69,7 +70,9 @@ async def choose_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Deutsch", callback_data="set_lang_de")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    prompt = translates["choose_language_prompt"].get(language, translates["choose_language_prompt"]["en"])
+    prompt = translates["choose_language_prompt"].get(
+        language, translates["choose_language_prompt"]["en"]
+    )
     await update.message.reply_text(prompt, reply_markup=reply_markup)
 
 
@@ -116,7 +119,9 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     device_info = await get_github_device_code()
     if "error" in device_info:
-        text = translates["github_auth_failed"].get(language, translates["github_auth_failed"]["en"])
+        text = translates["github_auth_failed"].get(
+            language, translates["github_auth_failed"]["en"]
+        )
         await reply_text(update, text)
         logger.error("GitHub device code error: %s", device_info)
         return
@@ -126,10 +131,14 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
     expires_in = device_info["expires_in"]
     interval = device_info["interval"]
 
-    text = translates["github_auth_prompt"].get(language, translates["github_auth_prompt"]["en"]).format(
-        verification_uri=verification_uri,
-        user_code=user_code,
-        expires_in=expires_in,
+    text = (
+        translates["github_auth_prompt"]
+        .get(language, translates["github_auth_prompt"]["en"])
+        .format(
+            verification_uri=verification_uri,
+            user_code=user_code,
+            expires_in=expires_in,
+        )
     )
     await reply_text(update, text)
 
@@ -140,7 +149,9 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
             expires_in=expires_in,
         )
         if not token:
-            text = translates["github_auth_timeout"].get(language, translates["github_auth_timeout"]["en"])
+            text = translates["github_auth_timeout"].get(
+                language, translates["github_auth_timeout"]["en"]
+            )
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=text,
@@ -149,7 +160,9 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         repo_info = await get_or_create_obsidian_repo(token)
         if not repo_info:
-            text = translates["github_repo_failed"].get(language, translates["github_repo_failed"]["en"])
+            text = translates["github_repo_failed"].get(
+                language, translates["github_repo_failed"]["en"]
+            )
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=text,
@@ -161,16 +174,22 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await set_save_to_obsidian(chat_id, True)
 
-        text = translates["github_connected"].get(language, translates["github_connected"]["en"]).format(
-            owner=repo_info["owner"],
-            repo=repo_info["repo"],
+        text = (
+            translates["github_connected"]
+            .get(language, translates["github_connected"]["en"])
+            .format(
+                owner=repo_info["owner"],
+                repo=repo_info["repo"],
+            )
         )
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=text,
         )
 
-    asyncio.create_task(_poll_and_setup())
+    task = asyncio.create_task(_poll_and_setup())
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
 
 async def toggle_obsidian(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -194,7 +213,10 @@ async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = get_chat_id(update)
     await clear_github_settings(chat_id)
     language = await get_chat_language(chat_id)
-    await reply_text(update, translates["github_disconnected"].get(language, translates["github_disconnected"]["en"]))
+    await reply_text(
+        update,
+        translates["github_disconnected"].get(language, translates["github_disconnected"]["en"]),
+    )
 
 
 async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -248,7 +270,9 @@ async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     github_settings = await get_github_settings(chat_id)
 
     if not github_settings:
-        text = translates["github_not_connected"].get(language, translates["github_not_connected"]["en"])
+        text = translates["github_not_connected"].get(
+            language, translates["github_not_connected"]["en"]
+        )
         await reply_text(update, text)
         return
 
@@ -277,7 +301,11 @@ async def link_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     code = await generate_link_code(user_id)
 
-    text = translates["whatsapp_link_prompt"].get(language, translates["whatsapp_link_prompt"]["en"]).format(code=code)
+    text = (
+        translates["whatsapp_link_prompt"]
+        .get(language, translates["whatsapp_link_prompt"]["en"])
+        .format(code=code)
+    )
     await reply_text(update, text)
 
 
@@ -291,9 +319,17 @@ async def unlink_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = await unlink(user_id)
 
     if result:
-        await reply_text(update, translates["whatsapp_unlinked"].get(language, translates["whatsapp_unlinked"]["en"]))
+        await reply_text(
+            update,
+            translates["whatsapp_unlinked"].get(language, translates["whatsapp_unlinked"]["en"]),
+        )
     else:
-        await reply_text(update, translates["whatsapp_not_linked"].get(language, translates["whatsapp_not_linked"]["en"]))
+        await reply_text(
+            update,
+            translates["whatsapp_not_linked"].get(
+                language, translates["whatsapp_not_linked"]["en"]
+            ),
+        )
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -333,7 +369,8 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• Wit.ai: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)\n"
         f"• Groq: {groq_audio_seconds} sec (${groq_cost:.2f})\n\n"
         f"<b>Health</b>\n"
-        f"• Wit.ai: {'✅' if wit_status == 'OK' else '⚠️' if wit_status == 'Warning' else '🚨'} {wit_status}\n"
+        f"• Wit.ai: {'✅' if wit_status == 'OK' else '⚠️' if wit_status == 'Warning' else '🚨'} "
+        f"{wit_status}\n"
         f"• Groq: {'✅' if settings.groq_api_key else '❌'} {groq_status}"
     )
     await update.message.reply_text(text, parse_mode="HTML")
@@ -454,7 +491,9 @@ async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE
     if action == "language":
         chat_id = get_chat_id(update)
         language = await get_chat_language(chat_id)
-        prompt = translates["choose_language_prompt"].get(language, translates["choose_language_prompt"]["en"])
+        prompt = translates["choose_language_prompt"].get(
+            language, translates["choose_language_prompt"]["en"]
+        )
 
         keyboard = [
             [InlineKeyboardButton("Русский", callback_data="set_lang_ru")],

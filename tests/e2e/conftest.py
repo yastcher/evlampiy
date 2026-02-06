@@ -19,7 +19,9 @@ class E2ESettings(BaseSettings):
 def e2e_settings():
     s = E2ESettings()
     if not s.e2e_telegram_api_id or not s.e2e_telegram_api_hash:
-        pytest.skip("E2E credentials not configured (set E2E_TELEGRAM_API_ID and E2E_TELEGRAM_API_HASH)")
+        pytest.skip(
+            "E2E credentials not configured (set E2E_TELEGRAM_API_ID and E2E_TELEGRAM_API_HASH)"
+        )
     if not s.e2e_bot_username:
         pytest.skip("E2E_BOT_USERNAME not configured")
     return s

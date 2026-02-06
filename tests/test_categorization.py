@@ -22,9 +22,7 @@ class TestGetExistingCategories:
             {"name": "README.md", "type": "file"},
         ]
 
-        with patch(
-            "src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)
-        ):
+        with patch("src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)):
             result = await get_existing_categories("token", "owner", "repo")
 
         assert "income" not in result
@@ -44,7 +42,9 @@ class TestGetExistingCategories:
 class TestClassifyNote:
     """Test note classification with Claude API."""
 
-    async def test_returns_existing_category(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_existing_category(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns existing category when note matches."""
         api_response = {
             "content": [{"text": "work"}],
@@ -61,7 +61,9 @@ class TestClassifyNote:
 
         assert result == "work"
 
-    async def test_suggests_new_category(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_suggests_new_category(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Suggests new category name when no match."""
         api_response = {
             "content": [{"text": "health_fitness"}],
@@ -85,7 +87,9 @@ class TestClassifyNote:
 
         assert result is None
 
-    async def test_normalizes_category_name(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_normalizes_category_name(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Converts spaces to underscores and lowercases."""
         api_response = {
             "content": [{"text": "Health Fitness"}],
@@ -102,7 +106,9 @@ class TestClassifyNote:
 
         assert result == "health_fitness"
 
-    async def test_returns_none_on_api_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
+    async def test_returns_none_on_api_error(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
         """Returns None when Anthropic API fails."""
         with (
             patch("src.categorization.settings.anthropic_api_key", "test-key"),
@@ -173,9 +179,7 @@ class TestCategorizeNote:
             patch("src.categorization.classify_note", AsyncMock(return_value="work")),
             patch("src.categorization.move_github_file", AsyncMock(return_value=True)),
         ):
-            result = await categorize_note(
-                "token", "owner", "repo", "note.md", "Meeting notes"
-            )
+            result = await categorize_note("token", "owner", "repo", "note.md", "Meeting notes")
 
         assert result == "work"
 
@@ -185,9 +189,7 @@ class TestCategorizeNote:
             patch("src.categorization.get_existing_categories", AsyncMock(return_value=[])),
             patch("src.categorization.classify_note", AsyncMock(return_value=None)),
         ):
-            result = await categorize_note(
-                "token", "owner", "repo", "note.md", "Some content"
-            )
+            result = await categorize_note("token", "owner", "repo", "note.md", "Some content")
 
         assert result is None
 
@@ -205,9 +207,7 @@ class TestCategorizeAllIncome:
         ]
 
         with (
-            patch(
-                "src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)
-            ),
+            patch("src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)),
             patch(
                 "src.categorization.get_github_file",
                 AsyncMock(return_value=("content", "sha")),
@@ -233,9 +233,7 @@ class TestCategorizeAllIncome:
         ]
 
         with (
-            patch(
-                "src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)
-            ),
+            patch("src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)),
             patch(
                 "src.categorization.get_github_file",
                 AsyncMock(return_value=("content", "sha")),

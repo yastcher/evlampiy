@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import http
 import logging
 
 import httpx
@@ -22,7 +23,7 @@ def _github_headers(token: str) -> dict:
 async def get_github_username(token: str) -> str | None:
     async with httpx.AsyncClient() as client:
         response = await client.get(f"{GITHUB_API_BASE}/user", headers=_github_headers(token))
-        if response.status_code == 200:
+        if response.status_code == http.HTTPStatus.OK:
             return response.json()["login"]
         logger.error("Failed to get GitHub username, status: %s", response.status_code)
         return None
@@ -43,11 +44,11 @@ async def get_or_create_obsidian_repo(
             f"{GITHUB_API_BASE}/repos/{username}/{repo_name}",
             headers=headers,
         )
-        if response.status_code == 200:
+        if response.status_code == http.HTTPStatus.OK:
             logger.info("Repo %s/%s already exists", username, repo_name)
             return {"owner": username, "repo": repo_name, "token": token}
 
-        if response.status_code != 404:
+        if response.status_code != http.HTTPStatus.NOT_FOUND:
             logger.error("Failed to check repo, status: %s", response.status_code)
             return None
 
@@ -57,7 +58,10 @@ async def get_or_create_obsidian_repo(
             headers=headers,
             json={"name": repo_name, "private": True, "auto_init": True},
         )
-        if create_response.status_code not in (200, 201):
+        if create_response.status_code not in (
+            http.HTTPStatus.OK,
+            http.HTTPStatus.CREATED,
+        ):
             logger.error("Failed to create repo, status: %s", create_response.status_code)
             return None
 
@@ -88,9 +92,9 @@ async def put_github_file(
                     headers=_github_headers(token),
                     json={"message": commit_message, "content": content_base64},
                 )
-            if response.status_code in (200, 201):
+            if response.status_code in (http.HTTPStatus.OK, http.HTTPStatus.CREATED):
                 return True
-            if response.status_code == 401:
+            if response.status_code == http.HTTPStatus.UNAUTHORIZED:
                 logger.error("GitHub token is invalid or expired")
                 return False
             logger.error("GitHub API error on attempt %s: status %s", attempt, response.status_code)
@@ -108,7 +112,7 @@ async def get_repo_contents(token: str, owner: str, repo: str, path: str = "") -
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=_github_headers(token))
-        if response.status_code == 200:
+        if response.status_code == http.HTTPStatus.OK:
             data = response.json()
             if isinstance(data, list):
                 return data
@@ -122,7 +126,7 @@ async def get_github_file(token: str, owner: str, repo: str, path: str) -> tuple
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=_github_headers(token))
-        if response.status_code == 200:
+        if response.status_code == http.HTTPStatus.OK:
             data = response.json()
             content = base64.b64decode(data["content"]).decode("utf-8")
             return content, data["sha"]
@@ -141,7 +145,7 @@ async def delete_github_file(
             headers=_github_headers(token),
             json={"message": commit_message, "sha": sha},
         )
-        if response.status_code == 200:
+        if response.status_code == http.HTTPStatus.OK:
             return True
         logger.error("Failed to delete file, status: %s", response.status_code)
         return False

@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     # Wit.ai monthly free limit
     wit_free_monthly_limit: int = 500
 
+    # FastAPI server
+    fastapi_host: str = "0.0.0.0"
+    fastapi_port: int = 8000
+
     @property
     def vip_user_ids(self) -> set[str]:
         return _parse_comma_separated_ids(self.vip_user_ids_raw)

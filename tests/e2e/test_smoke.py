@@ -47,9 +47,7 @@ async def test_voice_transcription_smoke(e2e_client: TelegramClient, e2e_setting
         if response_text:
             break
 
-    assert response_text is not None, (
-        f"Bot did not respond within {RESPONSE_TIMEOUT_SECONDS}s"
-    )
+    assert response_text is not None, f"Bot did not respond within {RESPONSE_TIMEOUT_SECONDS}s"
 
     response_lower = response_text.lower()
     matched = [kw for kw in EXPECTED_KEYWORDS if kw in response_lower]

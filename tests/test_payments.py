@@ -148,11 +148,13 @@ class TestMilestoneAlerts:
         async def capture_alert(bot, message):
             alerts_sent.append(message)
 
-        with patch("src.alerts.send_admin_alert", capture_alert):
-            with patch("src.alerts.settings") as mock_settings:
-                mock_settings.admin_user_ids = ["123"]
-                mock_settings.wit_free_monthly_limit = 500
-                await check_and_send_alerts(mock_context.bot, credits_just_sold=credits_for_10_dollars)
+        with (
+            patch("src.alerts.send_admin_alert", capture_alert),
+            patch("src.alerts.settings") as mock_settings,
+        ):
+            mock_settings.admin_user_ids = ["123"]
+            mock_settings.wit_free_monthly_limit = 500
+            await check_and_send_alerts(mock_context.bot, credits_just_sold=credits_for_10_dollars)
 
         milestone_alerts = [a for a in alerts_sent if "$10" in a]
         assert len(milestone_alerts) == 1

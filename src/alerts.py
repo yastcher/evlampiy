@@ -42,19 +42,24 @@ async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1):
     month = current_month_key()
     stats = await get_monthly_stats(month)
 
-    if stats:
-        if stats.total_payments == 1:
-            if await _should_send_alert("first_payment", month):
-                await send_admin_alert(bot, "🎉 <b>First payment received!</b>\n\nCongratulations!")
-                await _mark_alert_sent("first_payment", month)
+    if stats and stats.total_payments == 1:
+        if await _should_send_alert("first_payment", month):
+            await send_admin_alert(bot, "🎉 <b>First payment received!</b>\n\nCongratulations!")
+            await _mark_alert_sent("first_payment", month)
 
         revenue = stats.total_credits_sold * const.STAR_TO_DOLLAR
         for milestone in REVENUE_MILESTONES:
-            prev_revenue = (stats.total_credits_sold - credits_just_sold) * const.STAR_TO_DOLLAR if stats.total_credits_sold >= credits_just_sold else 0
+            prev_revenue = (
+                (stats.total_credits_sold - credits_just_sold) * const.STAR_TO_DOLLAR
+                if stats.total_credits_sold >= credits_just_sold
+                else 0
+            )
             if prev_revenue < milestone <= revenue:
                 alert_type = f"revenue_{milestone}"
                 if await _should_send_alert(alert_type, month):
-                    await send_admin_alert(bot, f"🎉 <b>Revenue milestone!</b>\n\nReached ${milestone}!")
+                    await send_admin_alert(
+                        bot, f"🎉 <b>Revenue milestone!</b>\n\nReached ${milestone}!"
+                    )
                     await _mark_alert_sent(alert_type, month)
 
     wit_usage = await get_wit_usage_this_month()
@@ -65,15 +70,14 @@ async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1):
             await send_admin_alert(
                 bot,
                 f"🚨 <b>Wit.ai CRITICAL</b>\n\n"
-                f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage/wit_limit*100:.1f}%)\n\n"
+                f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)\n\n"
                 f"Free tier almost exhausted!",
             )
             await _mark_alert_sent("wit_95", month)
-    elif wit_usage > wit_limit * 0.8:
-        if await _should_send_alert("wit_80", month):
-            await send_admin_alert(
-                bot,
-                f"⚠️ <b>Wit.ai Warning</b>\n\n"
-                f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage/wit_limit*100:.1f}%)",
-            )
-            await _mark_alert_sent("wit_80", month)
+    elif wit_usage > wit_limit * 0.8 and await _should_send_alert("wit_80", month):
+        await send_admin_alert(
+            bot,
+            f"⚠️ <b>Wit.ai Warning</b>\n\n"
+            f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)",
+        )
+        await _mark_alert_sent("wit_80", month)

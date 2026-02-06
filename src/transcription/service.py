@@ -47,7 +47,11 @@ async def transcribe_audio(
     else:
         text = _transcribe_with_wit(audio_bytes, audio_format, language)
 
-    logger.debug("Transcription result (%s): %s", const.PROVIDER_GROQ if use_groq else const.PROVIDER_WIT, text)
+    logger.debug(
+        "Transcription result (%s): %s",
+        const.PROVIDER_GROQ if use_groq else const.PROVIDER_WIT,
+        text,
+    )
     return text, duration
 
 
