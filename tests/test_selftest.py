@@ -30,10 +30,7 @@ def _patch_settings(tmp_path):
 
 
 async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings):
-    with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
-        patch("src.selftest.get_chat_language", new_callable=AsyncMock, return_value="ru"),
-    ):
+    with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
         mock_transcribe.return_value = ("привет мир", 5)
         await run_selftest(mock_bot)
 
@@ -45,10 +42,7 @@ async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings)
 
 
 async def test_sends_error_on_empty_transcription(mock_bot, _patch_settings):
-    with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
-        patch("src.selftest.get_chat_language", new_callable=AsyncMock, return_value="ru"),
-    ):
+    with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
         mock_transcribe.return_value = ("", 5)
         await run_selftest(mock_bot)
 
@@ -57,10 +51,7 @@ async def test_sends_error_on_empty_transcription(mock_bot, _patch_settings):
 
 
 async def test_sends_error_on_transcription_exception(mock_bot, _patch_settings):
-    with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
-        patch("src.selftest.get_chat_language", new_callable=AsyncMock, return_value="ru"),
-    ):
+    with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
         mock_transcribe.side_effect = RuntimeError("connection timeout")
         await run_selftest(mock_bot)
 
@@ -68,25 +59,19 @@ async def test_sends_error_on_transcription_exception(mock_bot, _patch_settings)
     assert "\u274c Wit.ai \u2014 error: connection timeout" in message_text
 
 
-async def test_uses_admin_language(mock_bot, _patch_settings):
-    with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
-        patch("src.selftest.get_chat_language", new_callable=AsyncMock, return_value="en"),
-    ):
-        mock_transcribe.return_value = ("hello world", 3)
+async def test_uses_russian_language(mock_bot, _patch_settings):
+    with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
+        mock_transcribe.return_value = ("текст", 3)
         await run_selftest(mock_bot)
 
-    mock_transcribe.assert_called_once_with(SAMPLE_AUDIO, "ogg", "en", use_groq=False)
+    mock_transcribe.assert_called_once_with(SAMPLE_AUDIO, "ogg", "ru", use_groq=False)
     message_text = mock_bot.send_message.call_args[1]["text"]
-    assert "Self-test (en)" in message_text
+    assert "Self-test (ru)" in message_text
 
 
 async def test_does_not_crash_on_send_failure(mock_bot, _patch_settings, caplog):
     mock_bot.send_message.side_effect = RuntimeError("chat not found")
-    with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
-        patch("src.selftest.get_chat_language", new_callable=AsyncMock, return_value="ru"),
-    ):
+    with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
         mock_transcribe.return_value = ("text", 2)
         await run_selftest(mock_bot)
 
@@ -116,7 +101,6 @@ async def test_message_contains_version(mock_bot, _patch_settings):
     with (
         patch("src.selftest._get_version", return_value="0.7.0"),
         patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
-        patch("src.selftest.get_chat_language", new_callable=AsyncMock, return_value="ru"),
     ):
         mock_transcribe.return_value = ("text", 2)
         await run_selftest(mock_bot)
