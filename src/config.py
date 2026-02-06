@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     # Wit.ai monthly free limit
     wit_free_monthly_limit: int = 500
 
+    # Self-test
+    selftest_sample_path: str = "./data/e2e_deploy_ru.ogg"
+
     # FastAPI server
     fastapi_host: str = "0.0.0.0"
     fastapi_port: int = 8000

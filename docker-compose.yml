@@ -34,5 +34,7 @@ services:
     <<: *variables
     ports:
       - "8000:8000"  # FastAPI for WhatsApp webhook
+    volumes:
+      - ./data:/app/data:ro
     depends_on:
       - mongodb

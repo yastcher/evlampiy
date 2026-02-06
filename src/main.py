@@ -19,6 +19,7 @@ from telegram.ext import (
 from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.mongo import init_beanie_models
+from src.selftest import run_selftest
 from src.telegram import handlers
 from src.telegram.payments import (
     balance_command,
@@ -117,6 +118,8 @@ async def post_init(application: Application):
             admin_commands,
             scope=BotCommandScopeChat(chat_id=int(admin_id)),
         )
+
+    await run_selftest(bot)
 
 
 def create_fastapi_app():
