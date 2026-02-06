@@ -7,6 +7,7 @@ import pytest
 from src.selftest import run_selftest
 
 SAMPLE_AUDIO = b"fake_ogg_audio_data"
+SAMPLE_DURATION = 5
 ADMIN_ID = "12345"
 
 
@@ -22,7 +23,10 @@ def mock_bot():
 def _patch_settings(tmp_path):
     sample_file = tmp_path / "test_sample.ogg"
     sample_file.write_bytes(SAMPLE_AUDIO)
-    with patch("src.selftest.settings") as mock_settings:
+    with (
+        patch("src.selftest.settings") as mock_settings,
+        patch("src.selftest.get_audio_duration_seconds", return_value=SAMPLE_DURATION),
+    ):
         mock_settings.admin_user_ids = {ADMIN_ID}
         mock_settings.selftest_sample_path = str(sample_file)
         mock_settings.default_language = "ru"
@@ -34,7 +38,9 @@ async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings)
         mock_transcribe.return_value = ("привет мир", 5)
         await run_selftest(mock_bot)
 
-    mock_bot.send_voice.assert_called_once_with(chat_id=int(ADMIN_ID), voice=SAMPLE_AUDIO)
+    mock_bot.send_voice.assert_called_once_with(
+        chat_id=int(ADMIN_ID), voice=SAMPLE_AUDIO, duration=SAMPLE_DURATION
+    )
     mock_bot.send_message.assert_called_once()
     message_text = mock_bot.send_message.call_args[1]["text"]
     assert "\u2705 Wit.ai \u2014 OK" in message_text

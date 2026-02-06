@@ -13,6 +13,8 @@ x-variables: &variables
     WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
     WHATSAPP_APP_ID: ${WHATSAPP_APP_ID:-}
     WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+    # GitHub OAuth (optional)
+    GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
     # Monetization (optional)
     VIP_USER_IDS: ${VIP_USER_IDS:-}
     ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
