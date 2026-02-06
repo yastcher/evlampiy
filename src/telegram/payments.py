@@ -9,6 +9,9 @@ from src import const
 from src.alerts import check_and_send_alerts
 from src.config import settings
 from src.credits import add_credits, get_credits, increment_payment_stats
+from src.localization import translates
+from src.mongo import get_chat_language
+from src.telegram.chat_params import get_chat_id
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +57,13 @@ async def handle_successful_payment(update: Update, context: ContextTypes.DEFAUL
 
 async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show current credit balance."""
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
     user_id = str(update.effective_user.id)
     credits = await get_credits(user_id)
 
+    text = translates["balance_message"].get(language, translates["balance_message"]["en"]).format(credits=credits)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"Balance: {credits} credits",
+        text=text,
     )

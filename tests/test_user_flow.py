@@ -4,8 +4,10 @@ import pytest
 from telegram.constants import ChatMemberStatus
 from telegram.ext import ConversationHandler
 
+from src.account_linking import confirm_link, generate_link_code
 from src.config import ENGLISH, GERMAN, RUSSIAN, SPANISH
-from src.credits import add_credits
+from src.credits import add_credits, current_month_key
+from src.dto import MonthlyStats
 from src.mongo import (
     get_auto_categorize,
     get_chat_language,
@@ -20,6 +22,7 @@ from src.mongo import (
 )
 from src.telegram.handlers import (
     WAITING_FOR_COMMAND,
+    account_hub,
     categorize_all,
     choose_language,
     connect_github,
@@ -28,6 +31,8 @@ from src.telegram.handlers import (
     handle_command_input,
     hub_callback_router,
     lang_buttons,
+    obsidian_hub,
+    settings_hub,
     start,
     toggle_categorize,
     toggle_obsidian,
@@ -224,7 +229,6 @@ class TestVoiceMessageFlow:
         self, mock_private_update, mock_context, mock_telegram_voice
     ):
         """Groq provider usage is recorded in stats."""
-        from src.dto import MonthlyStats
 
         user_id = "12352"
         chat_id = "u_12352"
@@ -246,7 +250,6 @@ class TestVoiceMessageFlow:
             await from_voice_to_text(mock_private_update, mock_context)
 
         # Verify groq usage was recorded
-        from src.credits import current_month_key
 
         month_key = current_month_key()
         stats = await MonthlyStats.find_one(MonthlyStats.month_key == month_key)
@@ -430,6 +433,8 @@ class TestConnectGithub:
 
     async def test_handles_device_code_error(self, mock_private_update, mock_context):
         """Error response from device code request."""
+        await set_chat_language("u_12345", "en")
+
         with patch(
             "src.telegram.handlers.get_github_device_code",
             AsyncMock(return_value={"error": "unauthorized_client"}),
@@ -446,6 +451,7 @@ class TestToggleObsidian:
     async def test_toggles_on(self, mock_private_update, mock_context):
         """Enables Obsidian sync when currently disabled."""
         chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
         # Ensure initially disabled
         await set_save_to_obsidian(chat_id, False)
 
@@ -459,6 +465,7 @@ class TestToggleObsidian:
     async def test_toggles_off(self, mock_private_update, mock_context):
         """Disables Obsidian sync when currently enabled."""
         chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
         # Ensure initially enabled
         await set_save_to_obsidian(chat_id, True)
 
@@ -476,6 +483,7 @@ class TestDisconnectGithub:
     async def test_clears_settings(self, mock_private_update, mock_context):
         """GitHub settings are cleared in real DB."""
         chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
         # Setup GitHub settings first
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
         await set_save_to_obsidian(chat_id, True)
@@ -565,7 +573,6 @@ class TestHubCommands:
 
     async def test_settings_hub_shows_keyboard(self, mock_private_update, mock_context):
         """Settings hub shows inline keyboard with 2 buttons."""
-        from src.telegram.handlers import settings_hub
 
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
@@ -586,7 +593,6 @@ class TestHubCommands:
         self, mock_group_update, mock_context
     ):
         """Non-admin in group chat cannot use settings hub."""
-        from src.telegram.handlers import settings_hub
 
         mock_context.bot.get_chat_member.return_value = MagicMock(
             status=ChatMemberStatus.MEMBER
@@ -598,7 +604,6 @@ class TestHubCommands:
 
     async def test_obsidian_hub_without_github(self, mock_private_update, mock_context):
         """Obsidian hub shows only 'Connect GitHub' when not connected."""
-        from src.telegram.handlers import obsidian_hub
 
         chat_id = "u_obsidian_no_gh"
         mock_private_update.effective_chat.id = 888888
@@ -618,7 +623,6 @@ class TestHubCommands:
 
     async def test_obsidian_hub_with_github(self, mock_private_update, mock_context):
         """Obsidian hub shows all buttons except 'Connect' when GitHub connected."""
-        from src.telegram.handlers import obsidian_hub
 
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
@@ -642,7 +646,6 @@ class TestHubCommands:
 
     async def test_account_hub_shows_balance_buttons(self, mock_private_update, mock_context):
         """Account hub shows buy, balance, mystats buttons."""
-        from src.telegram.handlers import account_hub
 
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
@@ -660,7 +663,6 @@ class TestHubCommands:
 
     async def test_account_hub_shows_link_whatsapp(self, mock_private_update, mock_context):
         """Account hub shows 'Link WhatsApp' when not linked."""
-        from src.telegram.handlers import account_hub
 
         chat_id = "u_account_no_wa"
         mock_private_update.effective_chat.id = 777777
@@ -679,8 +681,6 @@ class TestHubCommands:
 
     async def test_account_hub_shows_unlink_whatsapp(self, mock_private_update, mock_context):
         """Account hub shows 'Unlink WhatsApp' when linked."""
-        from src.account_linking import confirm_link, generate_link_code
-        from src.telegram.handlers import account_hub
 
         user_id = "12345"
         chat_id = "u_12345"
@@ -701,7 +701,6 @@ class TestHubCommands:
 
     async def test_account_hub_private_only(self, mock_group_update, mock_context):
         """Account hub only works in private chats."""
-        from src.telegram.handlers import account_hub
 
         await account_hub(mock_group_update, mock_context)
 

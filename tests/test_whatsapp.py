@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
+import src.whatsapp.client
 from src.main import create_fastapi_app
 from src.mongo import set_auto_categorize, set_chat_language, set_github_settings
 from src.whatsapp.client import WHATSAPP_CHAT_PREFIX, get_whatsapp_client
@@ -17,7 +18,6 @@ class TestWhatsAppClient:
             mock_settings.whatsapp_token = ""
             mock_settings.whatsapp_phone_id = ""
             # Reset cached client
-            import src.whatsapp.client
 
             src.whatsapp.client._wa_client = None
 
@@ -33,7 +33,6 @@ class TestWhatsAppClient:
             mock_settings.whatsapp_app_secret = ""
             mock_settings.whatsapp_verify_token = "verify_token"
             # Reset cached client
-            import src.whatsapp.client
 
             src.whatsapp.client._wa_client = None
 

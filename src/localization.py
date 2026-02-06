@@ -275,4 +275,105 @@ translates = {
         RUSSIAN: "📱 Отвязать WhatsApp",
         SPANISH: "📱 Desvincular WhatsApp",
     },
+    # Handler responses
+    "choose_language_prompt": {
+        ENGLISH: "Please choose your preferred language:",
+        GERMAN: "Bitte wählen Sie Ihre bevorzugte Sprache:",
+        RUSSIAN: "Выберите предпочтительный язык:",
+        SPANISH: "Por favor, elige tu idioma preferido:",
+    },
+    "obsidian_sync_enabled": {
+        ENGLISH: "Obsidian sync is now enabled.",
+        GERMAN: "Obsidian-Sync ist jetzt aktiviert.",
+        RUSSIAN: "Синхронизация с Obsidian включена.",
+        SPANISH: "Sincronización con Obsidian activada.",
+    },
+    "obsidian_sync_disabled": {
+        ENGLISH: "Obsidian sync is now disabled.",
+        GERMAN: "Obsidian-Sync ist jetzt deaktiviert.",
+        RUSSIAN: "Синхронизация с Obsidian выключена.",
+        SPANISH: "Sincronización con Obsidian desactivada.",
+    },
+    "github_disconnected": {
+        ENGLISH: "GitHub disconnected. Obsidian sync disabled.",
+        GERMAN: "GitHub getrennt. Obsidian-Sync deaktiviert.",
+        RUSSIAN: "GitHub отключён. Синхронизация выключена.",
+        SPANISH: "GitHub desconectado. Sincronización desactivada.",
+    },
+    "github_not_connected": {
+        ENGLISH: "GitHub not connected. Use /connect_github first.",
+        GERMAN: "GitHub nicht verbunden. Verwenden Sie zuerst /connect_github.",
+        RUSSIAN: "GitHub не подключён. Используйте /connect_github.",
+        SPANISH: "GitHub no conectado. Usa /connect_github primero.",
+    },
+    "github_auth_failed": {
+        ENGLISH: "Failed to start GitHub authorization.",
+        GERMAN: "GitHub-Autorisierung konnte nicht gestartet werden.",
+        RUSSIAN: "Не удалось начать авторизацию GitHub.",
+        SPANISH: "Error al iniciar la autorización de GitHub.",
+    },
+    "github_auth_prompt": {
+        ENGLISH: (
+            "1) Open: {verification_uri}\n"
+            "2) Enter code: {user_code}\n\n"
+            "You have {expires_in} seconds to complete authorization."
+        ),
+        GERMAN: (
+            "1) Öffnen: {verification_uri}\n"
+            "2) Code eingeben: {user_code}\n\n"
+            "Sie haben {expires_in} Sekunden zur Autorisierung."
+        ),
+        RUSSIAN: (
+            "1) Откройте: {verification_uri}\n"
+            "2) Введите код: {user_code}\n\n"
+            "На авторизацию отведено {expires_in} секунд."
+        ),
+        SPANISH: (
+            "1) Abre: {verification_uri}\n"
+            "2) Ingresa el código: {user_code}\n\n"
+            "Tienes {expires_in} segundos para completar la autorización."
+        ),
+    },
+    "github_auth_timeout": {
+        ENGLISH: "GitHub authorization failed or timed out. Try /connect_github again.",
+        GERMAN: "GitHub-Autorisierung fehlgeschlagen oder abgelaufen. Versuchen Sie /connect_github erneut.",
+        RUSSIAN: "Авторизация GitHub не удалась или истекло время. Попробуйте /connect_github снова.",
+        SPANISH: "Autorización de GitHub fallida o expirada. Intenta /connect_github de nuevo.",
+    },
+    "github_repo_failed": {
+        ENGLISH: "Failed to create/access GitHub repository.",
+        GERMAN: "GitHub-Repository konnte nicht erstellt/zugegriffen werden.",
+        RUSSIAN: "Не удалось создать/получить доступ к репозиторию GitHub.",
+        SPANISH: "Error al crear/acceder al repositorio de GitHub.",
+    },
+    "github_connected": {
+        ENGLISH: "GitHub connected! Repository: {owner}/{repo}\nObsidian sync is now enabled.",
+        GERMAN: "GitHub verbunden! Repository: {owner}/{repo}\nObsidian-Sync ist jetzt aktiviert.",
+        RUSSIAN: "GitHub подключён! Репозиторий: {owner}/{repo}\nСинхронизация с Obsidian включена.",
+        SPANISH: "¡GitHub conectado! Repositorio: {owner}/{repo}\nSincronización con Obsidian activada.",
+    },
+    "whatsapp_link_prompt": {
+        ENGLISH: "Send this message to the bot on WhatsApp:\n\nlink {code}\n\nCode expires in 5 minutes.",
+        GERMAN: "Senden Sie diese Nachricht an den Bot auf WhatsApp:\n\nlink {code}\n\nCode läuft in 5 Minuten ab.",
+        RUSSIAN: "Отправьте это сообщение боту в WhatsApp:\n\nlink {code}\n\nКод действителен 5 минут.",
+        SPANISH: "Envía este mensaje al bot en WhatsApp:\n\nlink {code}\n\nEl código expira en 5 minutos.",
+    },
+    "whatsapp_unlinked": {
+        ENGLISH: "WhatsApp account unlinked.",
+        GERMAN: "WhatsApp-Konto getrennt.",
+        RUSSIAN: "Аккаунт WhatsApp отвязан.",
+        SPANISH: "Cuenta de WhatsApp desvinculada.",
+    },
+    "whatsapp_not_linked": {
+        ENGLISH: "No WhatsApp account linked.",
+        GERMAN: "Kein WhatsApp-Konto verknüpft.",
+        RUSSIAN: "Аккаунт WhatsApp не привязан.",
+        SPANISH: "No hay cuenta de WhatsApp vinculada.",
+    },
+    "balance_message": {
+        ENGLISH: "Balance: {credits} credits",
+        GERMAN: "Guthaben: {credits} Credits",
+        RUSSIAN: "Баланс: {credits} кредитов",
+        SPANISH: "Saldo: {credits} créditos",
+    },
 }

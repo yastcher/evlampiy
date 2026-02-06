@@ -59,6 +59,9 @@ async def choose_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_admin(update, context):
         return
 
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+
     keyboard = [
         [InlineKeyboardButton("Русский", callback_data="set_lang_ru")],
         [InlineKeyboardButton("English", callback_data="set_lang_en")],
@@ -66,10 +69,8 @@ async def choose_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Deutsch", callback_data="set_lang_de")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "Please choose your preferred language:",
-        reply_markup=reply_markup,
-    )
+    prompt = translates["choose_language_prompt"].get(language, translates["choose_language_prompt"]["en"])
+    await update.message.reply_text(prompt, reply_markup=reply_markup)
 
 
 async def lang_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -111,10 +112,12 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
 
     device_info = await get_github_device_code()
     if "error" in device_info:
-        await reply_text(update, "Failed to start GitHub authorization.")
+        text = translates["github_auth_failed"].get(language, translates["github_auth_failed"]["en"])
+        await reply_text(update, text)
         logger.error("GitHub device code error: %s", device_info)
         return
 
@@ -123,12 +126,12 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
     expires_in = device_info["expires_in"]
     interval = device_info["interval"]
 
-    await reply_text(
-        update,
-        f"1) Open: {verification_uri}\n"
-        f"2) Enter code: {user_code}\n\n"
-        f"You have {expires_in} seconds to complete authorization.",
+    text = translates["github_auth_prompt"].get(language, translates["github_auth_prompt"]["en"]).format(
+        verification_uri=verification_uri,
+        user_code=user_code,
+        expires_in=expires_in,
     )
+    await reply_text(update, text)
 
     async def _poll_and_setup():
         token = await poll_github_for_token(
@@ -137,17 +140,19 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
             expires_in=expires_in,
         )
         if not token:
+            text = translates["github_auth_timeout"].get(language, translates["github_auth_timeout"]["en"])
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="GitHub authorization failed or timed out. Try /connect_github again.",
+                text=text,
             )
             return
 
         repo_info = await get_or_create_obsidian_repo(token)
         if not repo_info:
+            text = translates["github_repo_failed"].get(language, translates["github_repo_failed"]["en"])
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="Failed to create/access GitHub repository.",
+                text=text,
             )
             return
 
@@ -156,12 +161,13 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await set_save_to_obsidian(chat_id, True)
 
+        text = translates["github_connected"].get(language, translates["github_connected"]["en"]).format(
+            owner=repo_info["owner"],
+            repo=repo_info["repo"],
+        )
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=(
-                f"GitHub connected! Repository: {repo_info['owner']}/{repo_info['repo']}\n"
-                "Obsidian sync is now enabled."
-            ),
+            text=text,
         )
 
     asyncio.create_task(_poll_and_setup())
@@ -176,8 +182,9 @@ async def toggle_obsidian(update: Update, context: ContextTypes.DEFAULT_TYPE):
     new_value = not current
     await set_save_to_obsidian(chat_id, new_value)
 
-    status = "enabled" if new_value else "disabled"
-    await reply_text(update, f"Obsidian sync is now {status}.")
+    language = await get_chat_language(chat_id)
+    key = "obsidian_sync_enabled" if new_value else "obsidian_sync_disabled"
+    await reply_text(update, translates[key].get(language, translates[key]["en"]))
 
 
 async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -186,7 +193,8 @@ async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     chat_id = get_chat_id(update)
     await clear_github_settings(chat_id)
-    await reply_text(update, "GitHub disconnected. Obsidian sync disabled.")
+    language = await get_chat_language(chat_id)
+    await reply_text(update, translates["github_disconnected"].get(language, translates["github_disconnected"]["en"]))
 
 
 async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -240,7 +248,8 @@ async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     github_settings = await get_github_settings(chat_id)
 
     if not github_settings:
-        await reply_text(update, "GitHub not connected. Use /connect_github first.")
+        text = translates["github_not_connected"].get(language, translates["github_not_connected"]["en"])
+        await reply_text(update, text)
         return
 
     count = await categorize_all_income(
@@ -263,26 +272,28 @@ async def link_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_private_chat(update):
         return
 
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
     user_id = str(update.effective_user.id)
     code = await generate_link_code(user_id)
 
-    await reply_text(
-        update,
-        f"Send this message to the bot on WhatsApp:\n\nlink {code}\n\nCode expires in 5 minutes.",
-    )
+    text = translates["whatsapp_link_prompt"].get(language, translates["whatsapp_link_prompt"]["en"]).format(code=code)
+    await reply_text(update, text)
 
 
 async def unlink_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_private_chat(update):
         return
 
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
     user_id = str(update.effective_user.id)
     result = await unlink(user_id)
 
     if result:
-        await reply_text(update, "WhatsApp account unlinked.")
+        await reply_text(update, translates["whatsapp_unlinked"].get(language, translates["whatsapp_unlinked"]["en"]))
     else:
-        await reply_text(update, "No WhatsApp account linked.")
+        await reply_text(update, translates["whatsapp_not_linked"].get(language, translates["whatsapp_not_linked"]["en"]))
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -441,6 +452,10 @@ async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE
     action = query.data.replace("hub_", "")
 
     if action == "language":
+        chat_id = get_chat_id(update)
+        language = await get_chat_language(chat_id)
+        prompt = translates["choose_language_prompt"].get(language, translates["choose_language_prompt"]["en"])
+
         keyboard = [
             [InlineKeyboardButton("Русский", callback_data="set_lang_ru")],
             [InlineKeyboardButton("English", callback_data="set_lang_en")],
@@ -448,10 +463,7 @@ async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE
             [InlineKeyboardButton("Deutsch", callback_data="set_lang_de")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
-            "Please choose your preferred language:",
-            reply_markup=reply_markup,
-        )
+        await query.edit_message_text(prompt, reply_markup=reply_markup)
 
     elif action == "buy":
         await buy_command(update, context)

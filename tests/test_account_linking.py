@@ -14,6 +14,9 @@ from src.account_linking import (
     unlink,
 )
 from src.dto import LinkAttempt, LinkCode
+from src.mongo import set_chat_language
+from src.telegram.handlers import link_whatsapp, unlink_whatsapp
+from src.whatsapp.handlers import handle_link_command
 
 
 class TestAccountLinking:
@@ -126,7 +129,6 @@ class TestLinkWhatsAppCommand:
     """Test /link_whatsapp Telegram handler."""
 
     async def test_generates_code_in_private_chat(self, mock_private_update, mock_context):
-        from src.telegram.handlers import link_whatsapp
 
         mock_private_update.effective_user.id = 12345
 
@@ -138,7 +140,6 @@ class TestLinkWhatsAppCommand:
         assert "WhatsApp" in reply_text
 
     async def test_ignored_in_group_chat(self, mock_group_update, mock_context):
-        from src.telegram.handlers import link_whatsapp
 
         await link_whatsapp(mock_group_update, mock_context)
 
@@ -149,10 +150,10 @@ class TestUnlinkWhatsAppCommand:
     """Test /unlink_whatsapp Telegram handler."""
 
     async def test_unlinks_existing(self, mock_private_update, mock_context):
-        from src.telegram.handlers import unlink_whatsapp
 
         user_id = "12345"
         mock_private_update.effective_user.id = 12345
+        await set_chat_language("u_12345", "en")
 
         # Create a link first
         code = await generate_link_code(user_id)
@@ -165,9 +166,9 @@ class TestUnlinkWhatsAppCommand:
         assert "unlinked" in reply_text.lower()
 
     async def test_handles_no_link(self, mock_private_update, mock_context):
-        from src.telegram.handlers import unlink_whatsapp
 
         mock_private_update.effective_user.id = 99999
+        await set_chat_language("u_99999", "en")
 
         await unlink_whatsapp(mock_private_update, mock_context)
 
@@ -179,7 +180,6 @@ class TestWhatsAppLinkHandler:
     """Test WhatsApp link command handling."""
 
     async def test_links_with_valid_code(self):
-        from src.whatsapp.handlers import handle_link_command
 
         user_id = "tg_user_42"
         phone = "79001234567"
@@ -201,7 +201,6 @@ class TestWhatsAppLinkHandler:
         assert await get_linked_telegram_id(phone) == user_id
 
     async def test_rejects_invalid_code(self):
-        from src.whatsapp.handlers import handle_link_command
 
         mock_wa = MagicMock()
         mock_wa.send_message = MagicMock()

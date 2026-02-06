@@ -3,7 +3,8 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src import const
-from src.credits import get_credits
+from src.alerts import check_and_send_alerts
+from src.credits import add_credits, get_credits, increment_payment_stats
 from src.telegram.payments import (
     balance_command,
     buy_command,
@@ -117,7 +118,6 @@ class TestBalanceCommand:
 
     async def test_balance_shows_credits(self, mock_private_update, mock_context):
         """Balance command shows user's credits from real DB."""
-        from src.credits import add_credits
 
         user_id = "444"
         mock_private_update.effective_user.id = 444
@@ -138,9 +138,6 @@ class TestMilestoneAlerts:
 
     async def test_milestone_triggers_on_bulk_purchase(self, mock_private_update, mock_context):
         """Milestone alert triggers when buying multiple credits at once crossing threshold."""
-        from src import const
-        from src.alerts import check_and_send_alerts
-        from src.credits import increment_payment_stats
 
         credits_for_10_dollars = int(10 / const.STAR_TO_DOLLAR) + 1
 
