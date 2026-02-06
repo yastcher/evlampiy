@@ -25,3 +25,11 @@ async def is_user_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
             user_id=update.effective_user.id,
         )
         return chat_member.status in (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
+
+
+async def reply_text(update: Update, text: str, **kwargs):
+    """Reply via callback query message or regular message."""
+    if update.callback_query:
+        await update.callback_query.message.reply_text(text, **kwargs)
+    else:
+        await update.message.reply_text(text, **kwargs)

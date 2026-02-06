@@ -32,7 +32,8 @@ from src.mongo import (
     set_gpt_command,
     set_save_to_obsidian,
 )
-from src.telegram.chat_params import get_chat_id, is_private_chat, is_user_admin
+from src.telegram.chat_params import get_chat_id, is_private_chat, is_user_admin, reply_text
+from src.telegram.payments import balance_command, buy_command
 from src.wit_tracking import get_wit_usage_this_month
 
 logger = logging.getLogger(__name__)
@@ -113,7 +114,7 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     device_info = await get_github_device_code()
     if "error" in device_info:
-        await update.message.reply_text("Failed to start GitHub authorization.")
+        await reply_text(update, "Failed to start GitHub authorization.")
         logger.error("GitHub device code error: %s", device_info)
         return
 
@@ -122,10 +123,11 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
     expires_in = device_info["expires_in"]
     interval = device_info["interval"]
 
-    await update.message.reply_text(
+    await reply_text(
+        update,
         f"1) Open: {verification_uri}\n"
         f"2) Enter code: {user_code}\n\n"
-        f"You have {expires_in} seconds to complete authorization."
+        f"You have {expires_in} seconds to complete authorization.",
     )
 
     async def _poll_and_setup():
@@ -175,7 +177,7 @@ async def toggle_obsidian(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await set_save_to_obsidian(chat_id, new_value)
 
     status = "enabled" if new_value else "disabled"
-    await update.message.reply_text(f"Obsidian sync is now {status}.")
+    await reply_text(update, f"Obsidian sync is now {status}.")
 
 
 async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -184,7 +186,7 @@ async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     chat_id = get_chat_id(update)
     await clear_github_settings(chat_id)
-    await update.message.reply_text("GitHub disconnected. Obsidian sync disabled.")
+    await reply_text(update, "GitHub disconnected. Obsidian sync disabled.")
 
 
 async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -200,14 +202,18 @@ async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_spent = record.total_credits_spent if record else 0
     total_purchased = record.total_credits_purchased if record else 0
 
-    text = translates["mystats_message"].get(language, translates["mystats_message"]["en"]).format(
-        credits=credits,
-        tier=tier.value,
-        total_transcriptions=total_transcriptions,
-        total_spent=total_spent,
-        total_purchased=total_purchased,
+    text = (
+        translates["mystats_message"]
+        .get(language, translates["mystats_message"]["en"])
+        .format(
+            credits=credits,
+            tier=tier.value,
+            total_transcriptions=total_transcriptions,
+            total_spent=total_spent,
+            total_purchased=total_purchased,
+        )
     )
-    await update.message.reply_text(text, parse_mode="HTML")
+    await reply_text(update, text, parse_mode="HTML")
 
 
 async def toggle_categorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -222,7 +228,7 @@ async def toggle_categorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     key = "categorize_enabled" if new_value else "categorize_disabled"
     text = translates[key].get(language, translates[key]["en"])
-    await update.message.reply_text(text)
+    await reply_text(update, text)
 
 
 async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -234,7 +240,7 @@ async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     github_settings = await get_github_settings(chat_id)
 
     if not github_settings:
-        await update.message.reply_text("GitHub not connected. Use /connect_github first.")
+        await reply_text(update, "GitHub not connected. Use /connect_github first.")
         return
 
     count = await categorize_all_income(
@@ -245,12 +251,12 @@ async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if count > 0:
         text = translates["categorize_done"].get(language, translates["categorize_done"]["en"])
-        await update.message.reply_text(text.format(count=count))
+        await reply_text(update, text.format(count=count))
     else:
         text = translates["categorize_no_files"].get(
             language, translates["categorize_no_files"]["en"]
         )
-        await update.message.reply_text(text)
+        await reply_text(update, text)
 
 
 async def link_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -260,10 +266,9 @@ async def link_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     code = await generate_link_code(user_id)
 
-    await update.message.reply_text(
-        f"Send this message to the bot on WhatsApp:\n\n"
-        f"link {code}\n\n"
-        f"Code expires in 5 minutes."
+    await reply_text(
+        update,
+        f"Send this message to the bot on WhatsApp:\n\nlink {code}\n\nCode expires in 5 minutes.",
     )
 
 
@@ -275,9 +280,9 @@ async def unlink_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = await unlink(user_id)
 
     if result:
-        await update.message.reply_text("WhatsApp account unlinked.")
+        await reply_text(update, "WhatsApp account unlinked.")
     else:
-        await update.message.reply_text("No WhatsApp account linked.")
+        await reply_text(update, "No WhatsApp account linked.")
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -297,7 +302,11 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     revenue = total_credits_sold * const.STAR_TO_DOLLAR
     groq_cost = groq_audio_seconds / 3600 * 0.04
 
-    wit_status = "OK" if wit_usage < wit_limit * 0.8 else ("Warning" if wit_usage < wit_limit * 0.95 else "CRITICAL")
+    wit_status = (
+        "OK"
+        if wit_usage < wit_limit * 0.8
+        else ("Warning" if wit_usage < wit_limit * 0.95 else "CRITICAL")
+    )
     groq_status = "Configured" if settings.groq_api_key else "Not configured"
 
     text = (
@@ -310,7 +319,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• Credits sold: {total_credits_sold}\n"
         f"• Revenue: ${revenue:.2f}\n\n"
         f"<b>Costs</b>\n"
-        f"• Wit.ai: {wit_usage:,} / {wit_limit:,} ({wit_usage/wit_limit*100:.1f}%)\n"
+        f"• Wit.ai: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)\n"
         f"• Groq: {groq_audio_seconds} sec (${groq_cost:.2f})\n\n"
         f"<b>Health</b>\n"
         f"• Wit.ai: {'✅' if wit_status == 'OK' else '⚠️' if wit_status == 'Warning' else '🚨'} {wit_status}\n"
@@ -328,7 +337,11 @@ async def settings_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [InlineKeyboardButton(translates["btn_language"][language], callback_data="hub_language")],
-        [InlineKeyboardButton(translates["btn_gpt_command"][language], callback_data="hub_gpt_command")],
+        [
+            InlineKeyboardButton(
+                translates["btn_gpt_command"][language], callback_data="hub_gpt_command"
+            )
+        ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     title = translates["settings_hub_title"][language]
@@ -345,20 +358,37 @@ async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not github_settings:
         keyboard = [
-            [InlineKeyboardButton(translates["btn_connect_github"][language], callback_data="hub_connect_github")],
+            [
+                InlineKeyboardButton(
+                    translates["btn_connect_github"][language], callback_data="hub_connect_github"
+                )
+            ],
         ]
     else:
         sync_on = await get_save_to_obsidian(chat_id)
         sort_on = await get_auto_categorize(chat_id)
 
-        sync_label = translates["btn_toggle_sync_on" if sync_on else "btn_toggle_sync_off"][language]
-        sort_label = translates["btn_toggle_sort_on" if sort_on else "btn_toggle_sort_off"][language]
+        sync_label = translates["btn_toggle_sync_on" if sync_on else "btn_toggle_sync_off"][
+            language
+        ]
+        sort_label = translates["btn_toggle_sort_on" if sort_on else "btn_toggle_sort_off"][
+            language
+        ]
 
         keyboard = [
             [InlineKeyboardButton(sync_label, callback_data="hub_toggle_obsidian")],
             [InlineKeyboardButton(sort_label, callback_data="hub_toggle_categorize")],
-            [InlineKeyboardButton(translates["btn_categorize_all"][language], callback_data="hub_categorize")],
-            [InlineKeyboardButton(translates["btn_disconnect_github"][language], callback_data="hub_disconnect_github")],
+            [
+                InlineKeyboardButton(
+                    translates["btn_categorize_all"][language], callback_data="hub_categorize"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    translates["btn_disconnect_github"][language],
+                    callback_data="hub_disconnect_github",
+                )
+            ],
         ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -383,9 +413,21 @@ async def account_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     if whatsapp_linked:
-        keyboard.append([InlineKeyboardButton(translates["btn_unlink_whatsapp"][language], callback_data="hub_unlink_whatsapp")])
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    translates["btn_unlink_whatsapp"][language], callback_data="hub_unlink_whatsapp"
+                )
+            ]
+        )
     else:
-        keyboard.append([InlineKeyboardButton(translates["btn_link_whatsapp"][language], callback_data="hub_link_whatsapp")])
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    translates["btn_link_whatsapp"][language], callback_data="hub_link_whatsapp"
+                )
+            ]
+        )
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     title = translates["account_hub_title"][language]
@@ -410,6 +452,36 @@ async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE
             "Please choose your preferred language:",
             reply_markup=reply_markup,
         )
+
+    elif action == "buy":
+        await buy_command(update, context)
+
+    elif action == "balance":
+        await balance_command(update, context)
+
+    elif action == "mystats":
+        await mystats_command(update, context)
+
+    elif action == "toggle_obsidian":
+        await toggle_obsidian(update, context)
+
+    elif action == "toggle_categorize":
+        await toggle_categorize(update, context)
+
+    elif action == "categorize":
+        await categorize_all(update, context)
+
+    elif action == "connect_github":
+        await connect_github(update, context)
+
+    elif action == "disconnect_github":
+        await disconnect_github(update, context)
+
+    elif action == "link_whatsapp":
+        await link_whatsapp(update, context)
+
+    elif action == "unlink_whatsapp":
+        await unlink_whatsapp(update, context)
 
 
 async def enter_your_command_from_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
