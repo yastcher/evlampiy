@@ -1,148 +1,75 @@
-## Общие идеи
+# CLAUDE.md
 
-Отвечать нужно на русском, если текстовое сообщение.
-Перед тем, как решать конкретную задачу, нужно решить архитектурную задачу, как именно ее запланировать.
-Планировать надо сразу в парадигме DDD
-Лучше сначала сделать тест по TDD
+## Project
 
-Предлагай только необходимый миниум изменений в коде, в идеале вообще без изменений кода. При предложении нового кода
-или правок нельзя менять стиль уже существующего ранее кода из приложенных файлов! Единственное исключение - когда можно
-что-то упростить. Не меняй уже существующие строки без логики - комментарии или логи!
-Простота чтения кода для человека должна быть первым приоритетом. Код в целом должен легко читаться человеком, без
-мелких функций и сложной вложенной логики. Не предлагай сложный код, наоборот старайся упрощать. Простота - признак
-хорошего кода.
-Не используй локальные импорты (внутри функций, методов, тестов) — все импорты только на уровне модуля в начале
-файла. Думай над архитектурой, чтоб не было круговых импортов.
-Избегай овер-инженеринга - упрощай решение, если есть что-то потенциально не нужное.
+Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 
-Файл не должен превышать 500 строк. Если превышает — декомпозируй на модули.
+## Architecture
 
-Существующие имена переменных менять нельзя (если нет четкого указания поменять). Если нужно ввести новое имя - нужно
-использовать практики "Чистого кода" для выбора имени (по имени переменной должно быть понятно, для чего оно). То есть
-не использовать имена из 2-х символов например и тп. То есть gc_loop - плохое имя, а obsolete_callbacks_remove -
-получше.
+- DDD: modular by domain in src/, each module: router.py, schemas.py, models.py, service.py, dependencies.py,
+  exceptions.py
+- Constants: src/const.py, import as `from src import const`, use as `const.PROVIDER_GROQ`
+- Imports: `import datetime`, `import typing` (module-level only, no `from` for stdlib)
+- Settings: split BaseSettings per module
+- Max 500 lines per file — decompose if exceeded
+- FastAPI conventions: see .claude/skills/fastapi.md
 
-Не используй "магические" числа или строки. Если значение много раз повторяется - оно должно использоваться через
-константу. Все строковые литералы, используемые более одного раза, должны быть в src/const.py
-Или в класс настроек добавить как дополнительный параметр.
+## Commands
 
-Импорт констант — через модуль: `from src import const`, использование — `const.PROVIDER_GROQ`.
-НЕ через `from src.const import PROVIDER_GROQ`.
-То же самое насчет `import datetime` и `import typing`.
+- Lint: `uv run ruff check --fix`
+- Format: `uv run ruff format`
+- Test: `uv run pytest`
+- Coverage must be >= 85%
 
-Комментарии к коду обычно не нужны, код по умолчанию понятен. Комментарии бывают нужны только перед большими блоками со
-сложными вычислениями или сложной логикой. Если нужны комментарии в коде или логи (logger.) - то предпочтительно писать
-их на английском. Только в действительно сложных для понимания местах писать их на русском. Нельзя удалять комментарии
-из исходного кода или пробелы строк для улучшения читаемости кода. Для logger использовать стиль с форматированием %s -
-а не f-строки.
-Если добавляется новая функциональность, то желательно к ней сразу писать и тесты. Если пишешь тесты, то желательно
-писать их в парадигме Trophy - то есть упор на быстрые интеграционные тесты с миниумом моков.
+## Code style
 
-Прежде чем ответить, оцени неопределённость своего ответа. Если она больше 0.1, задай мне уточняющие вопросы, пока она
-не станет 0.1 или ниже. Учти, что мое понимание качества кода намного выше твоего, старайся, чтоб твои предложения не
-выглядели "джуновской" глупостью. Но также учти, что исходное задание может быть сформулировано не мной, а другими
-неопытными менеджерами (такое обычно будет в самом первом сообщении диалога), и соответственно иногда надо думать, как
-сделать правильнее с точки зрения архитектуры, а не сразу делать дословно, "как написано".
+Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config.
+Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 
-Для всех идей с обоих сторон в беседе необходима "прожарка" от лица технического лидера разработки. Исключи подхалимаж,
-надо научиться отвечать "ваша идея - говно", когда это действительно так. Не используй слов типа прожарка и тп.. Можно
-заменять подобные фразы аналогами с использованием классического английского юмора.
-В самом конце проанализируй еще раз свой ответ - если там есть лишний текст - его надо убрать.
+## Testing
 
-При баге сначала напиши тест, который его воспроизводит, затем исправляй код, пока тест не проходит.
-
-## Архитектура
-
-Стараться использовать DDD, TDD, SOLID. Сразу планировать документацию и качественные интеграционные тесты.
-
-## FastAPI
-
-Структура: модульная по доменам в src/, каждый модуль содержит router.py, schemas.py, models.py, service.py,
-dependencies.py, exceptions.py.
-
-Async: не использовать блокирующие операции (time.sleep, sync HTTP) в async def — либо def для sync I/O, либо await
-asyncio/run_in_threadpool. CPU-задачи — в отдельный процесс.
-
-Pydantic: максимально использовать валидаторы (Field, EmailStr, regex). Создавать CustomBaseModel. Разделять
-BaseSettings по модулям.
-
-Dependencies: использовать для валидации данных (проверка существования в БД), создавать цепочки зависимостей,
-предпочитать async def.
-
-REST: единые имена path-параметров для переиспользования зависимостей.
-
-БД: SQL-first (joins, агрегации в БД), naming convention: lower_snake_case, singular. Явные имена индексов.
-
-Тесты: async client (httpx) с первого дня.
-
-Линтер: ruff.
-
-## Фронтенд
-
-Как фронтенд лучше использовать Solid.js
-
-## Тесты
-
-**Парадигма Trophy Testing**: быстрые интеграционные тесты с реальной БД (mongomock), минимум моков.
-
-**Моки только на внешних границах:**
-
-- HTTP API (httpx.AsyncClient)
-- Telegram Bot API
-- WhatsApp API
-- Файловая система (при необходимости)
-
-**Импорты:**
-
-- Все импорты только на уровне модуля (в начале файла), никаких локальных импортов внутри тестов
-- В conftest.py уже прописано `pytest_plugins = ["tests.fixtures"]`, поэтому фикстуры из fixtures.py доступны
-  автоматически
-- НЕ использовать `from tests.fixtures import ...` — это признак непонимания pytest
-
-**Фикстуры:**
-
-- Повторяющиеся моки выносить в tests/fixtures.py как @pytest.fixture
-- Использовать фикстуры через параметры теста, не через импорт
-- В pyproject.toml уже настроен `asyncio_mode = "auto"`, поэтому `pytestmark` не нужен
-
-**Пример правильного теста:**
-
-```python
-from src.module import my_function  # импорт вверху файла
-
-
-async def test_something(mock_whatsapp_client, mock_context):  # фикстуры через параметры
-    result = await my_function()
-    assert result == expected
-```
+- Trophy testing: fast integration tests, real DB (mongomock), minimal mocks
+- Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
+- Fixtures in tests/fixtures.py as @pytest.fixture, accessed via test parameters (NOT via import)
+- pytest_plugins already configured in conftest.py
+- asyncio_mode = "auto" in pyproject.toml — pytestmark not needed
 
 ## Git
 
-- Conventional commits (feat:, fix:, docs:)
-- Всегда создавай PR, не пуш в main
+- Conventional commits (feat:, fix:, docs:, refactoring:)
+- Always PR, never push to main
 
-## Документация
+## Security review
 
-**После изменений кода — обновить документацию:**
+Before finishing any task, check for:
 
-- **README.md** — при изменении функциональности, команд, установки
-- **Пользовательский help** — при изменении команд/функций (все языки локализации)
+- Secrets/tokens leaking into logs, responses, or error messages
+- Injection: NoSQL, command injection, template injection
+- Input validation: all user input validated via Pydantic before use
+- Authorization: no endpoints accessible without proper auth checks
+- Rate limiting: new public endpoints must have rate limits
+- Dependencies: no known vulnerabilities in added packages
 
-Не создавать отдельные файлы документации без необходимости — достаточно актуального README.
+## Documentation
 
-## Завершение работы
+After code changes, update documentation:
 
-**ОБЯЗАТЕЛЬНО** после любых изменений кода перед завершением:
+- README.md — if functionality, commands, or setup changed
+- User-facing help — if commands/features changed (all localization languages)
+- Do not create separate doc files without necessity — keep README.md up to date
 
-1. Запустить линтер: `uv run ruff check --fix`
-2. Запустить тесты: `uv run pytest`
-3. Убедиться, что coverage >= 85%
-4. Обновить документацию (см. секцию "Документация")
+## Before finishing
 
-Не завершать работу, пока линтер и тесты не проходят.
+1. `uv run ruff check --fix`
+2. `uv run ruff format`
+3. `uv run pytest`
+4. Verify coverage >= 85%
+5. Security review (see above)
+6. Update documentation (see "Documentation" section above)
 
-После написания кода, перечисли, что может сломаться, и предложи тесты для проверки.
+Do not finish until lint, tests, and security review pass.
 
-## Summary instructions
+## Gotchas
 
-При компактировании фокусируйся на изменениях кода и результатах тестов.
+- Comments and logs in English
+- Frontend: Solid.js
