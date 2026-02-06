@@ -1,6 +1,6 @@
 [project]
 name = "evlampiy"
-version = "0.6.4"
+version = "0.7.0"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = ["Yast <yastcher@gmail.com>"]
@@ -29,6 +29,7 @@ dev = [
     "pytest-cov~=7.0.0",
     "mongomock-motor~=0.0.34",
     "responses~=0.25.7",
+    "telethon~=1.39",
 ]
 
 [tool.ruff]
@@ -64,7 +65,11 @@ addopts = [
     "--cov=src",
     "--cov-report=term-missing",
     #    "--cov-report=json:coverage.json",
-    "--cov-branch"
+    "--cov-branch",
+    "-m", "not e2e",
 ]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "e2e: end-to-end smoke tests (require Telethon credentials and deployed bot)",
+]
