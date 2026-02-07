@@ -14,7 +14,7 @@ from src.credits import (
     deduct_credits,
     get_user_tier,
     grant_initial_credits_if_eligible,
-    has_unlimited_access,
+    has_unlimited_voice_access,
     increment_transcription_stats,
     increment_user_stats,
     record_groq_usage,
@@ -35,12 +35,18 @@ def _select_provider(tier: UserTier, wit_available: bool) -> str | None:
     """
     Select transcription provider based on user tier and Wit.ai availability.
 
-    VIP and ADMIN users get Groq (if configured) else Wit.
+    VIP/ADMIN: Groq (if configured) else Wit.
+    TESTER: Wit primary, Groq fallback.
     Returns:
         const.PROVIDER_GROQ, const.PROVIDER_WIT, or None if no provider available
     """
     if tier == UserTier.VIP:
         return const.PROVIDER_GROQ if settings.groq_api_key else const.PROVIDER_WIT
+
+    if tier == UserTier.TESTER:
+        if wit_available:
+            return const.PROVIDER_WIT
+        return const.PROVIDER_GROQ if settings.groq_api_key else None
 
     if wit_available:
         return const.PROVIDER_WIT
@@ -76,7 +82,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
 
-    if not has_unlimited_access(user_id):
+    if not await has_unlimited_voice_access(user_id):
         ok, _msg = await can_perform_operation(user_id, settings.credit_cost_voice)
         if not ok:
             await send_response(
@@ -101,7 +107,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.debug("Empty voice message.")
         return
 
-    if not has_unlimited_access(user_id):
+    if not await has_unlimited_voice_access(user_id):
         await deduct_credits(user_id, settings.credit_cost_voice)
 
     if provider == const.PROVIDER_WIT:

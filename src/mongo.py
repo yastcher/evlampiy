@@ -10,6 +10,7 @@ from src.dto import (
     MonthlyStats,
     UsedTrial,
     UserCredits,
+    UserRole,
     UserSettings,
     WitUsageStats,
 )
@@ -21,6 +22,7 @@ ALL_DOCUMENT_MODELS = [
     WitUsageStats,
     MonthlyStats,
     AlertState,
+    UserRole,
     AccountLink,
     LinkCode,
     LinkAttempt,
@@ -121,3 +123,32 @@ async def get_auto_categorize(chat_id: str) -> bool:
     if not user:
         return False
     return user.auto_categorize
+
+
+async def add_user_role(user_id: str, role: str, added_by: str):
+    """Add a role to a user (upsert)."""
+    existing = await UserRole.find_one(UserRole.user_id == user_id, UserRole.role == role)
+    if existing:
+        return
+    await UserRole(user_id=user_id, role=role, added_by=added_by).insert()
+
+
+async def remove_user_role(user_id: str, role: str) -> bool:
+    """Remove a role from a user. Returns True if removed."""
+    existing = await UserRole.find_one(UserRole.user_id == user_id, UserRole.role == role)
+    if not existing:
+        return False
+    await existing.delete()
+    return True
+
+
+async def get_users_by_role(role: str) -> list[str]:
+    """Get all user IDs with a given role."""
+    docs = await UserRole.find(UserRole.role == role).to_list()
+    return [doc.user_id for doc in docs]
+
+
+async def has_role(user_id: str, role: str) -> bool:
+    """Check if a user has a specific role."""
+    existing = await UserRole.find_one(UserRole.user_id == user_id, UserRole.role == role)
+    return existing is not None

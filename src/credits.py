@@ -3,15 +3,20 @@
 import hashlib
 from datetime import datetime, timezone
 
+from src import const
 from src.config import settings
 from src.dto import MonthlyStats, UsedTrial, UserCredits, UserTier
+from src.mongo import has_role
 
 
 def hash_user_id(user_id: str) -> str:
     return hashlib.sha256(user_id.encode()).hexdigest()
 
 
-def is_vip_user(user_id: str) -> bool:
+async def is_vip_user(user_id: str) -> bool:
+    """Check VIP status: DB first, then env fallback."""
+    if await has_role(user_id, const.ROLE_VIP):
+        return True
     return user_id in settings.vip_user_ids
 
 
@@ -19,13 +24,27 @@ def is_admin_user(user_id: str) -> bool:
     return user_id in settings.admin_user_ids
 
 
-def has_unlimited_access(user_id: str) -> bool:
-    return is_vip_user(user_id) or is_admin_user(user_id)
+async def is_tester_user(user_id: str) -> bool:
+    return await has_role(user_id, const.ROLE_TESTER)
+
+
+async def has_unlimited_access(user_id: str) -> bool:
+    """VIP or admin — unlimited everything."""
+    return await is_vip_user(user_id) or is_admin_user(user_id)
+
+
+async def has_unlimited_voice_access(user_id: str) -> bool:
+    """VIP, admin, or tester — unlimited voice transcription."""
+    if await has_unlimited_access(user_id):
+        return True
+    return await is_tester_user(user_id)
 
 
 async def get_user_tier(user_id: str) -> UserTier:
-    if is_vip_user(user_id) or is_admin_user(user_id):
+    if await is_vip_user(user_id) or is_admin_user(user_id):
         return UserTier.VIP
+    if await is_tester_user(user_id):
+        return UserTier.TESTER
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if record and record.tier == UserTier.PAID:
         return UserTier.PAID
@@ -53,6 +72,18 @@ async def add_credits(user_id: str, amount: int) -> int:
         record.credits += amount
         record.tier = UserTier.PAID
         record.total_credits_purchased += amount
+        await record.save()
+    return record.credits
+
+
+async def admin_add_credits(user_id: str, amount: int) -> int:
+    """Add credits without changing tier (for admin top-ups)."""
+    record = await UserCredits.find_one(UserCredits.user_id == user_id)
+    if not record:
+        record = UserCredits(user_id=user_id, credits=amount)
+        await record.insert()
+    else:
+        record.credits += amount
         await record.save()
     return record.credits
 
@@ -86,7 +117,7 @@ async def grant_initial_credits_if_eligible(user_id: str) -> bool:
 
 
 async def can_perform_operation(user_id: str, cost: int) -> tuple[bool, str]:
-    if has_unlimited_access(user_id):
+    if await has_unlimited_access(user_id):
         return True, ""
 
     credits = await get_credits(user_id)

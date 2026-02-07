@@ -68,8 +68,8 @@ class TestCreditFlow:
         mock_settings.admin_user_ids = set()
 
         # 1. VIP check
-        assert is_vip_user(vip_id) is True
-        assert is_vip_user(regular_id) is False
+        assert await is_vip_user(vip_id) is True
+        assert await is_vip_user(regular_id) is False
 
         # 2. VIP has VIP tier (even without credits)
         assert await get_user_tier(vip_id) == UserTier.VIP

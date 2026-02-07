@@ -376,4 +376,83 @@ translates = {
         RUSSIAN: "Баланс: {credits} кредитов",
         SPANISH: "Saldo: {credits} créditos",
     },
+    # Admin interface
+    "admin_hub_title": {
+        ENGLISH: "🔧 Admin Panel",
+        GERMAN: "🔧 Admin-Panel",
+        RUSSIAN: "🔧 Панель администратора",
+        SPANISH: "🔧 Panel de administración",
+    },
+    "btn_manage_vip": {
+        ENGLISH: "⭐ VIP users",
+        GERMAN: "⭐ VIP-Benutzer",
+        RUSSIAN: "⭐ VIP пользователи",
+        SPANISH: "⭐ Usuarios VIP",
+    },
+    "btn_manage_testers": {
+        ENGLISH: "🧪 Testers",
+        GERMAN: "🧪 Tester",
+        RUSSIAN: "🧪 Тестеры",
+        SPANISH: "🧪 Testers",
+    },
+    "btn_admin_stats": {
+        ENGLISH: "📊 Stats",
+        GERMAN: "📊 Statistiken",
+        RUSSIAN: "📊 Статистика",
+        SPANISH: "📊 Estadísticas",
+    },
+    "btn_add_credits": {
+        ENGLISH: "💰 Add credits",
+        GERMAN: "💰 Credits hinzufügen",
+        RUSSIAN: "💰 Начислить кредиты",
+        SPANISH: "💰 Añadir créditos",
+    },
+    "admin_vip_list": {
+        ENGLISH: "<b>VIP users:</b>\n{users}\n\nUse /add_vip &lt;user_id&gt; or /remove_vip &lt;user_id&gt;",
+        GERMAN: "<b>VIP-Benutzer:</b>\n{users}\n\nVerwende /add_vip &lt;user_id&gt; oder /remove_vip &lt;user_id&gt;",
+        RUSSIAN: "<b>VIP пользователи:</b>\n{users}\n\nИспользуйте /add_vip &lt;user_id&gt; или /remove_vip &lt;user_id&gt;",
+        SPANISH: "<b>Usuarios VIP:</b>\n{users}\n\nUsa /add_vip &lt;user_id&gt; o /remove_vip &lt;user_id&gt;",
+    },
+    "admin_tester_list": {
+        ENGLISH: "<b>Testers:</b>\n{users}\n\nUse /add_tester &lt;user_id&gt; or /remove_tester &lt;user_id&gt;",
+        GERMAN: "<b>Tester:</b>\n{users}\n\nVerwende /add_tester &lt;user_id&gt; oder /remove_tester &lt;user_id&gt;",
+        RUSSIAN: "<b>Тестеры:</b>\n{users}\n\nИспользуйте /add_tester &lt;user_id&gt; или /remove_tester &lt;user_id&gt;",
+        SPANISH: "<b>Testers:</b>\n{users}\n\nUsa /add_tester &lt;user_id&gt; o /remove_tester &lt;user_id&gt;",
+    },
+    "admin_list_empty": {
+        ENGLISH: "(empty)",
+        GERMAN: "(leer)",
+        RUSSIAN: "(пусто)",
+        SPANISH: "(vacío)",
+    },
+    "admin_user_added": {
+        ENGLISH: "User {user_id} added as {role}.",
+        GERMAN: "Benutzer {user_id} als {role} hinzugefügt.",
+        RUSSIAN: "Пользователь {user_id} добавлен как {role}.",
+        SPANISH: "Usuario {user_id} añadido como {role}.",
+    },
+    "admin_user_removed": {
+        ENGLISH: "User {user_id} removed from {role}.",
+        GERMAN: "Benutzer {user_id} aus {role} entfernt.",
+        RUSSIAN: "Пользователь {user_id} удалён из {role}.",
+        SPANISH: "Usuario {user_id} eliminado de {role}.",
+    },
+    "admin_user_not_found": {
+        ENGLISH: "User {user_id} not found in {role} list.",
+        GERMAN: "Benutzer {user_id} nicht in {role}-Liste gefunden.",
+        RUSSIAN: "Пользователь {user_id} не найден в списке {role}.",
+        SPANISH: "Usuario {user_id} no encontrado en la lista de {role}.",
+    },
+    "admin_credits_added": {
+        ENGLISH: "Added {amount} credits to user {user_id}. New balance: {balance}.",
+        GERMAN: "{amount} Credits zu Benutzer {user_id} hinzugefügt. Neues Guthaben: {balance}.",
+        RUSSIAN: "Начислено {amount} кредитов пользователю {user_id}. Баланс: {balance}.",
+        SPANISH: "{amount} créditos añadidos al usuario {user_id}. Nuevo saldo: {balance}.",
+    },
+    "admin_usage": {
+        ENGLISH: "Usage: {command}",
+        GERMAN: "Verwendung: {command}",
+        RUSSIAN: "Использование: {command}",
+        SPANISH: "Uso: {command}",
+    },
 }

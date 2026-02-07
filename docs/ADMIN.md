@@ -6,25 +6,58 @@
 
 ## English
 
-### Admin Role
+### User Roles
 
-Admins have unlimited access to transcription services (same as VIP users) and can view system statistics.
+| Role | Voice transcription | Provider | GPT/Categorization | Credits |
+|------|--------------------|---------|--------------------|---------|
+| **Admin** | Unlimited | Groq (priority) | Unlimited | Not needed |
+| **VIP** | Unlimited | Groq (priority) | Unlimited | Not needed |
+| **Tester** | Unlimited | Wit.ai (Groq fallback) | Uses credits | Admin top-up |
+| **Paid** | Uses credits | Wit.ai (Groq fallback) | Free | Purchase via Stars |
+| **Free** | 3 trial credits | Wit.ai only | Free | Purchase via Stars |
 
 ### Configuration
 
-Add admin user IDs to `.env`:
+Admin user IDs are configured in `.env` (cannot be changed at runtime):
 
 ```env
 ADMIN_USER_IDS=123456789,987654321
 ```
 
+VIP users can be configured in `.env` as fallback, but primarily managed via Telegram:
+
+```env
+VIP_USER_IDS=123456,789012
+```
+
 Get your Telegram user ID by messaging [@userinfobot](https://t.me/userinfobot).
+
+### Admin Panel (`/admin`)
+
+The `/admin` command opens an inline keyboard hub:
+
+- **VIP users** — View current VIP list
+- **Testers** — View current tester list
+- **Stats** — System-wide statistics
+- **Add credits** — Usage hint for `/add_credits`
 
 ### Admin Commands
 
-| Command   | Description                          |
-|-----------|--------------------------------------|
-| `/stats`  | View system-wide statistics          |
+| Command | Description |
+|---------|-------------|
+| `/admin` | Open admin panel with inline buttons |
+| `/stats` | View system-wide statistics |
+| `/add_vip <user_id>` | Add user to VIP list |
+| `/remove_vip <user_id>` | Remove user from VIP list |
+| `/add_tester <user_id>` | Add user to tester list |
+| `/remove_tester <user_id>` | Remove user from tester list |
+| `/add_credits <user_id> <amount>` | Top up credits for a user |
+
+### Storage
+
+- **Admin list** — `.env` only (`ADMIN_USER_IDS`)
+- **VIP list** — MongoDB (primary) + `.env` fallback (`VIP_USER_IDS`)
+- **Tester list** — MongoDB only (managed via `/add_tester`, `/remove_tester`)
 
 ### System Statistics (`/stats`)
 
@@ -82,25 +115,58 @@ docker compose logs evlampiy_bot 2>&1 | grep ERROR
 
 ## Русский
 
-### Роль администратора
+### Роли пользователей
 
-Администраторы имеют безлимитный доступ к сервису транскрипции (как VIP) и могут просматривать системную статистику.
+| Роль | Транскрипция голоса | Провайдер | GPT/Категоризация | Кредиты |
+|------|--------------------|-----------|--------------------|---------|
+| **Admin** | Безлимитно | Groq (приоритет) | Безлимитно | Не нужны |
+| **VIP** | Безлимитно | Groq (приоритет) | Безлимитно | Не нужны |
+| **Tester** | Безлимитно | Wit.ai (Groq резерв) | Расходуют кредиты | Пополняет админ |
+| **Paid** | Расходуют кредиты | Wit.ai (Groq резерв) | Бесплатно | Покупка через Stars |
+| **Free** | 3 пробных кредита | Только Wit.ai | Бесплатно | Покупка через Stars |
 
 ### Конфигурация
 
-Добавьте ID администраторов в `.env`:
+ID администраторов задаются в `.env` (нельзя изменить в рантайме):
 
 ```env
 ADMIN_USER_IDS=123456789,987654321
 ```
 
+VIP-пользователи могут быть заданы в `.env` как fallback, но управляются через Telegram:
+
+```env
+VIP_USER_IDS=123456,789012
+```
+
 Узнайте свой Telegram user ID через [@userinfobot](https://t.me/userinfobot).
+
+### Панель администратора (`/admin`)
+
+Команда `/admin` открывает хаб с inline-кнопками:
+
+- **VIP пользователи** — Текущий список VIP
+- **Тестеры** — Текущий список тестеров
+- **Статистика** — Системная статистика
+- **Начислить кредиты** — Подсказка по использованию `/add_credits`
 
 ### Команды администратора
 
-| Команда   | Описание                             |
-|-----------|--------------------------------------|
-| `/stats`  | Просмотр системной статистики        |
+| Команда | Описание |
+|---------|----------|
+| `/admin` | Открыть панель администратора |
+| `/stats` | Просмотр системной статистики |
+| `/add_vip <user_id>` | Добавить пользователя в VIP |
+| `/remove_vip <user_id>` | Удалить пользователя из VIP |
+| `/add_tester <user_id>` | Добавить пользователя в тестеры |
+| `/remove_tester <user_id>` | Удалить пользователя из тестеров |
+| `/add_credits <user_id> <amount>` | Начислить кредиты пользователю |
+
+### Хранение
+
+- **Список админов** — только `.env` (`ADMIN_USER_IDS`)
+- **Список VIP** — MongoDB (основное) + `.env` fallback (`VIP_USER_IDS`)
+- **Список тестеров** — только MongoDB (управление через `/add_tester`, `/remove_tester`)
 
 ### Системная статистика (`/stats`)
 

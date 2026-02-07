@@ -12,6 +12,9 @@ SOURCE_WHATSAPP = "whatsapp"
 ANTHROPIC_API_BASE = "https://api.anthropic.com"
 EXCLUDED_CATEGORIES = ("income", "trash")
 
+ROLE_VIP = "vip"
+ROLE_TESTER = "tester"
+
 PRIVATE_CHAT_TYPE = "private"
 CHAT_PREFIX_USER = "u_"
 CHAT_PREFIX_GROUP = "g_"

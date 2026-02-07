@@ -20,7 +20,7 @@ from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.mongo import init_beanie_models
 from src.selftest import run_selftest
-from src.telegram import handlers
+from src.telegram import admin, handlers
 from src.telegram.payments import (
     balance_command,
     buy_command,
@@ -64,6 +64,12 @@ COMMAND_HANDLERS = {
     "balance": balance_command,
     "mystats": handlers.mystats_command,
     "stats": handlers.stats_command,
+    "admin": admin.admin_hub,
+    "add_vip": admin.add_vip_command,
+    "remove_vip": admin.remove_vip_command,
+    "add_tester": admin.add_tester_command,
+    "remove_tester": admin.remove_tester_command,
+    "add_credits": admin.add_credits_command,
     "toggle_categorize": handlers.toggle_categorize,
     "categorize": handlers.categorize_all,
     "link_whatsapp": handlers.link_whatsapp,
@@ -98,7 +104,13 @@ BOT_COMMANDS = {
 }
 
 ADMIN_COMMANDS = [
+    BotCommand("admin", "🔧 Admin panel"),
     BotCommand("stats", "📊 System stats"),
+    BotCommand("add_vip", "⭐ Add VIP user"),
+    BotCommand("remove_vip", "⭐ Remove VIP user"),
+    BotCommand("add_tester", "🧪 Add tester"),
+    BotCommand("remove_tester", "🧪 Remove tester"),
+    BotCommand("add_credits", "💰 Add credits to user"),
 ]
 
 
@@ -173,6 +185,7 @@ def main():
 
     application.add_handler(CallbackQueryHandler(handlers.lang_buttons, pattern="^set_lang_"))
     application.add_handler(CallbackQueryHandler(handlers.hub_callback_router, pattern="^hub_"))
+    application.add_handler(CallbackQueryHandler(admin.admin_callback_router, pattern="^adm_"))
 
     application.add_handler(MessageHandler(filters.VOICE, from_voice_to_text))
 

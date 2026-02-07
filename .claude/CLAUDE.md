@@ -42,6 +42,8 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 - Always PR, never push to main
 - Max ~500 lines of diff per commit — split large tasks into logical commits
 - When accumulated uncommitted changes approach ~500 lines, stop and propose a commit before continuing
+- Always work in the current branch — never clean or reset uncommitted changes
+- Ask confirmation only when about to delete or overwrite something not yet committed to git
 
 ## Security review
 
@@ -56,11 +58,13 @@ Before finishing any task, check for:
 
 ## Documentation
 
-After code changes, update documentation:
+Always update documentation as part of the same task (not as a separate step):
 
-- README.md — if functionality, commands, or setup changed
-- User-facing help — if commands/features changed (all localization languages)
+- README.md + all localized READMEs (docs/README.ru.md, docs/README.es.md, docs/README.de.md) — if functionality, commands, or setup changed
+- docs/ADMIN.md — if admin commands or roles changed
+- User-facing help in localization.py — if commands/features changed (all 4 languages)
 - Do not create separate doc files without necessity — keep README.md up to date
+- Documentation must be updated before running the "Before finishing" checklist, not after
 
 ## Before finishing
 

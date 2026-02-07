@@ -25,6 +25,7 @@ class UserTier(str, Enum):
     FREE = "free"
     PAID = "paid"
     VIP = "vip"
+    TESTER = "tester"
 
 
 class UserCredits(Document):
@@ -77,6 +78,16 @@ class AlertState(Document):
 
     class Settings:
         name = "alert_state"
+
+
+class UserRole(Document):
+    user_id: str
+    role: str  # "vip" or "tester"
+    added_by: str
+    added_at: datetime = Field(default_factory=_utc_now)
+
+    class Settings:
+        name = "user_roles"
 
 
 class AccountLink(Document):

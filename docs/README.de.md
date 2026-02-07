@@ -26,7 +26,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 ### Monetarisierung
 - **Kreditsystem** — Guthaben pro Benutzer mit Nutzungsverfolgung
 - **Telegram Stars** — Native Zahlungsintegration
-- **Benutzerstufen** — Free, Standard, VIP, Admin
+- **Benutzerstufen** — Free, Paid, VIP, Tester, Admin
 
 ### Obsidian-Integration
 - **GitHub-Synchronisierung** — Automatisches Speichern von Transkriptionen in Ihrem Vault über GitHub API
@@ -38,9 +38,10 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **Rate Limiting** — Schutz gegen Brute-Force-Angriffe
 
 ### Administration
+- **Admin-Panel** — `/admin` Hub mit Inline-Buttons in Telegram
+- **Benutzerverwaltung** — VIP- und Tester-Benutzer hinzufügen/entfernen, Credits aufladen über Telegram
 - **Nutzungsstatistiken** — Monatliche Transkriptionen, Einnahmen, Kosten
 - **Gesundheitsüberwachung** — Wit.ai/Groq-Nutzungsalarme
-- **VIP-Verwaltung** — Konfigurierbare Benutzerstufen
 
 ## Voraussetzungen
 
@@ -102,7 +103,7 @@ GITHUB_CLIENT_ID=deine_github_oauth_app_client_id
 
 # Optional: Monetarisierung
 GROQ_API_KEY=dein_groq_api_schluessel
-VIP_USER_IDS=123456,789012
+VIP_USER_IDS=123456,789012   # Env-Fallback; Verwaltung über /admin in Telegram
 ADMIN_USER_IDS=123456789
 INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500

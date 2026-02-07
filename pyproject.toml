@@ -1,6 +1,6 @@
 [project]
 name = "evlampiy"
-version = "0.7.0"
+version = "0.7.1"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = [{ name = "Yast", email = "yastcher@gmail.com" }]
@@ -85,7 +85,7 @@ addopts = [
     "-p", "pytest_cov",
     "--cov=src",
     "--cov-report=term-missing",
-    #    "--cov-report=json:coverage.json",
+    "--cov-report=json:coverage.json",
     "--cov-branch",
 ]
 testpaths = ["tests"]

@@ -56,3 +56,23 @@ class TestSelectProvider:
             result = _select_provider(UserTier.PAID, wit_available=False)
 
         assert result is None
+
+    def test_tester_gets_wit_when_available(self):
+        """Tester gets Wit.ai as primary provider."""
+        result = _select_provider(UserTier.TESTER, wit_available=True)
+
+        assert result == const.PROVIDER_WIT
+
+    def test_tester_gets_groq_fallback_when_wit_exhausted(self):
+        """Tester falls back to Groq when Wit is exhausted."""
+        with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
+            result = _select_provider(UserTier.TESTER, wit_available=False)
+
+        assert result == const.PROVIDER_GROQ
+
+    def test_tester_gets_none_when_no_providers(self):
+        """Tester gets None when Wit exhausted and Groq not configured."""
+        with patch("src.telegram.voice.settings.groq_api_key", ""):
+            result = _select_provider(UserTier.TESTER, wit_available=False)
+
+        assert result is None
