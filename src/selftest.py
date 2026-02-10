@@ -21,11 +21,17 @@ def _get_version() -> str:
         return importlib.metadata.version("evlampiy")
     except importlib.metadata.PackageNotFoundError:
         pass
-    try:
-        with _PYPROJECT_PATH.open("rb") as f:
-            return tomllib.load(f)["project"]["version"]
-    except Exception:
-        return "unknown"
+    candidates = [
+        _PYPROJECT_PATH,
+        pathlib.Path("pyproject.toml"),
+    ]
+    for path in candidates:
+        try:
+            with path.open("rb") as f:
+                return tomllib.load(f)["project"]["version"]
+        except Exception:
+            logger.debug("Could not read version from %s", path)
+    return "unknown"
 
 
 def _build_message(version: str, language: str, text: str, error: str | None) -> str:

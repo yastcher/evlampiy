@@ -10,8 +10,8 @@ from src.categorization import categorize_all_income
 from src.config import settings
 from src.credits import (
     current_month_key,
-    get_credits,
     get_monthly_stats,
+    get_total_credits,
     get_user_tier,
     is_admin_user,
 )
@@ -224,12 +224,12 @@ async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
 
-    credits = await get_credits(user_id)
+    credits = await get_total_credits(user_id)
     tier = await get_user_tier(user_id)
 
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     total_transcriptions = record.total_transcriptions if record else 0
-    total_spent = record.total_credits_spent if record else 0
+    total_tokens_used = record.total_tokens_used if record else 0
     total_purchased = record.total_credits_purchased if record else 0
 
     text = (
@@ -239,7 +239,7 @@ async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             credits=credits,
             tier=tier.value,
             total_transcriptions=total_transcriptions,
-            total_spent=total_spent,
+            total_tokens_used=total_tokens_used,
             total_purchased=total_purchased,
         )
     )

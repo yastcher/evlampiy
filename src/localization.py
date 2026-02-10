@@ -98,10 +98,40 @@ translates = {
         ),
     },
     "insufficient_credits": {
-        ENGLISH: "Not enough credits. Use /buy to purchase more.",
-        GERMAN: "Nicht genügend Credits. Verwenden Sie /buy, um mehr zu kaufen.",
-        RUSSIAN: "Недостаточно кредитов. Используйте /buy для покупки.",
-        SPANISH: "No tienes suficientes créditos. Usa /buy para comprar más.",
+        ENGLISH: "Not enough tokens. Use /buy to purchase more.",
+        GERMAN: "Nicht genügend Tokens. Verwenden Sie /buy, um mehr zu kaufen.",
+        RUSSIAN: "Недостаточно токенов. Используйте /buy для покупки.",
+        SPANISH: "No tienes suficientes tokens. Usa /buy para comprar más.",
+    },
+    "blocked_message": {
+        ENGLISH: "You are blocked from using this bot.",
+        GERMAN: "Sie sind für die Nutzung dieses Bots gesperrt.",
+        RUSSIAN: "Вы заблокированы и не можете использовать бота.",
+        SPANISH: "Estás bloqueado y no puedes usar este bot.",
+    },
+    "credits_exhausted_warning": {
+        ENGLISH: (
+            "Your token balance is exhausted. "
+            "The transcription was still processed. Use /buy to purchase more tokens."
+        ),
+        GERMAN: (
+            "Ihr Token-Guthaben ist erschöpft. "
+            "Die Transkription wurde trotzdem verarbeitet. Verwenden Sie /buy für mehr Tokens."
+        ),
+        RUSSIAN: (
+            "Ваш баланс токенов исчерпан. "
+            "Транскрипция всё равно была обработана. Используйте /buy для покупки токенов."
+        ),
+        SPANISH: (
+            "Tu saldo de tokens se ha agotado. "
+            "La transcripción se procesó de todos modos. Usa /buy para comprar más tokens."
+        ),
+    },
+    "buy_packages_prompt": {
+        ENGLISH: "Choose a token package:",
+        GERMAN: "Wählen Sie ein Token-Paket:",
+        RUSSIAN: "Выберите пакет токенов:",
+        SPANISH: "Elige un paquete de tokens:",
     },
     "service_unavailable": {
         ENGLISH: "Transcription service is temporarily unavailable. Please try again later.",
@@ -136,39 +166,39 @@ translates = {
     "mystats_message": {
         ENGLISH: (
             "📊 <b>Your Statistics</b>\n\n"
-            "Balance: {credits} credits\n"
+            "Balance: {credits} tokens\n"
             "Tier: {tier}\n\n"
             "<b>All time:</b>\n"
             "• Transcriptions: {total_transcriptions}\n"
-            "• Credits spent: {total_spent}\n"
-            "• Credits purchased: {total_purchased}"
+            "• Tokens used: {total_tokens_used}\n"
+            "• Tokens purchased: {total_purchased}"
         ),
         GERMAN: (
             "📊 <b>Ihre Statistiken</b>\n\n"
-            "Guthaben: {credits} Credits\n"
+            "Guthaben: {credits} Tokens\n"
             "Stufe: {tier}\n\n"
             "<b>Insgesamt:</b>\n"
             "• Transkriptionen: {total_transcriptions}\n"
-            "• Credits ausgegeben: {total_spent}\n"
-            "• Credits gekauft: {total_purchased}"
+            "• Tokens verbraucht: {total_tokens_used}\n"
+            "• Tokens gekauft: {total_purchased}"
         ),
         RUSSIAN: (
             "📊 <b>Ваша статистика</b>\n\n"
-            "Баланс: {credits} кредитов\n"
+            "Баланс: {credits} токенов\n"
             "Тариф: {tier}\n\n"
             "<b>За всё время:</b>\n"
             "• Транскрипций: {total_transcriptions}\n"
-            "• Потрачено кредитов: {total_spent}\n"
-            "• Куплено кредитов: {total_purchased}"
+            "• Потрачено токенов: {total_tokens_used}\n"
+            "• Куплено токенов: {total_purchased}"
         ),
         SPANISH: (
             "📊 <b>Tus estadísticas</b>\n\n"
-            "Saldo: {credits} créditos\n"
+            "Saldo: {credits} tokens\n"
             "Nivel: {tier}\n\n"
             "<b>Total:</b>\n"
             "• Transcripciones: {total_transcriptions}\n"
-            "• Créditos gastados: {total_spent}\n"
-            "• Créditos comprados: {total_purchased}"
+            "• Tokens usados: {total_tokens_used}\n"
+            "• Tokens comprados: {total_purchased}"
         ),
     },
     # Hub titles
@@ -246,10 +276,10 @@ translates = {
         SPANISH: "❌ Desconectar GitHub",
     },
     "btn_buy": {
-        ENGLISH: "💳 Buy credits",
-        GERMAN: "💳 Credits kaufen",
-        RUSSIAN: "💳 Купить кредиты",
-        SPANISH: "💳 Comprar créditos",
+        ENGLISH: "💳 Buy tokens",
+        GERMAN: "💳 Tokens kaufen",
+        RUSSIAN: "💳 Купить токены",
+        SPANISH: "💳 Comprar tokens",
     },
     "btn_balance": {
         ENGLISH: "💰 Balance",
@@ -370,11 +400,47 @@ translates = {
         RUSSIAN: "Аккаунт WhatsApp не привязан.",
         SPANISH: "No hay cuenta de WhatsApp vinculada.",
     },
-    "balance_message": {
-        ENGLISH: "Balance: {credits} credits",
-        GERMAN: "Guthaben: {credits} Credits",
-        RUSSIAN: "Баланс: {credits} кредитов",
-        SPANISH: "Saldo: {credits} créditos",
+    "balance_detailed": {
+        ENGLISH: (
+            "🎫 Balance: {total} tokens\n"
+            "├ Free: {free}/{free_max} (monthly)\n"
+            "└ Purchased: {purchased}\n\n"
+            "📊 This month:\n"
+            "├ Transcriptions: {month_transcriptions}\n"
+            "├ Audio: {month_audio}\n"
+            "└ Tokens used: {month_tokens}\n\n"
+            "💡 1 token = 20 sec audio"
+        ),
+        GERMAN: (
+            "🎫 Guthaben: {total} Tokens\n"
+            "├ Kostenlos: {free}/{free_max} (monatlich)\n"
+            "└ Gekauft: {purchased}\n\n"
+            "📊 Dieser Monat:\n"
+            "├ Transkriptionen: {month_transcriptions}\n"
+            "├ Audio: {month_audio}\n"
+            "└ Tokens verbraucht: {month_tokens}\n\n"
+            "💡 1 Token = 20 Sek. Audio"
+        ),
+        RUSSIAN: (
+            "🎫 Баланс: {total} токенов\n"
+            "├ Бесплатных: {free}/{free_max} (ежемесячно)\n"
+            "└ Купленных: {purchased}\n\n"
+            "📊 Этот месяц:\n"
+            "├ Транскрипций: {month_transcriptions}\n"
+            "├ Аудио: {month_audio}\n"
+            "└ Токенов использовано: {month_tokens}\n\n"
+            "💡 1 токен = 20 сек аудио"
+        ),
+        SPANISH: (
+            "🎫 Saldo: {total} tokens\n"
+            "├ Gratis: {free}/{free_max} (mensual)\n"
+            "└ Comprados: {purchased}\n\n"
+            "📊 Este mes:\n"
+            "├ Transcripciones: {month_transcriptions}\n"
+            "├ Audio: {month_audio}\n"
+            "└ Tokens usados: {month_tokens}\n\n"
+            "💡 1 token = 20 seg de audio"
+        ),
     },
     # Admin interface
     "admin_hub_title": {
@@ -394,6 +460,12 @@ translates = {
         GERMAN: "🧪 Tester",
         RUSSIAN: "🧪 Тестеры",
         SPANISH: "🧪 Testers",
+    },
+    "btn_manage_blocked": {
+        ENGLISH: "🚫 Blocked users",
+        GERMAN: "🚫 Gesperrte Benutzer",
+        RUSSIAN: "🚫 Заблокированные",
+        SPANISH: "🚫 Usuarios bloqueados",
     },
     "btn_admin_stats": {
         ENGLISH: "📊 Stats",
@@ -418,6 +490,24 @@ translates = {
         GERMAN: "<b>Tester:</b>\n{users}\n\nVerwende /add_tester &lt;user_id&gt; oder /remove_tester &lt;user_id&gt;",
         RUSSIAN: "<b>Тестеры:</b>\n{users}\n\nИспользуйте /add_tester &lt;user_id&gt; или /remove_tester &lt;user_id&gt;",
         SPANISH: "<b>Testers:</b>\n{users}\n\nUsa /add_tester &lt;user_id&gt; o /remove_tester &lt;user_id&gt;",
+    },
+    "admin_blocked_list": {
+        ENGLISH: "<b>Blocked users:</b>\n{users}\n\nUse /block &lt;user_id&gt; or /unblock &lt;user_id&gt;",
+        GERMAN: "<b>Gesperrte Benutzer:</b>\n{users}\n\nVerwende /block &lt;user_id&gt; oder /unblock &lt;user_id&gt;",
+        RUSSIAN: "<b>Заблокированные:</b>\n{users}\n\nИспользуйте /block &lt;user_id&gt; или /unblock &lt;user_id&gt;",
+        SPANISH: "<b>Usuarios bloqueados:</b>\n{users}\n\nUsa /block &lt;user_id&gt; o /unblock &lt;user_id&gt;",
+    },
+    "admin_user_blocked": {
+        ENGLISH: "User {user_id} has been blocked.",
+        GERMAN: "Benutzer {user_id} wurde gesperrt.",
+        RUSSIAN: "Пользователь {user_id} заблокирован.",
+        SPANISH: "Usuario {user_id} ha sido bloqueado.",
+    },
+    "admin_user_unblocked": {
+        ENGLISH: "User {user_id} has been unblocked.",
+        GERMAN: "Benutzer {user_id} wurde entsperrt.",
+        RUSSIAN: "Пользователь {user_id} разблокирован.",
+        SPANISH: "Usuario {user_id} ha sido desbloqueado.",
     },
     "admin_list_empty": {
         ENGLISH: "(empty)",

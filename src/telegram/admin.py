@@ -1,4 +1,4 @@
-"""Admin Telegram handlers for managing VIP/tester users."""
+"""Admin Telegram handlers for managing VIP/tester/blocked users."""
 
 import logging
 
@@ -42,6 +42,7 @@ async def admin_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton(_t("btn_manage_vip"), callback_data="adm_vip")],
         [InlineKeyboardButton(_t("btn_manage_testers"), callback_data="adm_testers")],
+        [InlineKeyboardButton(_t("btn_manage_blocked"), callback_data="adm_blocked")],
         [InlineKeyboardButton(_t("btn_admin_stats"), callback_data="adm_stats")],
         [InlineKeyboardButton(_t("btn_add_credits"), callback_data="adm_credits")],
     ]
@@ -69,6 +70,12 @@ async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
         users = await get_users_by_role(const.ROLE_TESTER)
         user_list = "\n".join(f"• {uid}" for uid in users) if users else _t("admin_list_empty")
         text = _t("admin_tester_list", users=user_list)
+        await query.edit_message_text(text, parse_mode="HTML")
+
+    elif action == "blocked":
+        users = await get_users_by_role(const.ROLE_BLOCKED)
+        user_list = "\n".join(f"• {uid}" for uid in users) if users else _t("admin_list_empty")
+        text = _t("admin_blocked_list", users=user_list)
         await query.edit_message_text(text, parse_mode="HTML")
 
     elif action == "stats":
@@ -141,6 +148,43 @@ async def remove_tester_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(_t("admin_user_removed", user_id=user_id, role="tester"))
     else:
         await update.message.reply_text(_t("admin_user_not_found", user_id=user_id, role="tester"))
+
+
+async def block_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Block a user. Usage: /block <user_id> [reason]"""
+    if not is_admin_user(str(update.effective_user.id)):
+        return
+
+    user_id = _parse_user_id(context.args)
+    if not user_id:
+        await update.message.reply_text(_t("admin_usage", command="/block <user_id> [reason]"))
+        return
+
+    admin_id = str(update.effective_user.id)
+    reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+    await add_user_role(user_id, const.ROLE_BLOCKED, admin_id)
+    if reason:
+        logger.info("User %s blocked by %s. Reason: %s", user_id, admin_id, reason)
+    else:
+        logger.info("User %s blocked by %s", user_id, admin_id)
+    await update.message.reply_text(_t("admin_user_blocked", user_id=user_id))
+
+
+async def unblock_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Unblock a user. Usage: /unblock <user_id>"""
+    if not is_admin_user(str(update.effective_user.id)):
+        return
+
+    user_id = _parse_user_id(context.args)
+    if not user_id:
+        await update.message.reply_text(_t("admin_usage", command="/unblock <user_id>"))
+        return
+
+    removed = await remove_user_role(user_id, const.ROLE_BLOCKED)
+    if removed:
+        await update.message.reply_text(_t("admin_user_unblocked", user_id=user_id))
+    else:
+        await update.message.reply_text(_t("admin_user_not_found", user_id=user_id, role="blocked"))
 
 
 async def add_credits_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
