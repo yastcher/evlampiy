@@ -15,6 +15,9 @@ def mock_private_update():
     update.message.text = ""
     update.message.message_id = 1
     update.message.voice = None
+    update.message.audio = None
+    update.message.forward_from = None
+    update.message.forward_from_chat = None
     update.callback_query = None
     return update
 
@@ -32,6 +35,9 @@ def mock_group_update():
     update.message.message_id = 1
     update.message.chat.id = -100123456
     update.message.voice = None
+    update.message.audio = None
+    update.message.forward_from = None
+    update.message.forward_from_chat = None
     update.callback_query = None
     return update
 
@@ -62,6 +68,16 @@ def mock_telegram_voice():
     voice.get_file = AsyncMock()
     voice.get_file.return_value.download_as_bytearray = AsyncMock(return_value=b"fake_audio_data")
     return voice
+
+
+@pytest.fixture
+def mock_telegram_audio():
+    """Mock Telegram audio file with download capability."""
+    audio = MagicMock()
+    audio.get_file = AsyncMock()
+    audio.get_file.return_value.download_as_bytearray = AsyncMock(return_value=b"fake_audio_data")
+    audio.duration = 30
+    return audio
 
 
 @pytest.fixture
