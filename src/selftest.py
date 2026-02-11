@@ -34,19 +34,36 @@ def _get_version() -> str:
     return "unknown"
 
 
-def _build_message(version: str, language: str, text: str, error: str | None) -> str:
-    header = f"\U0001f680 Evlampiy v{version} deployed"
+_WIT_LABEL = "Wit.ai"
+_GROQ_LABEL = "Groq"
+
+
+def _format_provider_result(provider: str, text: str, error: str | None) -> str:
+    """Format result line(s) for a single transcription provider."""
     if error:
-        return f"{header}\n\n\U0001f3a4 Self-test ({language}):\n\u274c Wit.ai \u2014 {error}"
+        return f"\u274c {provider} \u2014 {error}"
     if not text:
-        return (
-            f"{header}\n\n\U0001f3a4 Self-test ({language}):\n"
-            "\u274c Wit.ai \u2014 transcription returned empty text"
-        )
-    return (
-        f"{header}\n\n\U0001f3a4 Self-test ({language}):\n"
-        f"\U0001f4dd \u00ab{text}\u00bb\n\u2705 Wit.ai \u2014 OK"
-    )
+        return f"\u274c {provider} \u2014 transcription returned empty text"
+    return f"\U0001f4dd \u00ab{text}\u00bb\n\u2705 {provider} \u2014 OK"
+
+
+def _build_message(version: str, language: str, results: list[tuple[str, str, str | None]]) -> str:
+    header = f"\U0001f680 Evlampiy v{version} deployed"
+    lines = [header, "", f"\U0001f3a4 Self-test ({language}):"]
+    for provider, text, error in results:
+        lines.append(_format_provider_result(provider, text, error))
+    return "\n".join(lines)
+
+
+async def _test_provider(
+    audio_bytes: bytes, audio_format: str, language: str, *, use_groq: bool
+) -> tuple[str, str | None]:
+    """Run transcription for a single provider, return (text, error_message)."""
+    try:
+        text, _ = await transcribe_audio(audio_bytes, audio_format, language, use_groq=use_groq)
+        return text, None
+    except Exception as exc:
+        return "", f"error: {exc}"
 
 
 async def run_selftest(bot: telegram.Bot) -> None:
@@ -86,14 +103,20 @@ async def _selftest_for_admin(
     # todo =Y change it later
     # language = await get_chat_language(f"u_{admin_id}")
 
-    text = ""
-    error = None
-    try:
-        text, _ = await transcribe_audio(audio_bytes, "ogg", language, use_groq=False)
-    except Exception as exc:
-        error = f"error: {exc}"
+    results: list[tuple[str, str, str | None]] = []
 
-    message = _build_message(version, language, text, error)
+    # Test Wit.ai
+    wit_text, wit_error = await _test_provider(audio_bytes, "ogg", language, use_groq=False)
+    results.append((_WIT_LABEL, wit_text, wit_error))
+
+    # Test Groq
+    if settings.groq_api_key:
+        groq_text, groq_error = await _test_provider(audio_bytes, "ogg", language, use_groq=True)
+        results.append((_GROQ_LABEL, groq_text, groq_error))
+    else:
+        results.append((_GROQ_LABEL, "", "skipped (not configured)"))
+
+    message = _build_message(version, language, results)
     chat_id = int(admin_id)
     await bot.send_voice(chat_id=chat_id, voice=audio_bytes, duration=duration)
     await bot.send_message(chat_id=chat_id, text=message)
