@@ -6,9 +6,10 @@ from telegram.ext import ConversationHandler
 
 from src.account_linking import confirm_link, generate_link_code
 from src.config import ENGLISH, GERMAN, RUSSIAN, SPANISH
-from src.credits import add_credits, current_month_key
+from src.credits import add_credits, current_month_key, deduct_credits
 from src.dto import MonthlyStats
 from src.mongo import (
+    add_user_role,
     get_auto_categorize,
     get_chat_language,
     get_github_settings,
@@ -172,14 +173,76 @@ class TestLanguageButtons:
 class TestVoiceMessageFlow:
     """Test voice message processing flow with real DB operations."""
 
-    async def test_no_voice_message_returns_early(self, mock_private_update, mock_context):
-        """Handler returns early when no voice message attached."""
+    async def test_no_voice_or_audio_returns_early(self, mock_private_update, mock_context):
+        """Handler returns early when no voice/audio message attached."""
         mock_private_update.message.voice = None
+        mock_private_update.message.audio = None
 
         await from_voice_to_text(mock_private_update, mock_context)
 
         # No errors, no responses
         mock_private_update.message.reply_text.assert_not_called()
+
+    async def test_no_effective_user_returns_early(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
+        """Handler returns early when effective_user is None (channel forward)."""
+        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.effective_user = None
+
+        await from_voice_to_text(mock_private_update, mock_context)
+        mock_private_update.message.reply_text.assert_not_called()
+
+    async def test_blocked_user_rejected(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
+        """Blocked user gets rejected with blocked message."""
+        user_id = "12360"
+        chat_id = "u_12360"
+        mock_private_update.effective_user.id = 12360
+        mock_private_update.effective_chat.id = 12360
+
+        await set_chat_language(chat_id, "en")
+        await add_user_role(user_id, "blocked", "admin")
+        mock_private_update.message.voice = mock_telegram_voice
+
+        with patch("src.telegram.voice.send_response", AsyncMock()) as mock_send:
+            await from_voice_to_text(mock_private_update, mock_context)
+
+            mock_send.assert_called_once()
+            call_kwargs = mock_send.call_args.kwargs
+            assert "blocked" in call_kwargs["response"].lower()
+
+    async def test_audio_message_processed(
+        self, mock_private_update, mock_context, mock_telegram_audio
+    ):
+        """Audio messages (not just voice) are processed."""
+        user_id = "12361"
+        chat_id = "u_12361"
+        mock_private_update.effective_user.id = 12361
+        mock_private_update.effective_chat.id = 12361
+
+        await set_chat_language(chat_id, "en")
+        await add_credits(user_id, 100)
+        mock_private_update.message.voice = None
+        mock_private_update.message.audio = mock_telegram_audio
+
+        with (
+            patch(
+                "src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Audio text", 30))
+            ),
+            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
+            patch(
+                "src.telegram.voice.save_transcription_to_obsidian",
+                AsyncMock(return_value=(False, None)),
+            ),
+            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
+        ):
+            await from_voice_to_text(mock_private_update, mock_context)
+
+            mock_send.assert_called_once()
+            call_kwargs = mock_send.call_args.kwargs
+            assert call_kwargs["response"] == "Audio text"
 
     async def test_service_unavailable_when_no_provider(
         self, mock_private_update, mock_context, mock_telegram_voice
@@ -206,19 +269,18 @@ class TestVoiceMessageFlow:
     async def test_insufficient_credits_message(
         self, mock_private_update, mock_context, mock_telegram_voice
     ):
-        """Shows insufficient credits when user has no credits."""
+        """Shows insufficient tokens when user has no tokens."""
+        user_id = "12351"
         chat_id = "u_12351"
         mock_private_update.effective_user.id = 12351
         mock_private_update.effective_chat.id = 12351
 
         await set_chat_language(chat_id, "en")
+        # Exhaust free credits
+        await deduct_credits(user_id, 100)
         mock_private_update.message.voice = mock_telegram_voice
 
         with (
-            patch(
-                "src.telegram.voice.grant_initial_credits_if_eligible",
-                AsyncMock(return_value=False),
-            ),
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
             patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
         ):
@@ -226,7 +288,7 @@ class TestVoiceMessageFlow:
 
             mock_send.assert_called_once()
             call_kwargs = mock_send.call_args.kwargs
-            assert "credit" in call_kwargs["response"].lower()
+            assert "token" in call_kwargs["response"].lower()
 
     async def test_groq_provider_records_usage(
         self, mock_private_update, mock_context, mock_telegram_voice
@@ -772,17 +834,17 @@ class TestHubCallbackRouting:
     async def test_account_buy_callback(
         self, mock_private_update, mock_context, mock_callback_query
     ):
-        """Clicking Buy button in account hub sends invoice."""
+        """Clicking Buy button in account hub shows package keyboard."""
         mock_callback_query.data = "hub_buy"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
-        mock_context.bot.send_invoice = AsyncMock()
 
         await hub_callback_router(mock_private_update, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        mock_context.bot.send_invoice.assert_called_once()
+        # buy_command uses update.message.reply_text (not query.message)
+        mock_private_update.message.reply_text.assert_called_once()
 
     async def test_account_mystats_callback(
         self, mock_private_update, mock_context, mock_callback_query

@@ -54,9 +54,8 @@ class Settings(BaseSettings):
     # Monetization
     vip_user_ids_raw: str = Field(default="", validation_alias="VIP_USER_IDS")
     admin_user_ids_raw: str = Field(default="", validation_alias="ADMIN_USER_IDS")
-    initial_credits: int = 3
-    credit_cost_voice: int = 1
-    credits_per_star: int = 1
+    free_monthly_tokens: int = 10
+    seconds_per_token: int = 20
 
     # Groq
     groq_api_key: str = ""

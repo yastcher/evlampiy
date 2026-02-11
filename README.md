@@ -1,8 +1,8 @@
 # Evlampiy Notes Bot
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 English | [Русский](docs/README.ru.md) | [Español](docs/README.es.md) | [Deutsch](docs/README.de.md)
@@ -24,9 +24,9 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Groq Whisper** — Automatic fallback when Wit.ai limit reached
 
 ### Monetization
-- **Credit system** — Per-user balance with usage tracking
-- **Telegram Stars** — Native payment integration
-- **User tiers** — Free, Paid, VIP, Tester, Admin
+- **Token system** — 10 free tokens/month + purchasable packages (1 token = 20 sec audio)
+- **Telegram Stars** — Native payment integration with 4 package tiers
+- **User tiers** — Free, Paid, VIP, Tester, Admin, Blocked
 
 ### Obsidian Integration
 - **GitHub sync** — Auto-save transcriptions to your vault via GitHub API
@@ -39,13 +39,13 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 
 ### Administration
 - **Admin panel** — `/admin` hub with inline buttons in Telegram
-- **User management** — Add/remove VIP and tester users, top up credits via Telegram commands
+- **User management** — Add/remove VIP and tester users, block/unblock users, top up tokens via Telegram commands
 - **Usage stats** — Monthly transcriptions, revenue, costs
 - **Health monitoring** — Wit.ai/Groq usage alerts
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.13+
 - MongoDB
 - FFmpeg (for audio processing)
 - [Wit.ai](https://wit.ai/) API tokens
@@ -105,7 +105,7 @@ GITHUB_CLIENT_ID=your_github_oauth_app_client_id
 GROQ_API_KEY=your_groq_api_key
 VIP_USER_IDS=123456,789012   # env fallback; manage via /admin in Telegram
 ADMIN_USER_IDS=123456789
-INITIAL_CREDITS=3
+FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
 
 # Optional: Auto-categorization (requires Obsidian integration)
@@ -121,7 +121,7 @@ For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETU
 | `/start`    | Show help and current settings           |
 | `/settings` | Language & GPT command settings          |
 | `/obsidian` | Notes sync to GitHub (Obsidian vault)    |
-| `/account`  | Balance, credits & WhatsApp linking      |
+| `/account`  | Balance, tokens & WhatsApp linking       |
 
 For admin commands, see [docs/ADMIN.md](docs/ADMIN.md).
 

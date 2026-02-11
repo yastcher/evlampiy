@@ -24,6 +24,7 @@ from src.telegram import admin, handlers
 from src.telegram.payments import (
     balance_command,
     buy_command,
+    buy_package_callback,
     handle_pre_checkout,
     handle_successful_payment,
 )
@@ -70,6 +71,8 @@ COMMAND_HANDLERS = {
     "add_tester": admin.add_tester_command,
     "remove_tester": admin.remove_tester_command,
     "add_credits": admin.add_credits_command,
+    "block": admin.block_command,
+    "unblock": admin.unblock_command,
     "toggle_categorize": handlers.toggle_categorize,
     "categorize": handlers.categorize_all,
     "link_whatsapp": handlers.link_whatsapp,
@@ -111,6 +114,8 @@ ADMIN_COMMANDS = [
     BotCommand("add_tester", "🧪 Add tester"),
     BotCommand("remove_tester", "🧪 Remove tester"),
     BotCommand("add_credits", "💰 Add credits to user"),
+    BotCommand("block", "🚫 Block user"),
+    BotCommand("unblock", "✅ Unblock user"),
 ]
 
 
@@ -186,8 +191,9 @@ def main():
     application.add_handler(CallbackQueryHandler(handlers.lang_buttons, pattern="^set_lang_"))
     application.add_handler(CallbackQueryHandler(handlers.hub_callback_router, pattern="^hub_"))
     application.add_handler(CallbackQueryHandler(admin.admin_callback_router, pattern="^adm_"))
+    application.add_handler(CallbackQueryHandler(buy_package_callback, pattern="^buy_pkg_"))
 
-    application.add_handler(MessageHandler(filters.VOICE, from_voice_to_text))
+    application.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, from_voice_to_text))
 
     application.add_handler(PreCheckoutQueryHandler(handle_pre_checkout))
     application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, handle_successful_payment))

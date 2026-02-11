@@ -10,14 +10,16 @@ from src.alerts import check_and_send_alerts
 from src.categorization import categorize_note
 from src.config import settings
 from src.credits import (
+    calculate_token_cost,
     can_perform_operation,
     deduct_credits,
     get_user_tier,
-    grant_initial_credits_if_eligible,
     has_unlimited_voice_access,
     increment_transcription_stats,
     increment_user_stats,
+    is_blocked_user,
     record_groq_usage,
+    record_user_usage,
 )
 from src.dto import UserTier
 from src.localization import translates
@@ -57,17 +59,74 @@ def _select_provider(tier: UserTier, wit_available: bool) -> str | None:
     return None
 
 
+async def _handle_obsidian_save(chat_id: str, text: str, language: str):
+    """Save transcription to Obsidian and auto-categorize if enabled."""
+    saved, filename = await save_transcription_to_obsidian(
+        chat_id,
+        text,
+        const.SOURCE_TELEGRAM,
+        language,
+    )
+    if not (saved and filename and await get_auto_categorize(chat_id)):
+        return
+    github_settings = await get_github_settings(chat_id)
+    if github_settings:
+        await categorize_note(
+            token=github_settings["token"],
+            owner=github_settings["owner"],
+            repo=github_settings["repo"],
+            filename=filename,
+            content=text,
+        )
+
+
+def _build_voice_response(text: str, gpt_command: str, message_id: int) -> dict:
+    """Build response kwargs for voice transcription."""
+    if text.lower().startswith(gpt_command):
+        return {
+            "response": f"Command \\*{gpt_command}* detected in the voice message."
+            f"\nAsk GPT for: {text[len(gpt_command) :]}"
+        }
+    return {"response": text, "reply_to_message_id": message_id}
+
+
 async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle incoming voice message from Telegram."""
-    if not update.message.voice:
+    """Handle incoming voice/audio message from Telegram."""
+    voice = update.message.voice or update.message.audio
+    if not voice:
+        return
+
+    # Diagnostic logging for forwarded messages
+    logger.info(
+        "MSG: voice=%s, audio=%s, user=%s, fwd_from=%s, fwd_chat=%s",
+        bool(update.message.voice),
+        bool(update.message.audio),
+        update.effective_user.id if update.effective_user else None,
+        update.message.forward_from,
+        update.message.forward_from_chat,
+    )
+
+    # Guard: channel forwards may not have effective_user
+    if not update.effective_user:
+        logger.debug("No effective_user, skipping (likely channel forward)")
         return
 
     user_id = str(update.effective_user.id)
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
 
-    await grant_initial_credits_if_eligible(user_id)
+    # 1. Blocked check — FIRST
+    if await is_blocked_user(user_id):
+        await send_response(
+            update,
+            context,
+            response=translates["blocked_message"].get(
+                language, translates["blocked_message"]["en"]
+            ),
+        )
+        return
 
+    # 2. Tier + provider selection
     tier = await get_user_tier(user_id)
     wit_available = await is_wit_available()
     provider = _select_provider(tier, wit_available)
@@ -82,8 +141,9 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
 
+    # 3. Pre-check: has at least 1 token?
     if not await has_unlimited_voice_access(user_id):
-        ok, _msg = await can_perform_operation(user_id, settings.credit_cost_voice)
+        ok, _msg = await can_perform_operation(user_id, 1)
         if not ok:
             await send_response(
                 update,
@@ -94,7 +154,8 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             return
 
-    voice_file = await update.message.voice.get_file()
+    # 4. Transcription
+    voice_file = await voice.get_file()
     file_data = await voice_file.download_as_bytearray()
 
     use_groq = provider == const.PROVIDER_GROQ
@@ -107,9 +168,24 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.debug("Empty voice message.")
         return
 
+    # 5. Calculate cost and deduct
+    token_cost = calculate_token_cost(duration)
     if not await has_unlimited_voice_access(user_id):
-        await deduct_credits(user_id, settings.credit_cost_voice)
+        result = await deduct_credits(user_id, token_cost)
+        await record_user_usage(
+            user_id, duration, token_cost, result.free_used, result.purchased_used
+        )
 
+        if result.overdraft:
+            await send_response(
+                update,
+                context,
+                response=translates["credits_exhausted_warning"].get(
+                    language, translates["credits_exhausted_warning"]["en"]
+                ),
+            )
+
+    # 6. Track provider usage
     if provider == const.PROVIDER_WIT:
         await increment_wit_usage()
         await check_and_send_alerts(context.bot)
@@ -119,33 +195,10 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await increment_transcription_stats()
     await increment_user_stats(user_id, audio_seconds=duration)
 
-    saved, filename = await save_transcription_to_obsidian(
-        chat_id,
-        text,
-        const.SOURCE_TELEGRAM,
-        language,
-    )
-    if saved and filename and await get_auto_categorize(chat_id):
-        github_settings = await get_github_settings(chat_id)
-        if github_settings:
-            await categorize_note(
-                token=github_settings["token"],
-                owner=github_settings["owner"],
-                repo=github_settings["repo"],
-                filename=filename,
-                content=text,
-            )
+    # 7. Obsidian integration
+    await _handle_obsidian_save(chat_id, text, language)
 
+    # 8. Send response
     gpt_command = await get_gpt_command(chat_id)
-    if text.lower().startswith(gpt_command):
-        response_kwargs = {
-            "response": f"Command \\*{gpt_command}* detected in the voice message."
-            f"\nAsk GPT for: {text[len(gpt_command) :]}"
-        }
-    else:
-        response_kwargs = {
-            "response": text,
-            "reply_to_message_id": update.message.message_id,
-        }
-
+    response_kwargs = _build_voice_response(text, gpt_command, update.message.message_id)
     await send_response(update, context, **response_kwargs)

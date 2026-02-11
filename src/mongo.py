@@ -10,6 +10,7 @@ from src.dto import (
     MonthlyStats,
     UsedTrial,
     UserCredits,
+    UserMonthlyUsage,
     UserRole,
     UserSettings,
     WitUsageStats,
@@ -26,6 +27,7 @@ ALL_DOCUMENT_MODELS = [
     AccountLink,
     LinkCode,
     LinkAttempt,
+    UserMonthlyUsage,
 ]
 
 

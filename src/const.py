@@ -14,6 +14,9 @@ EXCLUDED_CATEGORIES = ("income", "trash")
 
 ROLE_VIP = "vip"
 ROLE_TESTER = "tester"
+ROLE_BLOCKED = "blocked"
+
+SECONDS_PER_TOKEN = 20
 
 PRIVATE_CHAT_TYPE = "private"
 CHAT_PREFIX_USER = "u_"

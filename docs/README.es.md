@@ -1,8 +1,8 @@
 # Evlampiy Notes Bot
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
 [English](../README.md) | [Русский](README.ru.md) | Español | [Deutsch](README.de.md)
@@ -24,9 +24,9 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Groq Whisper** — Cambio automático cuando se alcanza el límite de Wit.ai
 
 ### Monetización
-- **Sistema de créditos** — Saldo por usuario con seguimiento de uso
-- **Telegram Stars** — Integración de pagos nativa
-- **Niveles de usuario** — Free, Paid, VIP, Tester, Admin
+- **Sistema de tokens** — 10 tokens gratis/mes + paquetes comprables (1 token = 20 seg de audio)
+- **Telegram Stars** — Integración de pagos nativa con 4 niveles de paquetes
+- **Niveles de usuario** — Free, Paid, VIP, Tester, Admin, Blocked
 
 ### Integración con Obsidian
 - **Sincronización GitHub** — Guardado automático de transcripciones en tu vault vía GitHub API
@@ -39,13 +39,13 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 
 ### Administración
 - **Panel de administración** — Hub `/admin` con botones inline en Telegram
-- **Gestión de usuarios** — Añadir/eliminar usuarios VIP y testers, recargar créditos vía Telegram
+- **Gestión de usuarios** — Añadir/eliminar usuarios VIP y testers, bloquear/desbloquear, recargar tokens vía Telegram
 - **Estadísticas de uso** — Transcripciones, ingresos, costos mensuales
 - **Monitoreo de salud** — Alertas de uso de Wit.ai/Groq
 
 ## Requisitos
 
-- Python 3.12+
+- Python 3.13+
 - MongoDB
 - FFmpeg (para procesamiento de audio)
 - Tokens API de [Wit.ai](https://wit.ai/)
@@ -105,7 +105,7 @@ GITHUB_CLIENT_ID=tu_github_oauth_app_client_id
 GROQ_API_KEY=tu_groq_api_key
 VIP_USER_IDS=123456,789012   # env fallback; gestionar vía /admin en Telegram
 ADMIN_USER_IDS=123456789
-INITIAL_CREDITS=3
+FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
 ```
 
@@ -118,7 +118,7 @@ Para instrucciones de configuración de WhatsApp, consulta [WHATSAPP_SETUP.md](W
 | `/start`    | Mostrar ayuda y configuración actual     |
 | `/settings` | Idioma y comando GPT                     |
 | `/obsidian` | Sincronización de notas con GitHub       |
-| `/account`  | Saldo, créditos y vinculación WhatsApp   |
+| `/account`  | Saldo, tokens y vinculación WhatsApp     |
 
 Para comandos de administrador, ver [ADMIN.md](ADMIN.md).
 

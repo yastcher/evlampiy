@@ -8,13 +8,14 @@
 
 ### User Roles
 
-| Role | Voice transcription | Provider | GPT/Categorization | Credits |
-|------|--------------------|---------|--------------------|---------|
+| Role | Voice transcription | Provider | GPT/Categorization | Tokens |
+|------|--------------------|---------|--------------------|--------|
 | **Admin** | Unlimited | Groq (priority) | Unlimited | Not needed |
 | **VIP** | Unlimited | Groq (priority) | Unlimited | Not needed |
-| **Tester** | Unlimited | Wit.ai (Groq fallback) | Uses credits | Admin top-up |
-| **Paid** | Uses credits | Wit.ai (Groq fallback) | Free | Purchase via Stars |
-| **Free** | 3 trial credits | Wit.ai only | Free | Purchase via Stars |
+| **Tester** | Unlimited | Wit.ai (Groq fallback) | Uses tokens | Admin top-up |
+| **Paid** | Uses tokens | Wit.ai (Groq fallback) | Free | Purchase via Stars |
+| **Free** | 10 free/month | Wit.ai only | Free | Purchase via Stars |
+| **Blocked** | Denied | — | Denied | — |
 
 ### Configuration
 
@@ -38,6 +39,7 @@ The `/admin` command opens an inline keyboard hub:
 
 - **VIP users** — View current VIP list
 - **Testers** — View current tester list
+- **Blocked users** — View blocked user list
 - **Stats** — System-wide statistics
 - **Add credits** — Usage hint for `/add_credits`
 
@@ -51,7 +53,9 @@ The `/admin` command opens an inline keyboard hub:
 | `/remove_vip <user_id>` | Remove user from VIP list |
 | `/add_tester <user_id>` | Add user to tester list |
 | `/remove_tester <user_id>` | Remove user from tester list |
-| `/add_credits <user_id> <amount>` | Top up credits for a user |
+| `/add_credits <user_id> <amount>` | Top up tokens for a user |
+| `/block <user_id>` | Block a user from using the bot |
+| `/unblock <user_id>` | Unblock a user |
 
 ### Storage
 
@@ -117,13 +121,14 @@ docker compose logs evlampiy_bot 2>&1 | grep ERROR
 
 ### Роли пользователей
 
-| Роль | Транскрипция голоса | Провайдер | GPT/Категоризация | Кредиты |
-|------|--------------------|-----------|--------------------|---------|
+| Роль | Транскрипция голоса | Провайдер | GPT/Категоризация | Токены |
+|------|--------------------|-----------|--------------------|--------|
 | **Admin** | Безлимитно | Groq (приоритет) | Безлимитно | Не нужны |
 | **VIP** | Безлимитно | Groq (приоритет) | Безлимитно | Не нужны |
-| **Tester** | Безлимитно | Wit.ai (Groq резерв) | Расходуют кредиты | Пополняет админ |
-| **Paid** | Расходуют кредиты | Wit.ai (Groq резерв) | Бесплатно | Покупка через Stars |
-| **Free** | 3 пробных кредита | Только Wit.ai | Бесплатно | Покупка через Stars |
+| **Tester** | Безлимитно | Wit.ai (Groq резерв) | Расходуют токены | Пополняет админ |
+| **Paid** | Расходуют токены | Wit.ai (Groq резерв) | Бесплатно | Покупка через Stars |
+| **Free** | 10 бесплатных/мес | Только Wit.ai | Бесплатно | Покупка через Stars |
+| **Blocked** | Запрещено | — | Запрещено | — |
 
 ### Конфигурация
 
@@ -147,6 +152,7 @@ VIP_USER_IDS=123456,789012
 
 - **VIP пользователи** — Текущий список VIP
 - **Тестеры** — Текущий список тестеров
+- **Заблокированные** — Список заблокированных пользователей
 - **Статистика** — Системная статистика
 - **Начислить кредиты** — Подсказка по использованию `/add_credits`
 
@@ -160,7 +166,9 @@ VIP_USER_IDS=123456,789012
 | `/remove_vip <user_id>` | Удалить пользователя из VIP |
 | `/add_tester <user_id>` | Добавить пользователя в тестеры |
 | `/remove_tester <user_id>` | Удалить пользователя из тестеров |
-| `/add_credits <user_id> <amount>` | Начислить кредиты пользователю |
+| `/add_credits <user_id> <amount>` | Начислить токены пользователю |
+| `/block <user_id>` | Заблокировать пользователя |
+| `/unblock <user_id>` | Разблокировать пользователя |
 
 ### Хранение
 

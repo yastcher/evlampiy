@@ -30,15 +30,38 @@ class UserTier(str, Enum):
 
 class UserCredits(Document):
     user_id: str
-    credits: int = 0
+
+    # Balance
+    free_credits: int = 10
+    free_credits_month: str = ""
+    purchased_credits: int = 0
+
+    # Tier
     tier: UserTier = UserTier.FREE
+
+    # Cumulative stats (per-user, all-time)
     total_transcriptions: int = 0
     total_audio_seconds: int = 0
-    total_credits_spent: int = 0
+    total_tokens_used: int = 0
+    total_credits_spent: int = 0  # deprecated, kept for backward compat
     total_credits_purchased: int = 0
 
     class Settings:
         name = "user_credits"
+
+
+class UserMonthlyUsage(Document):
+    user_id: str
+    month_key: str  # "2026-02"
+
+    transcriptions: int = 0
+    audio_seconds: int = 0
+    tokens_used: int = 0
+    free_tokens_used: int = 0
+    purchased_tokens_used: int = 0
+
+    class Settings:
+        name = "user_monthly_usage"
 
 
 class UsedTrial(Document):

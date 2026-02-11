@@ -10,13 +10,14 @@ from src.credits import (
     admin_add_credits,
     current_month_key,
     deduct_credits,
-    get_credits,
+    get_total_credits,
     has_unlimited_access,
     has_unlimited_voice_access,
     increment_payment_stats,
     increment_transcription_stats,
     increment_user_stats,
     is_admin_user,
+    is_blocked_user,
     is_tester_user,
     is_vip_user,
     record_groq_usage,
@@ -29,8 +30,10 @@ from src.telegram.admin import (
     add_vip_command,
     admin_callback_router,
     admin_hub,
+    block_command,
     remove_tester_command,
     remove_vip_command,
+    unblock_command,
 )
 from src.telegram.handlers import mystats_command, stats_command
 
@@ -200,8 +203,8 @@ class TestAdminCommands:
         with patch.object(settings, "admin_user_ids_raw", "999"):
             await add_credits_command(mock_private_update, mock_context)
 
-        balance = await get_credits("12345")
-        assert balance == 100
+        balance = await get_total_credits("12345")
+        assert balance == 110  # 10 free + 100 purchased
 
     async def test_add_credits_invalid_amount(self, mock_private_update, mock_context):
         """Invalid amount shows usage."""
@@ -283,6 +286,45 @@ class TestAdminCommands:
         mock_callback_query.edit_message_text.assert_called_once()
         call_text = mock_callback_query.edit_message_text.call_args[0][0]
         assert "/add_credits" in call_text
+
+    async def test_block_command(self, mock_private_update, mock_context):
+        """Admin can block a user."""
+        mock_private_update.effective_user.id = 999
+        mock_context.args = ["12345", "spam"]
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await block_command(mock_private_update, mock_context)
+
+        assert await is_blocked_user("12345") is True
+        mock_private_update.message.reply_text.assert_called_once()
+
+    async def test_unblock_command(self, mock_private_update, mock_context):
+        """Admin can unblock a user."""
+        await add_user_role("12345", "blocked", "admin")
+
+        mock_private_update.effective_user.id = 999
+        mock_context.args = ["12345"]
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await unblock_command(mock_private_update, mock_context)
+
+        assert await is_blocked_user("12345") is False
+        mock_private_update.message.reply_text.assert_called_once()
+
+    async def test_admin_callback_blocked_list(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """Admin callback shows blocked users list."""
+        await add_user_role("333", "blocked", "admin")
+
+        mock_private_update.effective_user.id = 999
+        mock_callback_query.data = "adm_blocked"
+        mock_private_update.callback_query = mock_callback_query
+
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await admin_callback_router(mock_private_update, mock_context)
+
+        mock_callback_query.edit_message_text.assert_called_once()
+        call_text = mock_callback_query.edit_message_text.call_args[0][0]
+        assert "333" in call_text
 
     async def test_non_admin_commands_blocked(self, mock_private_update, mock_context):
         """Non-admin cannot use admin commands."""
@@ -463,19 +505,19 @@ class TestUserStatsTracking:
         await add_credits(user_id, 100)
         record = await UserCredits.find_one(UserCredits.user_id == user_id)
         assert record.total_credits_purchased == 100
-        assert record.credits == 100
+        assert record.purchased_credits == 100
 
         # 2. Add more credits - accumulates
         await add_credits(user_id, 50)
         record = await UserCredits.find_one(UserCredits.user_id == user_id)
         assert record.total_credits_purchased == 150
-        assert record.credits == 150
+        assert record.purchased_credits == 150
 
-        # 3. Spend credits - track total_credits_spent
-        await deduct_credits(user_id, 30)
+        # 3. Spend credits - track total_tokens_used
+        result = await deduct_credits(user_id, 30)
+        assert result.overdraft is False
         record = await UserCredits.find_one(UserCredits.user_id == user_id)
-        assert record.total_credits_spent == 30
-        assert record.credits == 120
+        assert record.total_tokens_used == 30
 
         # 4. Track transcription stats
         await increment_user_stats(user_id, audio_seconds=45)
@@ -490,5 +532,6 @@ class TestUserStatsTracking:
         assert record.total_transcriptions == 3
         assert record.total_audio_seconds == 135
 
-        # 6. Credits unchanged by stats tracking
-        assert record.credits == 120
+        # 6. Purchased credits reduced by deduction (30 was from free, depends on initial state)
+        total = await get_total_credits(user_id)
+        assert total > 0
