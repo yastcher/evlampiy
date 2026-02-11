@@ -233,6 +233,12 @@ translates = {
         RUSSIAN: "🤖 GPT команда",
         SPANISH: "🤖 Comando GPT",
     },
+    "btn_provider": {
+        ENGLISH: "🔊 Provider",
+        GERMAN: "🔊 Anbieter",
+        RUSSIAN: "🔊 Провайдер",
+        SPANISH: "🔊 Proveedor",
+    },
     "btn_connect_github": {
         ENGLISH: "🔗 Connect GitHub",
         GERMAN: "🔗 GitHub verbinden",
@@ -311,6 +317,30 @@ translates = {
         GERMAN: "Bitte wählen Sie Ihre bevorzugte Sprache:",
         RUSSIAN: "Выберите предпочтительный язык:",
         SPANISH: "Por favor, elige tu idioma preferido:",
+    },
+    "choose_provider_prompt": {
+        ENGLISH: "Choose transcription provider:",
+        GERMAN: "Transkriptionsanbieter wählen:",
+        RUSSIAN: "Выберите провайдер транскрипции:",
+        SPANISH: "Elige el proveedor de transcripción:",
+    },
+    "choose_my_provider_auto": {
+        ENGLISH: "Provider: Auto",
+        GERMAN: "Anbieter: Auto",
+        RUSSIAN: "Провайдер: Авто",
+        SPANISH: "Proveedor: Auto",
+    },
+    "choose_my_provider_wit": {
+        ENGLISH: "Provider: Wit.ai",
+        GERMAN: "Anbieter: Wit.ai",
+        RUSSIAN: "Провайдер: Wit.ai",
+        SPANISH: "Proveedor: Wit.ai",
+    },
+    "choose_my_provider_groq": {
+        ENGLISH: "Provider: Groq",
+        GERMAN: "Anbieter: Groq",
+        RUSSIAN: "Провайдер: Groq",
+        SPANISH: "Proveedor: Groq",
     },
     "obsidian_sync_enabled": {
         ENGLISH: "Obsidian sync is now enabled.",

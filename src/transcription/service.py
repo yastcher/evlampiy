@@ -26,7 +26,7 @@ async def transcribe_audio(
     audio_bytes: bytes,
     audio_format: str,
     language: str,
-    use_groq: bool = False,
+    provider: str = const.PROVIDER_WIT,
 ) -> tuple[str, int]:
     """
     Transcribe audio to text.
@@ -35,23 +35,19 @@ async def transcribe_audio(
         audio_bytes: Raw audio data
         audio_format: Format hint for pydub (e.g., "ogg", "opus", "mp4")
         language: Language code (en, ru, es, de)
-        use_groq: If True, use Groq Whisper instead of Wit.ai
+        provider: Transcription provider (const.PROVIDER_WIT or const.PROVIDER_GROQ)
 
     Returns:
         Tuple of (transcribed text, duration in seconds)
     """
     duration = get_audio_duration_seconds(audio_bytes, audio_format)
 
-    if use_groq:
+    if provider == const.PROVIDER_GROQ:
         text = await transcribe_with_groq(audio_bytes, language, audio_format)
     else:
         text = _transcribe_with_wit(audio_bytes, audio_format, language)
 
-    logger.debug(
-        "Transcription result (%s): %s",
-        const.PROVIDER_GROQ if use_groq else const.PROVIDER_WIT,
-        text,
-    )
+    logger.debug("Transcription result (%s): %s", provider, text)
     return text, duration
 
 

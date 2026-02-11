@@ -20,8 +20,8 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **Chat-Einstellungen** — Individuelle Sprache und Trigger für jeden Chat
 
 ### Transkriptionsanbieter
-- **Wit.ai** — Kostenloses Kontingent mit monatlicher Limitüberwachung
-- **Groq Whisper** — Automatischer Wechsel bei Erreichen des Wit.ai-Limits
+- **Wit.ai** — Standardanbieter mit monatlicher Limitüberwachung
+- **Groq Whisper** — Fallback bei Erreichen des Wit.ai-Limits; zahlende Nutzer können manuell über `/settings` wählen
 
 ### Monetarisierung
 - **Token-System** — 10 kostenlose Tokens/Monat + kaufbare Pakete (1 Token = 20 Sek. Audio)
@@ -116,7 +116,7 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 | Befehl      | Beschreibung                             |
 |-------------|------------------------------------------|
 | `/start`    | Hilfe und aktuelle Einstellungen         |
-| `/settings` | Sprache und GPT-Befehl                   |
+| `/settings` | Sprache, GPT-Befehl und Anbieter         |
 | `/obsidian` | Notizen-Synchronisierung mit GitHub      |
 | `/account`  | Guthaben, Tokens und WhatsApp-Verknüpfung |
 

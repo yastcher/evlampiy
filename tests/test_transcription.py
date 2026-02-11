@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from src import const
 from src.transcription.service import CHUNK_LENGTH_MS, transcribe_audio
 
 
@@ -143,7 +144,9 @@ class TestTranscribeAudio:
             ),
             patch("src.transcription.service.transcribe_with_groq", mock_groq),
         ):
-            text, duration = await transcribe_audio(b"audio_data", "ogg", "en", use_groq=True)
+            text, duration = await transcribe_audio(
+                b"audio_data", "ogg", "en", provider=const.PROVIDER_GROQ
+            )
 
             assert text == "Groq result"
             assert duration == 10

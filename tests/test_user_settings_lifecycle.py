@@ -8,11 +8,13 @@ from src.mongo import (
     get_chat_language,
     get_github_settings,
     get_gpt_command,
+    get_preferred_provider,
     get_save_to_obsidian,
     set_auto_categorize,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
+    set_preferred_provider,
     set_save_to_obsidian,
 )
 
@@ -118,3 +120,22 @@ class TestUserSettingsLifecycle:
         # Re-enable
         await set_auto_categorize(chat_id, True)
         assert await get_auto_categorize(chat_id) is True
+
+    async def test_preferred_provider_lifecycle(self):
+        """Test preferred_provider setting lifecycle."""
+        chat_id = "u_provider_test"
+
+        # New user gets default (None = auto)
+        assert await get_preferred_provider(chat_id) is None
+
+        # Set to groq
+        await set_preferred_provider(chat_id, "groq")
+        assert await get_preferred_provider(chat_id) == "groq"
+
+        # Update to wit
+        await set_preferred_provider(chat_id, "wit")
+        assert await get_preferred_provider(chat_id) == "wit"
+
+        # Reset to auto (None)
+        await set_preferred_provider(chat_id, None)
+        assert await get_preferred_provider(chat_id) is None

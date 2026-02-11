@@ -15,7 +15,7 @@ from src.credits import (
     get_user_tier,
     is_admin_user,
 )
-from src.dto import UserCredits
+from src.dto import UserCredits, UserTier
 from src.github_api import get_or_create_obsidian_repo
 from src.github_oauth import get_github_device_code, poll_github_for_token
 from src.localization import translates
@@ -25,11 +25,13 @@ from src.mongo import (
     get_chat_language,
     get_github_settings,
     get_gpt_command,
+    get_preferred_provider,
     get_save_to_obsidian,
     set_auto_categorize,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
+    set_preferred_provider,
     set_save_to_obsidian,
 )
 from src.telegram.chat_params import get_chat_id, is_private_chat, is_user_admin, reply_text
@@ -391,6 +393,20 @@ async def settings_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         ],
     ]
+
+    # Show provider button only for paid tiers when multiple providers available
+    if settings.groq_api_key and update.effective_user:
+        user_id = str(update.effective_user.id)
+        tier = await get_user_tier(user_id)
+        if tier not in (UserTier.FREE,):
+            keyboard.append(
+                [
+                    InlineKeyboardButton(
+                        translates["btn_provider"][language], callback_data="hub_provider"
+                    )
+                ]
+            )
+
     reply_markup = InlineKeyboardMarkup(keyboard)
     title = translates["settings_hub_title"][language]
     await update.message.reply_text(title, reply_markup=reply_markup)
@@ -482,6 +498,44 @@ async def account_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(title, reply_markup=reply_markup)
 
 
+async def _show_provider_menu(update: Update):
+    query = update.callback_query
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+    current = await get_preferred_provider(chat_id)
+
+    prompt = translates["choose_provider_prompt"].get(
+        language, translates["choose_provider_prompt"]["en"]
+    )
+
+    check = "\u2705 "
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                f"{check if current is None else ''}Auto",
+                callback_data="set_prov_auto",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                f"{check if current == const.PROVIDER_WIT else ''}Wit.ai",
+                callback_data="set_prov_wit",
+            )
+        ],
+    ]
+    if settings.groq_api_key:
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"{check if current == const.PROVIDER_GROQ else ''}Groq",
+                    callback_data="set_prov_groq",
+                )
+            ]
+        )
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(prompt, reply_markup=reply_markup)
+
+
 async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -533,6 +587,38 @@ async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     elif action == "unlink_whatsapp":
         await unlink_whatsapp(update, context)
+
+    elif action == "provider":
+        await _show_provider_menu(update)
+
+
+async def provider_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_admin(update, context):
+        return
+
+    query = update.callback_query
+    await query.answer()
+
+    choice = query.data.replace("set_prov_", "")
+
+    if is_private_chat(update):
+        chat_id = f"{const.CHAT_PREFIX_USER}{query.from_user.id}"
+    else:
+        chat_id = f"{const.CHAT_PREFIX_GROUP}{query.message.chat.id}"
+
+    language = await get_chat_language(chat_id)
+
+    provider_map = {
+        "auto": (None, "choose_my_provider_auto"),
+        "wit": (const.PROVIDER_WIT, "choose_my_provider_wit"),
+        "groq": (const.PROVIDER_GROQ, "choose_my_provider_groq"),
+    }
+
+    provider_value, translate_key = provider_map.get(choice, (None, "choose_my_provider_auto"))
+    await set_preferred_provider(chat_id, provider_value)
+    await query.edit_message_text(
+        text=translates[translate_key].get(language, translates[translate_key]["en"])
+    )
 
 
 async def enter_your_command_from_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):

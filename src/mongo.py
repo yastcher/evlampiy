@@ -127,6 +127,19 @@ async def get_auto_categorize(chat_id: str) -> bool:
     return user.auto_categorize
 
 
+async def set_preferred_provider(chat_id: str, provider: str | None):
+    user = await get_or_create_user(chat_id)
+    user.preferred_provider = provider
+    await user.save()
+
+
+async def get_preferred_provider(chat_id: str) -> str | None:
+    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
+    if not user:
+        return None
+    return user.preferred_provider
+
+
 async def add_user_role(user_id: str, role: str, added_by: str):
     """Add a role to a user (upsert)."""
     existing = await UserRole.find_one(UserRole.user_id == user_id, UserRole.role == role)

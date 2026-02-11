@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from src import const
 from src.selftest import run_selftest
 
 SAMPLE_AUDIO = b"fake_ogg_audio_data"
@@ -71,7 +72,7 @@ async def test_uses_russian_language(mock_bot, _patch_settings):
         mock_transcribe.return_value = ("текст", 3)
         await run_selftest(mock_bot)
 
-    mock_transcribe.assert_called_once_with(SAMPLE_AUDIO, "ogg", "ru", use_groq=False)
+    mock_transcribe.assert_called_once_with(SAMPLE_AUDIO, "ogg", "ru", provider=const.PROVIDER_WIT)
     message_text = mock_bot.send_message.call_args[1]["text"]
     assert "Self-test (ru)" in message_text
 

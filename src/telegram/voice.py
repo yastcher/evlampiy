@@ -23,7 +23,13 @@ from src.credits import (
 )
 from src.dto import UserTier
 from src.localization import translates
-from src.mongo import get_auto_categorize, get_chat_language, get_github_settings, get_gpt_command
+from src.mongo import (
+    get_auto_categorize,
+    get_chat_language,
+    get_github_settings,
+    get_gpt_command,
+    get_preferred_provider,
+)
 from src.obsidian import save_transcription_to_obsidian
 from src.telegram.bot import send_response
 from src.telegram.chat_params import get_chat_id
@@ -33,30 +39,37 @@ from src.wit_tracking import increment_wit_usage, is_wit_available
 logger = logging.getLogger(__name__)
 
 
-def _select_provider(tier: UserTier, wit_available: bool) -> str | None:
+def _select_provider(
+    tier: UserTier,
+    wit_available: bool,
+    preferred_provider: str | None = None,
+) -> str | None:
     """
-    Select transcription provider based on user tier and Wit.ai availability.
+    Select transcription provider based on user tier, availability, and preference.
 
-    VIP/ADMIN: Groq (if configured) else Wit.
-    TESTER: Wit primary, Groq fallback.
+    Default for all tiers: Wit.ai. Paid tiers can override via preferred_provider.
+    Free/Blocked: preference ignored, auto-selection only.
+
     Returns:
         const.PROVIDER_GROQ, const.PROVIDER_WIT, or None if no provider available
     """
-    if tier == UserTier.VIP:
-        return const.PROVIDER_GROQ if settings.groq_api_key else const.PROVIDER_WIT
+    groq_available = bool(settings.groq_api_key)
 
-    if tier == UserTier.TESTER:
-        if wit_available:
-            return const.PROVIDER_WIT
-        return const.PROVIDER_GROQ if settings.groq_api_key else None
+    # Free tier: Wit only, no Groq fallback, ignore preference
+    if tier == UserTier.FREE:
+        return const.PROVIDER_WIT if wit_available else None
 
-    if wit_available:
-        return const.PROVIDER_WIT
-
-    if tier == UserTier.PAID and settings.groq_api_key:
+    # Paid tiers with explicit preference
+    if preferred_provider == const.PROVIDER_GROQ and groq_available:
         return const.PROVIDER_GROQ
 
-    return None
+    if preferred_provider == const.PROVIDER_WIT and wit_available:
+        return const.PROVIDER_WIT
+
+    # Auto or fallback: Wit primary, Groq secondary
+    if wit_available:
+        return const.PROVIDER_WIT
+    return const.PROVIDER_GROQ if groq_available else None
 
 
 async def _handle_obsidian_save(chat_id: str, text: str, language: str):
@@ -129,7 +142,8 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # 2. Tier + provider selection
     tier = await get_user_tier(user_id)
     wit_available = await is_wit_available()
-    provider = _select_provider(tier, wit_available)
+    preferred = await get_preferred_provider(chat_id)
+    provider = _select_provider(tier, wit_available, preferred)
 
     if provider is None:
         await send_response(
@@ -158,9 +172,8 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     voice_file = await voice.get_file()
     file_data = await voice_file.download_as_bytearray()
 
-    use_groq = provider == const.PROVIDER_GROQ
     text, duration = await transcribe_audio(
-        bytes(file_data), audio_format="ogg", language=language, use_groq=use_groq
+        bytes(file_data), audio_format="ogg", language=language, provider=provider
     )
 
     logger.debug("Voice message translation: %s", text)

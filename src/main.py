@@ -189,6 +189,7 @@ def main():
         application.add_handler(CommandHandler(command_name, command_handler))
 
     application.add_handler(CallbackQueryHandler(handlers.lang_buttons, pattern="^set_lang_"))
+    application.add_handler(CallbackQueryHandler(handlers.provider_buttons, pattern="^set_prov_"))
     application.add_handler(CallbackQueryHandler(handlers.hub_callback_router, pattern="^hub_"))
     application.add_handler(CallbackQueryHandler(admin.admin_callback_router, pattern="^adm_"))
     application.add_handler(CallbackQueryHandler(buy_package_callback, pattern="^buy_pkg_"))

@@ -10,12 +10,12 @@ from src.telegram.voice import _select_provider
 class TestSelectProvider:
     """Test transcription provider selection logic."""
 
-    def test_vip_gets_groq_when_configured(self):
-        """VIP user gets Groq when API key is set."""
+    def test_vip_gets_wit_by_default(self):
+        """VIP user gets Wit by default (auto), not Groq."""
         with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
             result = _select_provider(UserTier.VIP, wit_available=True)
 
-        assert result == const.PROVIDER_GROQ
+        assert result == const.PROVIDER_WIT
 
     def test_vip_gets_wit_without_groq(self):
         """VIP user falls back to Wit when Groq not configured."""
@@ -76,3 +76,70 @@ class TestSelectProvider:
             result = _select_provider(UserTier.TESTER, wit_available=False)
 
         assert result is None
+
+
+class TestSelectProviderWithPreference:
+    """Test provider selection with user's preferred_provider."""
+
+    def test_paid_auto_wit_available(self):
+        """Paid + preferred=None + wit available -> WIT (auto)."""
+        result = _select_provider(UserTier.PAID, wit_available=True)
+        assert result == const.PROVIDER_WIT
+
+    def test_paid_auto_wit_unavailable_groq_configured(self):
+        """Paid + preferred=None + wit unavailable + groq configured -> GROQ (fallback)."""
+        with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
+            result = _select_provider(UserTier.PAID, wit_available=False)
+        assert result == const.PROVIDER_GROQ
+
+    def test_paid_preferred_groq_configured(self):
+        """Paid + preferred=groq + groq configured -> GROQ."""
+        with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
+            result = _select_provider(UserTier.PAID, wit_available=True, preferred_provider="groq")
+        assert result == const.PROVIDER_GROQ
+
+    def test_paid_preferred_groq_not_configured(self):
+        """Paid + preferred=groq + groq not configured + wit available -> WIT (fallback)."""
+        with patch("src.telegram.voice.settings.groq_api_key", ""):
+            result = _select_provider(UserTier.PAID, wit_available=True, preferred_provider="groq")
+        assert result == const.PROVIDER_WIT
+
+    def test_paid_preferred_wit_available(self):
+        """Paid + preferred=wit + wit available -> WIT."""
+        result = _select_provider(UserTier.PAID, wit_available=True, preferred_provider="wit")
+        assert result == const.PROVIDER_WIT
+
+    def test_paid_preferred_wit_unavailable_groq_fallback(self):
+        """Paid + preferred=wit + wit unavailable + groq configured -> GROQ (fallback)."""
+        with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
+            result = _select_provider(UserTier.PAID, wit_available=False, preferred_provider="wit")
+        assert result == const.PROVIDER_GROQ
+
+    def test_free_preferred_groq_ignored(self):
+        """Free + preferred=groq -> ignored, WIT (auto)."""
+        with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
+            result = _select_provider(UserTier.FREE, wit_available=True, preferred_provider="groq")
+        assert result == const.PROVIDER_WIT
+
+    def test_free_wit_unavailable_returns_none(self):
+        """Free + wit unavailable -> None (Free never gets Groq)."""
+        with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
+            result = _select_provider(UserTier.FREE, wit_available=False, preferred_provider="groq")
+        assert result is None
+
+    def test_vip_auto_wit_available(self):
+        """VIP + preferred=None + wit available -> WIT (default changed)."""
+        with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
+            result = _select_provider(UserTier.VIP, wit_available=True)
+        assert result == const.PROVIDER_WIT
+
+    def test_vip_preferred_groq_configured(self):
+        """VIP + preferred=groq + groq configured -> GROQ."""
+        with patch("src.telegram.voice.settings.groq_api_key", "test-key"):
+            result = _select_provider(UserTier.VIP, wit_available=True, preferred_provider="groq")
+        assert result == const.PROVIDER_GROQ
+
+    def test_tester_auto_wit_available(self):
+        """Tester + preferred=None + wit available -> WIT."""
+        result = _select_provider(UserTier.TESTER, wit_available=True)
+        assert result == const.PROVIDER_WIT

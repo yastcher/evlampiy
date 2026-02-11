@@ -7,6 +7,7 @@ import tomllib
 
 import telegram
 
+from src import const
 from src.config import RUSSIAN, settings
 from src.transcription.service import get_audio_duration_seconds, transcribe_audio
 
@@ -56,11 +57,11 @@ def _build_message(version: str, language: str, results: list[tuple[str, str, st
 
 
 async def _test_provider(
-    audio_bytes: bytes, audio_format: str, language: str, *, use_groq: bool
+    audio_bytes: bytes, audio_format: str, language: str, *, provider: str
 ) -> tuple[str, str | None]:
     """Run transcription for a single provider, return (text, error_message)."""
     try:
-        text, _ = await transcribe_audio(audio_bytes, audio_format, language, use_groq=use_groq)
+        text, _ = await transcribe_audio(audio_bytes, audio_format, language, provider=provider)
         return text, None
     except Exception as exc:
         return "", f"error: {exc}"
@@ -106,12 +107,16 @@ async def _selftest_for_admin(
     results: list[tuple[str, str, str | None]] = []
 
     # Test Wit.ai
-    wit_text, wit_error = await _test_provider(audio_bytes, "ogg", language, use_groq=False)
+    wit_text, wit_error = await _test_provider(
+        audio_bytes, "ogg", language, provider=const.PROVIDER_WIT
+    )
     results.append((_WIT_LABEL, wit_text, wit_error))
 
     # Test Groq
     if settings.groq_api_key:
-        groq_text, groq_error = await _test_provider(audio_bytes, "ogg", language, use_groq=True)
+        groq_text, groq_error = await _test_provider(
+            audio_bytes, "ogg", language, provider=const.PROVIDER_GROQ
+        )
         results.append((_GROQ_LABEL, groq_text, groq_error))
     else:
         results.append((_GROQ_LABEL, "", "skipped (not configured)"))
