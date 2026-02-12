@@ -1,39 +1,16 @@
-x-variables: &variables
-  environment:
-    TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-    WIT_RU_TOKEN: ${WIT_RU_TOKEN}
-    WIT_EN_TOKEN: ${WIT_EN_TOKEN}
-    WIT_ES_TOKEN: ${WIT_ES_TOKEN}
-    WIT_DE_TOKEN: ${WIT_DE_TOKEN}
-    MONGO_URI: ${MONGO_URI}
-    GPT_TOKEN: ${GPT_TOKEN}
-    # WhatsApp (optional)
-    WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
-    WHATSAPP_PHONE_ID: ${WHATSAPP_PHONE_ID:-}
-    WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
-    WHATSAPP_APP_ID: ${WHATSAPP_APP_ID:-}
-    WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
-    # GitHub OAuth (optional)
-    GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
-    # Monetization (optional)
-    VIP_USER_IDS: ${VIP_USER_IDS:-}
-    ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
-    GROQ_API_KEY: ${GROQ_API_KEY:-}
-    # Auto-categorization (optional)
-    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-
 services:
 
   mongodb:
     image: mongo:latest
     container_name: mongodb
-    ports:
-      - "27017:27017"
+    volumes:
+      - ./mongo_data:/data/db
 
   evlampiy_bot:
     image: evlampiy_notes_tgbot:latest
     restart: always
-    <<: *variables
+    env_file:
+      - .env
     ports:
       - "8000:8000"  # FastAPI for WhatsApp webhook
     volumes:

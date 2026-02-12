@@ -110,7 +110,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     # Diagnostic logging for forwarded messages
-    logger.info(
+    logger.debug(
         "MSG: voice=%s, audio=%s, user=%s, fwd_from=%s, fwd_chat=%s",
         bool(update.message.voice),
         bool(update.message.audio),
