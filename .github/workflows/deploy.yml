@@ -96,6 +96,7 @@ jobs:
             gunzip -c ~/evlampiy/evlampiy_notes_tgbot.tar.gz | docker load
             rm ~/evlampiy/evlampiy_notes_tgbot.tar.gz
             docker image prune -f
+            docker volume prune -f
             docker compose up -d
           EOF
           rm private_key

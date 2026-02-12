@@ -111,12 +111,11 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     # Diagnostic logging for forwarded messages
     logger.debug(
-        "MSG: voice=%s, audio=%s, user=%s, fwd_from=%s, fwd_chat=%s",
+        "MSG: voice=%s, audio=%s, user=%s, forward_origin=%s",
         bool(update.message.voice),
         bool(update.message.audio),
         update.effective_user.id if update.effective_user else None,
-        update.message.forward_from,
-        update.message.forward_from_chat,
+        update.message.forward_origin,
     )
 
     # Guard: channel forwards may not have effective_user
