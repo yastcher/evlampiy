@@ -81,7 +81,7 @@ jobs:
 
       - name: Build and save docker image
         run: |
-          docker build -t evlampiy_notes_tgbot:latest .
+          docker build --load -t evlampiy_notes_tgbot:latest .
           docker save evlampiy_notes_tgbot:latest | gzip > evlampiy_notes_tgbot.tar.gz
 
       - name: Copy docker image and docker-compose file to server and run
