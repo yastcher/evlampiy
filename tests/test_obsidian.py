@@ -115,6 +115,37 @@ class TestSaveTranscriptionToObsidian:
         assert "source: whatsapp" in content
         assert "language: ru" in content
 
+    async def test_group_uses_sender_settings(self):
+        """In group chat, uses sender's personal settings but keeps group chat_id in frontmatter."""
+        group_chat_id = "g_-1001234567890"
+        sender_chat_id = "u_123"
+        await set_save_to_obsidian(sender_chat_id, True)
+        await set_github_settings(sender_chat_id, "sender", "vault", "ghp_sender")
+
+        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+            success, filename = await save_transcription_to_obsidian(
+                group_chat_id, "Group note", "telegram", "en", settings_chat_id=sender_chat_id
+            )
+
+        assert success is True
+        assert filename is not None
+        call_kwargs = mock_put.call_args.kwargs
+        assert call_kwargs["token"] == "ghp_sender"
+        content = call_kwargs["content"]
+        assert f"chat_id: {group_chat_id}" in content
+
+    async def test_group_no_sender_settings_skips(self):
+        """In group chat, if sender has no settings, nothing is saved."""
+        group_chat_id = "g_-1001234567890"
+        sender_chat_id = "u_no_settings"
+
+        success, filename = await save_transcription_to_obsidian(
+            group_chat_id, "text", "telegram", "en", settings_chat_id=sender_chat_id
+        )
+
+        assert success is False
+        assert filename is None
+
     async def test_returns_false_on_api_failure(self):
         """Returns (False, None) when GitHub API call fails."""
         chat_id = "u_transcription_api_fail"

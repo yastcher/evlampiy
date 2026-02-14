@@ -838,13 +838,14 @@ class TestHubCallbackRouting:
         mock_callback_query.data = "hub_buy"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = 12345
+        mock_callback_query.message.reply_text = AsyncMock()
         mock_private_update.callback_query = mock_callback_query
+        mock_private_update.message = None
 
         await hub_callback_router(mock_private_update, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        # buy_command uses update.message.reply_text (not query.message)
-        mock_private_update.message.reply_text.assert_called_once()
+        mock_callback_query.message.reply_text.assert_called_once()
 
     async def test_account_mystats_callback(
         self, mock_private_update, mock_context, mock_callback_query

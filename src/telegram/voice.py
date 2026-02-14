@@ -72,17 +72,20 @@ def _select_provider(
     return const.PROVIDER_GROQ if groq_available else None
 
 
-async def _handle_obsidian_save(chat_id: str, text: str, language: str):
+async def _handle_obsidian_save(chat_id: str, text: str, language: str, user_id: str | None = None):
     """Save transcription to Obsidian and auto-categorize if enabled."""
+    settings_chat_id = f"u_{user_id}" if chat_id.startswith("g_") and user_id else None
     saved, filename = await save_transcription_to_obsidian(
         chat_id,
         text,
         const.SOURCE_TELEGRAM,
         language,
+        settings_chat_id=settings_chat_id,
     )
-    if not (saved and filename and await get_auto_categorize(chat_id)):
+    lookup_id = settings_chat_id or chat_id
+    if not (saved and filename and await get_auto_categorize(lookup_id)):
         return
-    github_settings = await get_github_settings(chat_id)
+    github_settings = await get_github_settings(lookup_id)
     if github_settings:
         await categorize_note(
             token=github_settings["token"],
@@ -208,7 +211,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await increment_user_stats(user_id, audio_seconds=duration)
 
     # 7. Obsidian integration
-    await _handle_obsidian_save(chat_id, text, language)
+    await _handle_obsidian_save(chat_id, text, language, user_id=user_id)
 
     # 8. Send response
     gpt_command = await get_gpt_command(chat_id)

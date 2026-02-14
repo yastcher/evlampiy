@@ -42,7 +42,7 @@ trash_loggers = (
     "telegram.ext.ExtBot",
     "pydub.converter",
     "urllib3",
-    "pymongo.topology",
+    "pymongo",
     "uvicorn.access",
 )
 for logger_name in trash_loggers:

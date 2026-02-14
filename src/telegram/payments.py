@@ -18,7 +18,7 @@ from src.credits import (
 from src.dto import UserMonthlyUsage
 from src.localization import translates
 from src.mongo import get_chat_language
-from src.telegram.chat_params import get_chat_id
+from src.telegram.chat_params import get_chat_id, reply_text
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = translates["buy_packages_prompt"].get(language, translates["buy_packages_prompt"]["en"])
-    await update.message.reply_text(text, reply_markup=reply_markup)
+    await reply_text(update, text, reply_markup=reply_markup)
 
 
 async def buy_package_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

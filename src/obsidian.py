@@ -45,6 +45,7 @@ async def save_transcription_to_obsidian(
     text: str,
     source: str,
     language: str,
+    settings_chat_id: str | None = None,
 ) -> tuple[bool, str | None]:
     """
     Save transcription to Obsidian vault via GitHub.
@@ -52,10 +53,11 @@ async def save_transcription_to_obsidian(
     Returns:
         tuple[bool, str | None]: (success, filename) where filename is just the name without path
     """
-    if not await get_save_to_obsidian(chat_id):
+    lookup_id = settings_chat_id or chat_id
+    if not await get_save_to_obsidian(lookup_id):
         return False, None
 
-    github_settings = await get_github_settings(chat_id)
+    github_settings = await get_github_settings(lookup_id)
     if not github_settings:
         return False, None
 
