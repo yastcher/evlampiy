@@ -16,6 +16,7 @@ class UserSettings(Document):
     github_settings: dict[str, str] | None = None
     save_to_obsidian: bool = False
     auto_categorize: bool = False
+    auto_cleanup: bool = False
     preferred_provider: str | None = None  # "wit", "groq", or None (auto)
 
     class Settings:

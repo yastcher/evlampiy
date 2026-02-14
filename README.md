@@ -18,6 +18,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Multi-platform** — Telegram and WhatsApp support
 - **Multi-language** — English, German, Russian, Spanish
 - **Per-chat settings** — Individual language and trigger preferences
+- **AI text cleanup** — Optional LLM-powered cleanup of transcriptions (removes filler words, fixes punctuation)
 
 ### Transcription Providers
 - **Wit.ai** — Default provider with monthly limit tracking

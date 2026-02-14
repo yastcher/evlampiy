@@ -5,12 +5,14 @@ from src.dto import UserSettings
 from src.mongo import (
     clear_github_settings,
     get_auto_categorize,
+    get_auto_cleanup,
     get_chat_language,
     get_github_settings,
     get_gpt_command,
     get_preferred_provider,
     get_save_to_obsidian,
     set_auto_categorize,
+    set_auto_cleanup,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
@@ -120,6 +122,25 @@ class TestUserSettingsLifecycle:
         # Re-enable
         await set_auto_categorize(chat_id, True)
         assert await get_auto_categorize(chat_id) is True
+
+    async def test_auto_cleanup_lifecycle(self):
+        """Test auto_cleanup setting lifecycle."""
+        chat_id = "u_cleanup_test"
+
+        # New user gets default (False)
+        assert await get_auto_cleanup(chat_id) is False
+
+        # Enable auto_cleanup for new user
+        await set_auto_cleanup(chat_id, True)
+        assert await get_auto_cleanup(chat_id) is True
+
+        # Disable auto_cleanup
+        await set_auto_cleanup(chat_id, False)
+        assert await get_auto_cleanup(chat_id) is False
+
+        # Re-enable
+        await set_auto_cleanup(chat_id, True)
+        assert await get_auto_cleanup(chat_id) is True
 
     async def test_preferred_provider_lifecycle(self):
         """Test preferred_provider setting lifecycle."""

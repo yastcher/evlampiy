@@ -8,11 +8,14 @@ from pywa import WhatsApp
 from pywa.types import Message
 
 from src import const
-from src.account_linking import confirm_link
+from src.account_linking import confirm_link, get_linked_telegram_id
 from src.categorization import categorize_note
 from src.config import settings
-from src.mongo import get_auto_categorize, get_chat_language, get_github_settings
+from src.credits import get_user_tier
+from src.dto import UserTier
+from src.mongo import get_auto_categorize, get_auto_cleanup, get_chat_language, get_github_settings
 from src.obsidian import save_transcription_to_obsidian
+from src.transcript_cleanup import cleanup_transcript
 from src.transcription.service import transcribe_audio
 from src.whatsapp.client import WHATSAPP_CHAT_PREFIX
 
@@ -90,6 +93,13 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
     if not text:
         logger.debug("Empty WhatsApp voice message from %s", phone_number)
         return
+
+    # Optional transcript cleanup (only for linked paid users)
+    telegram_user_id = await get_linked_telegram_id(phone_number)
+    if telegram_user_id and await get_auto_cleanup(chat_id):
+        tier = await get_user_tier(telegram_user_id)
+        if tier != UserTier.FREE:
+            text = await cleanup_transcript(text)
 
     saved, filename = await save_transcription_to_obsidian(
         chat_id,

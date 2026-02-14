@@ -151,6 +151,18 @@ translates = {
         RUSSIAN: "Автокатегоризация выключена.",
         SPANISH: "Categorización automática desactivada.",
     },
+    "cleanup_enabled": {
+        ENGLISH: "Text cleanup enabled \u2728",
+        GERMAN: "Textbereinigung aktiviert \u2728",
+        RUSSIAN: "Очистка текста включена \u2728",
+        SPANISH: "Limpieza de texto activada \u2728",
+    },
+    "cleanup_disabled": {
+        ENGLISH: "Text cleanup disabled.",
+        GERMAN: "Textbereinigung deaktiviert.",
+        RUSSIAN: "Очистка текста выключена.",
+        SPANISH: "Limpieza de texto desactivada.",
+    },
     "categorize_done": {
         ENGLISH: "Categorized {count} notes.",
         GERMAN: "{count} Notizen kategorisiert.",
@@ -268,6 +280,18 @@ translates = {
         GERMAN: "📂 Auto-Sort: AUS",
         RUSSIAN: "📂 Авто-сорт.: ВЫКЛ",
         SPANISH: "📂 Auto-orden: NO",
+    },
+    "btn_toggle_cleanup_on": {
+        ENGLISH: "\u2728 Text cleanup: ON",
+        GERMAN: "\u2728 Textbereinigung: AN",
+        RUSSIAN: "\u2728 Очистка текста: ВКЛ",
+        SPANISH: "\u2728 Limpieza de texto: S\u00cd",
+    },
+    "btn_toggle_cleanup_off": {
+        ENGLISH: "Text cleanup: OFF",
+        GERMAN: "Textbereinigung: AUS",
+        RUSSIAN: "Очистка текста: ВЫКЛ",
+        SPANISH: "Limpieza de texto: NO",
     },
     "btn_categorize_all": {
         ENGLISH: "📂 Categorize all",

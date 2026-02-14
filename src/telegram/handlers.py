@@ -22,12 +22,14 @@ from src.localization import translates
 from src.mongo import (
     clear_github_settings,
     get_auto_categorize,
+    get_auto_cleanup,
     get_chat_language,
     get_github_settings,
     get_gpt_command,
     get_preferred_provider,
     get_save_to_obsidian,
     set_auto_categorize,
+    set_auto_cleanup,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
@@ -263,6 +265,21 @@ async def toggle_categorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_text(update, text)
 
 
+async def toggle_cleanup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_admin(update, context):
+        return
+
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+    current = await get_auto_cleanup(chat_id)
+    new_value = not current
+    await set_auto_cleanup(chat_id, new_value)
+
+    key = "cleanup_enabled" if new_value else "cleanup_disabled"
+    text = translates[key].get(language, translates[key]["en"])
+    await reply_text(update, text)
+
+
 async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_admin(update, context):
         return
@@ -394,15 +411,28 @@ async def settings_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ],
     ]
 
-    # Show provider button only for paid tiers when multiple providers available
-    if settings.groq_api_key and update.effective_user:
+    # Show paid-tier options
+    if update.effective_user:
         user_id = str(update.effective_user.id)
         tier = await get_user_tier(user_id)
         if tier not in (UserTier.FREE,):
+            # Provider selection (when multiple providers available)
+            if settings.groq_api_key:
+                keyboard.append(
+                    [
+                        InlineKeyboardButton(
+                            translates["btn_provider"][language], callback_data="hub_provider"
+                        )
+                    ]
+                )
+
+            # Transcript cleanup toggle
+            cleanup_on = await get_auto_cleanup(chat_id)
+            cleanup_key = "btn_toggle_cleanup_on" if cleanup_on else "btn_toggle_cleanup_off"
             keyboard.append(
                 [
                     InlineKeyboardButton(
-                        translates["btn_provider"][language], callback_data="hub_provider"
+                        translates[cleanup_key][language], callback_data="hub_toggle_cleanup"
                     )
                 ]
             )
@@ -536,60 +566,53 @@ async def _show_provider_menu(update: Update):
     await query.edit_message_text(prompt, reply_markup=reply_markup)
 
 
+async def _hub_show_language_menu(update: Update, _context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+    prompt = translates["choose_language_prompt"].get(
+        language, translates["choose_language_prompt"]["en"]
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("Русский", callback_data="set_lang_ru")],
+        [InlineKeyboardButton("English", callback_data="set_lang_en")],
+        [InlineKeyboardButton("Español", callback_data="set_lang_es")],
+        [InlineKeyboardButton("Deutsch", callback_data="set_lang_de")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(prompt, reply_markup=reply_markup)
+
+
+async def _hub_show_provider(update: Update, _context: ContextTypes.DEFAULT_TYPE):
+    await _show_provider_menu(update)
+
+
+_HUB_ACTIONS = {
+    "language": _hub_show_language_menu,
+    "buy": buy_command,
+    "balance": balance_command,
+    "mystats": mystats_command,
+    "toggle_obsidian": toggle_obsidian,
+    "toggle_categorize": toggle_categorize,
+    "toggle_cleanup": toggle_cleanup,
+    "categorize": categorize_all,
+    "connect_github": connect_github,
+    "disconnect_github": disconnect_github,
+    "link_whatsapp": link_whatsapp,
+    "unlink_whatsapp": unlink_whatsapp,
+    "provider": _hub_show_provider,
+}
+
+
 async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     action = query.data.replace("hub_", "")
-
-    if action == "language":
-        chat_id = get_chat_id(update)
-        language = await get_chat_language(chat_id)
-        prompt = translates["choose_language_prompt"].get(
-            language, translates["choose_language_prompt"]["en"]
-        )
-
-        keyboard = [
-            [InlineKeyboardButton("Русский", callback_data="set_lang_ru")],
-            [InlineKeyboardButton("English", callback_data="set_lang_en")],
-            [InlineKeyboardButton("Español", callback_data="set_lang_es")],
-            [InlineKeyboardButton("Deutsch", callback_data="set_lang_de")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(prompt, reply_markup=reply_markup)
-
-    elif action == "buy":
-        await buy_command(update, context)
-
-    elif action == "balance":
-        await balance_command(update, context)
-
-    elif action == "mystats":
-        await mystats_command(update, context)
-
-    elif action == "toggle_obsidian":
-        await toggle_obsidian(update, context)
-
-    elif action == "toggle_categorize":
-        await toggle_categorize(update, context)
-
-    elif action == "categorize":
-        await categorize_all(update, context)
-
-    elif action == "connect_github":
-        await connect_github(update, context)
-
-    elif action == "disconnect_github":
-        await disconnect_github(update, context)
-
-    elif action == "link_whatsapp":
-        await link_whatsapp(update, context)
-
-    elif action == "unlink_whatsapp":
-        await unlink_whatsapp(update, context)
-
-    elif action == "provider":
-        await _show_provider_menu(update)
+    handler = _HUB_ACTIONS.get(action)
+    if handler:
+        await handler(update, context)
 
 
 async def provider_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):

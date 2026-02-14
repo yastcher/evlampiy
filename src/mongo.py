@@ -127,6 +127,19 @@ async def get_auto_categorize(chat_id: str) -> bool:
     return user.auto_categorize
 
 
+async def set_auto_cleanup(chat_id: str, enabled: bool):
+    user = await get_or_create_user(chat_id)
+    user.auto_cleanup = enabled
+    await user.save()
+
+
+async def get_auto_cleanup(chat_id: str) -> bool:
+    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
+    if not user:
+        return False
+    return user.auto_cleanup
+
+
 async def set_preferred_provider(chat_id: str, provider: str | None):
     user = await get_or_create_user(chat_id)
     user.preferred_provider = provider

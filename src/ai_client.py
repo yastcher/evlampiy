@@ -157,6 +157,11 @@ async def classify_text(prompt: str) -> str | None:
     )
 
 
+async def cleanup_text(prompt: str, max_tokens: int) -> str | None:
+    """Clean up text using the configured GPT provider."""
+    return await _ai_complete(settings.gpt_provider, prompt, max_tokens=max_tokens, temperature=0.0)
+
+
 async def gpt_chat(prompt: str) -> str | None:
     """Generate a chat response using the configured GPT provider."""
     return await _ai_complete(settings.gpt_provider, prompt, max_tokens=2048, temperature=0.7)

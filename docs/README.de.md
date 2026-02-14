@@ -18,6 +18,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **Multiplattform** — Telegram und WhatsApp
 - **Mehrsprachig** — Englisch, Deutsch, Russisch, Spanisch
 - **Chat-Einstellungen** — Individuelle Sprache und Trigger für jeden Chat
+- **KI-Textbereinigung** — Optionale LLM-gestützte Bereinigung von Transkriptionen (entfernt Füllwörter, korrigiert Zeichensetzung)
 
 ### Transkriptionsanbieter
 - **Wit.ai** — Standardanbieter mit monatlicher Limitüberwachung

@@ -11,11 +11,13 @@ from src.dto import MonthlyStats
 from src.mongo import (
     add_user_role,
     get_auto_categorize,
+    get_auto_cleanup,
     get_chat_language,
     get_github_settings,
     get_gpt_command,
     get_save_to_obsidian,
     set_auto_categorize,
+    set_auto_cleanup,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
@@ -36,6 +38,7 @@ from src.telegram.handlers import (
     settings_hub,
     start,
     toggle_categorize,
+    toggle_cleanup,
     toggle_obsidian,
 )
 from src.telegram.voice import from_voice_to_text
@@ -448,6 +451,74 @@ class TestVoiceMessageFlow:
             await from_voice_to_text(mock_private_update, mock_context)
 
             mock_send.assert_not_called()
+
+
+class TestVoiceMessageWithCleanup:
+    """Test voice message flow with transcript cleanup."""
+
+    async def test_voice_message_with_cleanup_enabled(
+        self, mock_private_update, mock_context, mock_telegram_voice
+    ):
+        """Voice message triggers cleanup when enabled for paid user."""
+        user_id = "12360"
+        chat_id = "u_12360"
+        mock_private_update.effective_user.id = 12360
+        mock_private_update.effective_chat.id = 12360
+
+        await set_chat_language(chat_id, "en")
+        await set_gpt_command(chat_id, "евлампий")
+        await add_credits(user_id, 100)
+        await set_auto_cleanup(chat_id, True)
+
+        mock_private_update.message.voice = mock_telegram_voice
+
+        with (
+            patch(
+                "src.telegram.voice.transcribe_audio",
+                AsyncMock(return_value=("ну вот значит я хотел сказать что проект классный", 5)),
+            ),
+            patch("src.telegram.voice.send_response", AsyncMock()),
+            patch(
+                "src.telegram.voice.save_transcription_to_obsidian",
+                AsyncMock(return_value=(False, None)),
+            ),
+            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
+            patch(
+                "src.telegram.voice.cleanup_transcript",
+                AsyncMock(return_value="Я хотел сказать, что проект классный."),
+            ) as mock_cleanup,
+        ):
+            await from_voice_to_text(mock_private_update, mock_context)
+
+            mock_cleanup.assert_called_once()
+
+
+class TestToggleCleanup:
+    """Test /toggle_cleanup command with real DB."""
+
+    async def test_enables_cleanup(self, mock_private_update, mock_context):
+        """Enables text cleanup when currently disabled."""
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_auto_cleanup(chat_id, False)
+
+        await toggle_cleanup(mock_private_update, mock_context)
+
+        assert await get_auto_cleanup(chat_id) is True
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "enabled" in reply_text.lower()
+
+    async def test_disables_cleanup(self, mock_private_update, mock_context):
+        """Disables text cleanup when currently enabled."""
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_auto_cleanup(chat_id, True)
+
+        await toggle_cleanup(mock_private_update, mock_context)
+
+        assert await get_auto_cleanup(chat_id) is False
+        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        assert "disabled" in reply_text.lower()
 
 
 class TestEnterYourCommand:
