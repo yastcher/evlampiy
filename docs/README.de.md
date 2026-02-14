@@ -31,7 +31,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 ### Obsidian-Integration
 - **GitHub-Synchronisierung** — Automatisches Speichern von Transkriptionen in Ihrem Vault über GitHub API
 - **OAuth Device Flow** — Sichere Authentifizierung ohne Token-Offenlegung
-- **Auto-Kategorisierung** — KI-gestützte Notizklassifizierung mit Claude Haiku
+- **Auto-Kategorisierung** — KI-gestützte Notizklassifizierung (Google Gemini, Anthropic Claude, OpenAI)
 
 ### Kontoverknüpfung
 - **Telegram ↔ WhatsApp** — Konten mit Einmalcodes verknüpfen
@@ -53,7 +53,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - (Optional) WhatsApp Business API-Zugangsdaten
 - (Optional) GitHub OAuth App Client-ID (für Obsidian-Integration)
 - (Optional) [Groq](https://groq.com/) API-Schlüssel (für Whisper-Fallback-Transkription)
-- (Optional) [Anthropic](https://anthropic.com/) API-Schlüssel (für Auto-Kategorisierung)
+- (Optional) API-Schlüssel eines KI-Anbieters — [Google Gemini](https://ai.google.dev/), [Anthropic](https://anthropic.com/) oder [OpenAI](https://openai.com/) (für Auto-Kategorisierung und GPT-Befehle)
 
 ## Schnellstart
 

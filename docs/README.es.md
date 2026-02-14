@@ -31,7 +31,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 ### Integración con Obsidian
 - **Sincronización GitHub** — Guardado automático de transcripciones en tu vault vía GitHub API
 - **OAuth Device Flow** — Autenticación segura sin exponer tokens
-- **Auto-categorización** — Clasificación de notas con IA usando Claude Haiku
+- **Auto-categorización** — Clasificación de notas con IA (Google Gemini, Anthropic Claude, OpenAI)
 
 ### Vinculación de cuentas
 - **Telegram ↔ WhatsApp** — Vincula cuentas con códigos de un solo uso
@@ -53,7 +53,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - (Opcional) Credenciales de WhatsApp Business API
 - (Opcional) GitHub OAuth App client ID (para integración con Obsidian)
 - (Opcional) [Groq](https://groq.com/) API key (para transcripción de respaldo Whisper)
-- (Opcional) [Anthropic](https://anthropic.com/) API key (para auto-categorización)
+- (Opcional) API key de proveedor IA — [Google Gemini](https://ai.google.dev/), [Anthropic](https://anthropic.com/) o [OpenAI](https://openai.com/) (para auto-categorización y comandos GPT)
 
 ## Inicio Rápido
 

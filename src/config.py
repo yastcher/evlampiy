@@ -61,10 +61,17 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "whisper-large-v3-turbo"
 
+    # AI provider selection
+    categorization_provider: str = "gemini"
+    gpt_provider: str = "gemini"
+
+    # Gemini
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+
     # Anthropic
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-3-5-haiku-latest"
-    anthropic_version: str = "2023-06-01"
 
     # Wit.ai monthly free limit
     wit_free_monthly_limit: int = 500

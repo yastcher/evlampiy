@@ -1,12 +1,10 @@
-"""Note categorization using Claude Haiku."""
+"""Note categorization using AI providers."""
 
-import http
+import asyncio
 import logging
 
-import httpx
-
 from src import const
-from src.config import settings
+from src.ai_client import classify_text
 from src.github_api import (
     OBSIDIAN_NOTES_FOLDER,
     delete_github_file,
@@ -29,11 +27,7 @@ async def get_existing_categories(token: str, owner: str, repo: str) -> list[str
 
 
 async def classify_note(text: str, existing_categories: list[str]) -> str | None:
-    """Classify note text into a category using Claude Haiku."""
-    if not settings.anthropic_api_key:
-        logger.warning("Anthropic API key not configured")
-        return None
-
+    """Classify note text into a category using the configured AI provider."""
     categories_list = ", ".join(existing_categories) if existing_categories else "none"
     prompt = (
         f"You are a note categorizer. Analyze this note and suggest a category.\n\n"
@@ -46,36 +40,12 @@ async def classify_note(text: str, existing_categories: list[str]) -> str | None
         f"3. Return ONLY the category name, nothing else."
     )
 
-    headers = {
-        "x-api-key": settings.anthropic_api_key,
-        "anthropic-version": settings.anthropic_version,
-        "content-type": "application/json",
-    }
-
-    payload = {
-        "model": settings.anthropic_model,
-        "max_tokens": 50,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{const.ANTHROPIC_API_BASE}/v1/messages",
-                headers=headers,
-                json=payload,
-                timeout=30.0,
-            )
-            if response.status_code == http.HTTPStatus.OK:
-                data = response.json()
-                category = data["content"][0]["text"].strip().lower()
-                category = category.replace(" ", "_")
-                return category
-            logger.error("Anthropic API error, status: %s", response.status_code)
-            return None
-    except httpx.HTTPError as exc:
-        logger.error("Anthropic API request failed: %s", exc)
+    result = await classify_text(prompt)
+    if not result:
         return None
+
+    category = result.strip().lower().replace(" ", "_")
+    return category
 
 
 async def move_github_file(token: str, owner: str, repo: str, old_path: str, new_path: str) -> bool:
@@ -150,5 +120,6 @@ async def categorize_all_income(token: str, owner: str, repo: str) -> int:
         result = await categorize_note(token, owner, repo, item["name"], content)
         if result:
             processed += 1
+        await asyncio.sleep(4)  # 15 RPM free tier
 
     return processed

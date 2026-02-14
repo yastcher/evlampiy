@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from src.gpt_commands import evlampiy_command
 
@@ -7,21 +7,15 @@ class TestEvlampiyCommand:
     """Test GPT command handler."""
 
     async def test_sends_gpt_response(self, mock_private_update, mock_context):
-        """GPT response is sent to user."""
+        """AI response is sent to user."""
         mock_private_update.message.text = "Tell me a joke"
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content="Why did the chicken..."))]
-
         with (
-            patch("src.gpt_commands.client.chat.completions.create") as mock_create,
+            patch("src.gpt_commands.gpt_chat", AsyncMock(return_value="Why did the chicken...")),
             patch("src.gpt_commands.send_response", AsyncMock()) as mock_send,
         ):
-            mock_create.return_value = mock_response
-
             await evlampiy_command(mock_private_update, mock_context)
 
-            mock_create.assert_called_once()
             mock_send.assert_called_once()
             call_kwargs = mock_send.call_args.kwargs
             assert call_kwargs["response"] == "Why did the chicken..."
@@ -31,32 +25,25 @@ class TestEvlampiyCommand:
         mock_private_update.message.text = "Test"
 
         with (
-            patch("src.gpt_commands.client.chat.completions.create") as mock_create,
+            patch("src.gpt_commands.gpt_chat", AsyncMock(side_effect=Exception("API Error"))),
             patch("src.gpt_commands.send_response", AsyncMock()) as mock_send,
         ):
-            mock_create.side_effect = Exception("API Error")
-
             await evlampiy_command(mock_private_update, mock_context)
 
             mock_send.assert_called_once()
             call_kwargs = mock_send.call_args.kwargs
             assert "API Error" in call_kwargs["response"]
 
-    async def test_uses_correct_model(self, mock_private_update, mock_context):
-        """Uses model from settings."""
+    async def test_handles_empty_response(self, mock_private_update, mock_context):
+        """Handles None response from AI."""
         mock_private_update.message.text = "Test"
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content="Response"))]
-
         with (
-            patch("src.gpt_commands.client.chat.completions.create") as mock_create,
-            patch("src.gpt_commands.send_response", AsyncMock()),
-            patch("src.gpt_commands.settings.gpt_model", "gpt-4"),
+            patch("src.gpt_commands.gpt_chat", AsyncMock(return_value=None)),
+            patch("src.gpt_commands.send_response", AsyncMock()) as mock_send,
         ):
-            mock_create.return_value = mock_response
-
             await evlampiy_command(mock_private_update, mock_context)
 
-            call_kwargs = mock_create.call_args.kwargs
-            assert call_kwargs["model"] == "gpt-4"
+            mock_send.assert_called_once()
+            call_kwargs = mock_send.call_args.kwargs
+            assert "Empty response" in call_kwargs["response"]

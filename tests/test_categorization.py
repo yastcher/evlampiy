@@ -40,86 +40,35 @@ class TestGetExistingCategories:
 
 
 class TestClassifyNote:
-    """Test note classification with Claude API."""
+    """Test note classification via AI provider."""
 
-    async def test_returns_existing_category(
-        self, mock_httpx_response_factory, mock_httpx_client_factory
-    ):
+    async def test_returns_existing_category(self):
         """Returns existing category when note matches."""
-        api_response = {
-            "content": [{"text": "work"}],
-        }
-
-        with (
-            patch("src.categorization.settings.anthropic_api_key", "test-key"),
-            patch("src.categorization.httpx.AsyncClient") as mock_client_cls,
-        ):
-            mock_client = mock_httpx_client_factory(mock_client_cls)
-            mock_client.post.return_value = mock_httpx_response_factory(api_response, 200)
-
+        with patch("src.categorization.classify_text", AsyncMock(return_value="work")):
             result = await classify_note("Meeting notes about project X", ["work", "personal"])
 
         assert result == "work"
 
-    async def test_suggests_new_category(
-        self, mock_httpx_response_factory, mock_httpx_client_factory
-    ):
+    async def test_suggests_new_category(self):
         """Suggests new category name when no match."""
-        api_response = {
-            "content": [{"text": "health_fitness"}],
-        }
-
-        with (
-            patch("src.categorization.settings.anthropic_api_key", "test-key"),
-            patch("src.categorization.httpx.AsyncClient") as mock_client_cls,
-        ):
-            mock_client = mock_httpx_client_factory(mock_client_cls)
-            mock_client.post.return_value = mock_httpx_response_factory(api_response, 200)
-
+        with patch("src.categorization.classify_text", AsyncMock(return_value="health_fitness")):
             result = await classify_note("Gym workout plan", ["work", "personal"])
 
         assert result == "health_fitness"
 
-    async def test_returns_none_without_api_key(self):
-        """Returns None when API key not configured."""
-        with patch("src.categorization.settings.anthropic_api_key", ""):
+    async def test_returns_none_on_ai_failure(self):
+        """Returns None when AI provider returns None."""
+        with patch("src.categorization.classify_text", AsyncMock(return_value=None)):
             result = await classify_note("Some text", ["work"])
 
         assert result is None
 
-    async def test_normalizes_category_name(
-        self, mock_httpx_response_factory, mock_httpx_client_factory
-    ):
+    async def test_normalizes_category_name(self):
         """Converts spaces to underscores and lowercases."""
-        api_response = {
-            "content": [{"text": "Health Fitness"}],
-        }
-
-        with (
-            patch("src.categorization.settings.anthropic_api_key", "test-key"),
-            patch("src.categorization.httpx.AsyncClient") as mock_client_cls,
-        ):
-            mock_client = mock_httpx_client_factory(mock_client_cls)
-            mock_client.post.return_value = mock_httpx_response_factory(api_response, 200)
-
+        with patch("src.categorization.classify_text", AsyncMock(return_value="Health Fitness")):
             result = await classify_note("Workout notes", [])
 
         assert result == "health_fitness"
-
-    async def test_returns_none_on_api_error(
-        self, mock_httpx_response_factory, mock_httpx_client_factory
-    ):
-        """Returns None when Anthropic API fails."""
-        with (
-            patch("src.categorization.settings.anthropic_api_key", "test-key"),
-            patch("src.categorization.httpx.AsyncClient") as mock_client_cls,
-        ):
-            mock_client = mock_httpx_client_factory(mock_client_cls)
-            mock_client.post.return_value = mock_httpx_response_factory(status_code=500)
-
-            result = await classify_note("Some text", ["work"])
-
-        assert result is None
 
 
 class TestMoveGithubFile:

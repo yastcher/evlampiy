@@ -31,7 +31,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 ### Obsidian Integration
 - **GitHub sync** — Auto-save transcriptions to your vault via GitHub API
 - **OAuth Device Flow** — Secure authentication without exposing tokens
-- **Auto-categorization** — AI-powered note classification using Claude Haiku
+- **Auto-categorization** — AI-powered note classification (Google Gemini, Anthropic Claude, OpenAI)
 
 ### Account Linking
 - **Telegram ↔ WhatsApp** — Link accounts with one-time codes
@@ -53,7 +53,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - (Optional) WhatsApp Business API credentials
 - (Optional) GitHub OAuth App client ID (for Obsidian integration)
 - (Optional) [Groq](https://groq.com/) API key (for Whisper fallback)
-- (Optional) [Anthropic](https://anthropic.com/) API key (for auto-categorization)
+- (Optional) AI provider API key — [Google Gemini](https://ai.google.dev/), [Anthropic](https://anthropic.com/), or [OpenAI](https://openai.com/) (for auto-categorization and GPT commands)
 
 ## Quick Start
 
@@ -108,8 +108,10 @@ ADMIN_USER_IDS=123456789
 FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
 
-# Optional: Auto-categorization (requires Obsidian integration)
-ANTHROPIC_API_KEY=your_anthropic_api_key
+# Optional: AI provider (gemini / anthropic / openai)
+CATEGORIZATION_PROVIDER=gemini
+GPT_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md).
