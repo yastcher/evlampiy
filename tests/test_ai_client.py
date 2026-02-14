@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from src.ai_client import (
     _strip_backticks,
@@ -78,6 +78,45 @@ class TestGeminiProvider:
         ):
             mock_client = mock_httpx_client_factory(mock_cls)
             mock_client.post.return_value = mock_httpx_response_factory(status_code=500)
+            result = await classify_text("Test prompt")
+
+        assert result is None
+
+    async def test_gemini_retries_on_429(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
+        """Gemini retries after 429 and succeeds on next attempt."""
+        ok_response = mock_httpx_response_factory(
+            {"candidates": [{"content": {"parts": [{"text": "work"}]}}]}, 200
+        )
+        rate_limited = mock_httpx_response_factory(status_code=429)
+
+        with (
+            patch("src.ai_client.settings.gemini_api_key", "test-key"),
+            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("src.ai_client.asyncio.sleep", new_callable=AsyncMock),
+            patch("src.ai_client.httpx.AsyncClient") as mock_cls,
+        ):
+            mock_client = mock_httpx_client_factory(mock_cls)
+            mock_client.post.side_effect = [rate_limited, ok_response]
+            result = await classify_text("Test prompt")
+
+        assert result == "work"
+
+    async def test_gemini_exhausts_retries_on_429(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
+        """Gemini returns None after exhausting all retries on 429."""
+        rate_limited = mock_httpx_response_factory(status_code=429)
+
+        with (
+            patch("src.ai_client.settings.gemini_api_key", "test-key"),
+            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("src.ai_client.asyncio.sleep", new_callable=AsyncMock),
+            patch("src.ai_client.httpx.AsyncClient") as mock_cls,
+        ):
+            mock_client = mock_httpx_client_factory(mock_cls)
+            mock_client.post.return_value = rate_limited
             result = await classify_text("Test prompt")
 
         assert result is None

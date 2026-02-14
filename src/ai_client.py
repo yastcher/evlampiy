@@ -1,5 +1,6 @@
 """Unified AI provider client for text generation."""
 
+import asyncio
 import http
 import logging
 
@@ -22,8 +23,12 @@ def _strip_backticks(text: str) -> str:
     return text
 
 
+_GEMINI_MAX_RETRIES = 3
+_GEMINI_RETRY_DELAY = 5.0
+
+
 async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> str | None:
-    """Call Google Gemini API."""
+    """Call Google Gemini API with retry on rate limit (429)."""
     if not settings.gemini_api_key:
         logger.warning("Gemini API key not configured")
         return None
@@ -41,21 +46,38 @@ async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> 
     }
     url = f"{const.GEMINI_API_BASE}/v1beta/models/{settings.gemini_model}:generateContent"
 
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=payload, timeout=30.0)
-            if response.status_code == http.HTTPStatus.OK:
-                data = response.json()
-                candidates = data.get("candidates", [])
-                if not candidates:
-                    logger.error("Gemini returned empty candidates")
-                    return None
-                return candidates[0]["content"]["parts"][0]["text"]
-            logger.error("Gemini API error, status: %s", response.status_code)
+    for attempt in range(_GEMINI_MAX_RETRIES):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+                if response.status_code == http.HTTPStatus.OK:
+                    data = response.json()
+                    candidates = data.get("candidates", [])
+                    if not candidates:
+                        logger.error("Gemini returned empty candidates")
+                        return None
+                    return candidates[0]["content"]["parts"][0]["text"]
+                if response.status_code == http.HTTPStatus.TOO_MANY_REQUESTS:
+                    logger.warning(
+                        "Gemini rate limited (429), attempt %d/%d, retrying in %.0fs",
+                        attempt + 1,
+                        _GEMINI_MAX_RETRIES,
+                        _GEMINI_RETRY_DELAY,
+                    )
+                    if attempt < _GEMINI_MAX_RETRIES - 1:
+                        await asyncio.sleep(_GEMINI_RETRY_DELAY)
+                        continue
+                    logger.error(
+                        "Gemini rate limit exhausted after %d retries",
+                        _GEMINI_MAX_RETRIES,
+                    )
+                else:
+                    logger.error("Gemini API error, status: %s", response.status_code)
+                return None
+        except httpx.HTTPError as exc:
+            logger.error("Gemini API request failed: %s", exc)
             return None
-    except httpx.HTTPError as exc:
-        logger.error("Gemini API request failed: %s", exc)
-        return None
+    return None
 
 
 async def _anthropic_complete(prompt: str, max_tokens: int, temperature: float) -> str | None:
