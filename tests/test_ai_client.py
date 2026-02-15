@@ -134,7 +134,7 @@ class TestAnthropicProvider:
         }
 
         with (
-            patch("src.ai_client.settings.anthropic_api_key", "test-key"),
+            patch("src.ai_client.settings.anthropic_bot_api_key", "test-key"),
             patch("src.ai_client.settings.categorization_provider", "anthropic"),
             patch("src.ai_client.httpx.AsyncClient") as mock_cls,
         ):
@@ -147,7 +147,7 @@ class TestAnthropicProvider:
     async def test_anthropic_returns_none_without_key(self):
         """Returns None when Anthropic key not set."""
         with (
-            patch("src.ai_client.settings.anthropic_api_key", ""),
+            patch("src.ai_client.settings.anthropic_bot_api_key", ""),
             patch("src.ai_client.settings.categorization_provider", "anthropic"),
         ):
             result = await classify_text("Test prompt")
@@ -159,7 +159,7 @@ class TestAnthropicProvider:
     ):
         """Returns None on Anthropic API error."""
         with (
-            patch("src.ai_client.settings.anthropic_api_key", "test-key"),
+            patch("src.ai_client.settings.anthropic_bot_api_key", "test-key"),
             patch("src.ai_client.settings.categorization_provider", "anthropic"),
             patch("src.ai_client.httpx.AsyncClient") as mock_cls,
         ):

@@ -9,6 +9,7 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Never delete files not tracked in git. Run `git ls-files <path>` before removing any file. If untracked — ask user.
 - Never simplify architecture by removing existing providers, configs, or feature flags unless explicitly asked.
 - When fixing linter/import issues: fix one file at a time, run tests after each change.
+- Always propose solutions that make sense. No workarounds or hacks unless explicitly asked.
 
 ## Architecture
 
