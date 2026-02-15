@@ -4,6 +4,12 @@
 
 Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 
+## Safety rules
+
+- Never delete files not tracked in git. Run `git ls-files <path>` before removing any file. If untracked — ask user.
+- Never simplify architecture by removing existing providers, configs, or feature flags unless explicitly asked.
+- When fixing linter/import issues: fix one file at a time, run tests after each change.
+
 ## Architecture
 
 - DDD: modular by domain in src/, each module: router.py, schemas.py, models.py, service.py, dependencies.py,
@@ -40,10 +46,9 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 
 - Conventional commits (feat:, fix:, docs:, refactoring:)
 - Always PR, never push to main
-- Max ~500 lines of diff per commit — split large tasks into logical commits
-- When accumulated uncommitted changes approach ~500 lines, stop and propose a commit before continuing
-- Always work in the current branch — never clean or reset uncommitted changes
-- Ask confirmation only when about to delete or overwrite something not yet committed to git
+- **Do not run git commit, checkout, reset, clean, stash, rebase** — these are blocked in settings.json. Ask user if needed.
+- Max ~500 lines of diff per commit — stop and propose a commit before continuing
+- Always work in the current branch — never switch branches
 
 ## Security review
 

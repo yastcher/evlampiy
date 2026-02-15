@@ -1,0 +1,9 @@
+{
+  "name": "Evlampiy Dev",
+  "dockerComposeFile": "docker-compose.dev.yml",
+  "service": "dev",
+  "workspaceFolder": "/app",
+  "forwardPorts": [8000],
+  "postCreateCommand": "pip install uv && uv sync --group dev",
+  "remoteUser": "root"
+}

@@ -23,6 +23,5 @@ cover/
 *.session
 .claude/tasks
 .claude/settings.local.json
-.devcontainer
 data
 mongo_data

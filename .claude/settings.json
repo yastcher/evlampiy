@@ -18,7 +18,30 @@
       "Bash(rm -rf*)",
       "Bash(* rm *)",
       "Bash(sudo*)",
-      "Bash(git push*)"
+      "Bash(git push*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git switch*)",
+      "Bash(git reset*)",
+      "Bash(git clean*)",
+      "Bash(git stash*)",
+      "Bash(git rebase*)",
+      "Bash(git branch -D*)",
+      "Bash(git branch -d*)",
+      "Bash(git restore*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/lint.sh"
+          }
+        ]
+      }
     ]
   }
 }
