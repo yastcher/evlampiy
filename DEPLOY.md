@@ -52,7 +52,7 @@ INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500
 
 # Optional: Auto-categorization
-ANTHROPIC_API_KEY=your_anthropic_api_key
+ANTHROPIC_BOT_API_KEY=your_anthropic_api_key
 ```
 
 ### Local Run
@@ -189,7 +189,7 @@ INITIAL_CREDITS=3
 WIT_FREE_MONTHLY_LIMIT=500
 
 # Опционально: Автокатегоризация
-ANTHROPIC_API_KEY=ваш_anthropic_api_ключ
+ANTHROPIC_BOT_API_KEY=ваш_anthropic_api_ключ
 ```
 
 ### Локальный запуск

@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.0-flash"
 
     # Anthropic
-    anthropic_api_key: str = ""
+    anthropic_bot_api_key: str = ""
     anthropic_model: str = "claude-3-5-haiku-latest"
 
     # Wit.ai monthly free limit

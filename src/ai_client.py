@@ -82,12 +82,12 @@ async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> 
 
 async def _anthropic_complete(prompt: str, max_tokens: int, temperature: float) -> str | None:
     """Call Anthropic Messages API."""
-    if not settings.anthropic_api_key:
+    if not settings.anthropic_bot_api_key:
         logger.warning("Anthropic API key not configured")
         return None
 
     headers = {
-        "x-api-key": settings.anthropic_api_key,
+        "x-api-key": settings.anthropic_bot_api_key,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
     }
