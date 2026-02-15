@@ -7,6 +7,6 @@
     "ghcr.io/devcontainers/features/node:1": {}
   },
   "forwardPorts": [8000],
-  "postCreateCommand": "uv sync --group dev && npm install -g @anthropic-ai/claude-code",
+  "postCreateCommand": "git config --global --add safe.directory /app && uv sync --group dev && npm install -g @anthropic-ai/claude-code",
   "remoteUser": "root"
 }

@@ -16,5 +16,6 @@ services:
       - "8000:8000"
     volumes:
       - ..:/app:cached
+      - ~/.claude:/root/.claude
     depends_on:
       - mongodb
