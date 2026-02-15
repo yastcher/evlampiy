@@ -3,7 +3,7 @@ services:
   mongodb:
     image: mongo:latest
     volumes:
-      - ./mongo_data:/data/db
+      - ../mongo_data:/data/db
 
   dev:
     build:
