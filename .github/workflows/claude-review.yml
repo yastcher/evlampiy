@@ -7,17 +7,28 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
-    if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
     permissions:
       contents: read
       pull-requests: write
       id-token: write
     steps:
+      - name: Check API key
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY not configured, skipping review"
+            exit 0
+          fi
+          echo "has_key=true" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v4
+        if: env.has_key == 'true'
         with:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1.0.3
+        if: env.has_key == 'true'
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
