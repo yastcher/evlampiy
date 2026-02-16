@@ -217,7 +217,7 @@ class TestVoiceMessageFlow:
             assert "blocked" in call_kwargs["response"].lower()
 
     async def test_audio_message_processed(
-        self, mock_private_update, mock_context, mock_telegram_audio
+        self, mock_private_update, mock_context, mock_telegram_audio, voice_external_mocks
     ):
         """Audio messages (not just voice) are processed."""
         user_id = "12361"
@@ -229,26 +229,15 @@ class TestVoiceMessageFlow:
         await add_credits(user_id, 100)
         mock_private_update.message.voice = None
         mock_private_update.message.audio = mock_telegram_audio
+        voice_external_mocks["transcribe"].return_value = ("Audio text", 30)
 
-        with (
-            patch(
-                "src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Audio text", 30))
-            ),
-            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch(
-                "src.telegram.voice.save_transcription_to_obsidian",
-                AsyncMock(return_value=(False, None)),
-            ),
-            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
-        ):
-            await from_voice_to_text(mock_private_update, mock_context)
+        await from_voice_to_text(mock_private_update, mock_context)
 
-            mock_send.assert_called_once()
-            call_kwargs = mock_send.call_args.kwargs
-            assert call_kwargs["response"] == "Audio text"
+        call_kwargs = voice_external_mocks["send"].call_args.kwargs
+        assert call_kwargs["response"] == "Audio text"
 
     async def test_service_unavailable_when_no_provider(
-        self, mock_private_update, mock_context, mock_telegram_voice
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
     ):
         """Shows service unavailable when no transcription provider available."""
         chat_id = "u_12350"
@@ -261,16 +250,14 @@ class TestVoiceMessageFlow:
         with (
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=False)),
             patch("src.telegram.voice.settings.groq_api_key", ""),
-            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
-            mock_send.assert_called_once()
-            call_kwargs = mock_send.call_args.kwargs
-            assert "unavailable" in call_kwargs["response"].lower()
+        call_kwargs = voice_external_mocks["send"].call_args.kwargs
+        assert "unavailable" in call_kwargs["response"].lower()
 
     async def test_insufficient_credits_message(
-        self, mock_private_update, mock_context, mock_telegram_voice
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
     ):
         """Shows insufficient tokens when user has no tokens."""
         user_id = "12351"
@@ -279,25 +266,19 @@ class TestVoiceMessageFlow:
         mock_private_update.effective_chat.id = 12351
 
         await set_chat_language(chat_id, "en")
-        # Exhaust free credits
         await deduct_credits(user_id, 100)
         mock_private_update.message.voice = mock_telegram_voice
 
-        with (
-            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)),
-            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-        ):
+        with patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)):
             await from_voice_to_text(mock_private_update, mock_context)
 
-            mock_send.assert_called_once()
-            call_kwargs = mock_send.call_args.kwargs
-            assert "token" in call_kwargs["response"].lower()
+        call_kwargs = voice_external_mocks["send"].call_args.kwargs
+        assert "token" in call_kwargs["response"].lower()
 
     async def test_groq_provider_records_usage(
-        self, mock_private_update, mock_context, mock_telegram_voice
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
     ):
         """Groq provider usage is recorded in stats."""
-
         user_id = "12352"
         chat_id = "u_12352"
         mock_private_update.effective_user.id = 12352
@@ -306,21 +287,13 @@ class TestVoiceMessageFlow:
         await set_chat_language(chat_id, "en")
         await add_credits(user_id, 100)
         mock_private_update.message.voice = mock_telegram_voice
+        voice_external_mocks["transcribe"].return_value = ("Hello", 10)
 
         with (
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=False)),
             patch("src.telegram.voice.settings.groq_api_key", "test-key"),
-            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello", 10))),
-            patch("src.telegram.voice.send_response", AsyncMock()),
-            patch(
-                "src.telegram.voice.save_transcription_to_obsidian",
-                AsyncMock(return_value=(False, None)),
-            ),
-            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
-
-        # Verify groq usage was recorded
 
         month_key = current_month_key()
         stats = await MonthlyStats.find_one(MonthlyStats.month_key == month_key)
@@ -328,7 +301,7 @@ class TestVoiceMessageFlow:
         assert stats.groq_audio_seconds >= 10
 
     async def test_voice_message_with_auto_categorize(
-        self, mock_private_update, mock_context, mock_telegram_voice
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
     ):
         """Voice message triggers auto-categorization when enabled."""
         user_id = "12353"
@@ -343,57 +316,33 @@ class TestVoiceMessageFlow:
         await set_auto_categorize(chat_id, True)
 
         mock_private_update.message.voice = mock_telegram_voice
+        voice_external_mocks["transcribe"].return_value = ("Note content", 5)
+        voice_external_mocks["obsidian"].return_value = (True, "note.md")
 
-        with (
-            patch(
-                "src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Note content", 5))
-            ),
-            patch("src.telegram.voice.send_response", AsyncMock()),
-            patch(
-                "src.telegram.voice.save_transcription_to_obsidian",
-                AsyncMock(return_value=(True, "note.md")),
-            ),
-            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
-            patch(
-                "src.telegram.voice.categorize_note", AsyncMock(return_value="work")
-            ) as mock_categorize,
-        ):
-            await from_voice_to_text(mock_private_update, mock_context)
+        await from_voice_to_text(mock_private_update, mock_context)
 
-            mock_categorize.assert_called_once()
+        voice_external_mocks["categorize"].assert_called_once()
 
-    async def test_voice_message_flow(self, mock_private_update, mock_context, mock_telegram_voice):
+    async def test_voice_message_flow(
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
+    ):
         """Complete voice message flow: setup user -> transcribe -> response."""
         user_id = "12345"
         chat_id = "u_12345"
 
-        # =Y Setup user in real DB
         await set_chat_language(chat_id, "en")
         await set_gpt_command(chat_id, "евлампий")
         await add_credits(user_id, 100)
 
         mock_private_update.message.voice = mock_telegram_voice
 
-        # Mock only external boundaries
-        with (
-            patch(
-                "src.telegram.voice.transcribe_audio", AsyncMock(return_value=("Hello world", 5))
-            ),
-            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch(
-                "src.telegram.voice.save_transcription_to_obsidian",
-                AsyncMock(return_value=(False, None)),
-            ),
-            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
-        ):
-            await from_voice_to_text(mock_private_update, mock_context)
+        await from_voice_to_text(mock_private_update, mock_context)
 
-            mock_send.assert_called_once()
-            call_kwargs = mock_send.call_args.kwargs
-            assert call_kwargs["response"] == "Hello world"
+        call_kwargs = voice_external_mocks["send"].call_args.kwargs
+        assert call_kwargs["response"] == "Hello world"
 
     async def test_voice_message_with_command_prefix(
-        self, mock_private_update, mock_context, mock_telegram_voice
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
     ):
         """Voice message starting with command triggers GPT response indicator."""
         user_id = "12346"
@@ -401,34 +350,20 @@ class TestVoiceMessageFlow:
         mock_private_update.effective_user.id = 12346
         mock_private_update.effective_chat.id = 12346
 
-        # =Y Setup user in real DB
         await set_chat_language(chat_id, "ru")
         await set_gpt_command(chat_id, "евлампий")
         await add_credits(user_id, 100)
 
         mock_private_update.message.voice = mock_telegram_voice
+        voice_external_mocks["transcribe"].return_value = ("евлампий расскажи анекдот", 10)
 
-        # Mock only external boundaries
-        with (
-            patch(
-                "src.telegram.voice.transcribe_audio",
-                AsyncMock(return_value=("евлампий расскажи анекдот", 10)),
-            ),
-            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch(
-                "src.telegram.voice.save_transcription_to_obsidian",
-                AsyncMock(return_value=(False, None)),
-            ),
-            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
-        ):
-            await from_voice_to_text(mock_private_update, mock_context)
+        await from_voice_to_text(mock_private_update, mock_context)
 
-            mock_send.assert_called_once()
-            call_kwargs = mock_send.call_args.kwargs
-            assert "Command" in call_kwargs["response"]
+        call_kwargs = voice_external_mocks["send"].call_args.kwargs
+        assert "Command" in call_kwargs["response"]
 
     async def test_empty_voice_message_ignored(
-        self, mock_private_update, mock_context, mock_telegram_voice
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
     ):
         """Empty voice transcription produces no response."""
         user_id = "12347"
@@ -436,28 +371,22 @@ class TestVoiceMessageFlow:
         mock_private_update.effective_user.id = 12347
         mock_private_update.effective_chat.id = 12347
 
-        # =Y Setup user in real DB
         await set_chat_language(chat_id, "en")
         await add_credits(user_id, 100)
 
         mock_private_update.message.voice = mock_telegram_voice
+        voice_external_mocks["transcribe"].return_value = ("", 0)
 
-        # Mock only external boundaries
-        with (
-            patch("src.telegram.voice.transcribe_audio", AsyncMock(return_value=("", 0))),
-            patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
-            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
-        ):
-            await from_voice_to_text(mock_private_update, mock_context)
+        await from_voice_to_text(mock_private_update, mock_context)
 
-            mock_send.assert_not_called()
+        voice_external_mocks["send"].assert_not_called()
 
 
 class TestVoiceMessageWithCleanup:
     """Test voice message flow with transcript cleanup."""
 
     async def test_voice_message_with_cleanup_enabled(
-        self, mock_private_update, mock_context, mock_telegram_voice
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
     ):
         """Voice message triggers cleanup when enabled for paid user."""
         user_id = "12360"
@@ -471,26 +400,16 @@ class TestVoiceMessageWithCleanup:
         await set_auto_cleanup(chat_id, True)
 
         mock_private_update.message.voice = mock_telegram_voice
+        voice_external_mocks["transcribe"].return_value = (
+            "ну вот значит я хотел сказать что проект классный",
+            5,
+        )
+        voice_external_mocks["cleanup"].side_effect = None
+        voice_external_mocks["cleanup"].return_value = "Я хотел сказать, что проект классный."
 
-        with (
-            patch(
-                "src.telegram.voice.transcribe_audio",
-                AsyncMock(return_value=("ну вот значит я хотел сказать что проект классный", 5)),
-            ),
-            patch("src.telegram.voice.send_response", AsyncMock()),
-            patch(
-                "src.telegram.voice.save_transcription_to_obsidian",
-                AsyncMock(return_value=(False, None)),
-            ),
-            patch("src.telegram.voice.check_and_send_alerts", AsyncMock()),
-            patch(
-                "src.telegram.voice.cleanup_transcript",
-                AsyncMock(return_value="Я хотел сказать, что проект классный."),
-            ) as mock_cleanup,
-        ):
-            await from_voice_to_text(mock_private_update, mock_context)
+        await from_voice_to_text(mock_private_update, mock_context)
 
-            mock_cleanup.assert_called_once()
+        voice_external_mocks["cleanup"].assert_called_once()
 
 
 class TestToggleCleanup:

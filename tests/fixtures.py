@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -114,6 +114,39 @@ def mock_httpx_client_factory():
         return mock_client
 
     return _create
+
+
+@pytest.fixture
+def voice_external_mocks():
+    """Mock external boundaries for voice handler (Trophy: real DB, mock I/O)."""
+    with (
+        patch(
+            "src.telegram.voice.transcribe_audio",
+            AsyncMock(return_value=("Hello world", 5)),
+        ) as mock_transcribe,
+        patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
+        patch(
+            "src.telegram.voice.save_transcription_to_obsidian",
+            AsyncMock(return_value=(False, None)),
+        ) as mock_obsidian,
+        patch("src.telegram.voice.check_and_send_alerts", AsyncMock()) as mock_alerts,
+        patch(
+            "src.telegram.voice.cleanup_transcript",
+            AsyncMock(side_effect=lambda t: t),
+        ) as mock_cleanup,
+        patch(
+            "src.telegram.voice.categorize_note",
+            AsyncMock(return_value="work"),
+        ) as mock_categorize,
+    ):
+        yield {
+            "transcribe": mock_transcribe,
+            "send": mock_send,
+            "obsidian": mock_obsidian,
+            "alerts": mock_alerts,
+            "cleanup": mock_cleanup,
+            "categorize": mock_categorize,
+        }
 
 
 @pytest.fixture
