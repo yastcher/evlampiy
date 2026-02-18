@@ -2,6 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import src.ai_client
+
 
 @pytest.fixture
 def mock_private_update():
@@ -114,6 +116,53 @@ def mock_httpx_client_factory():
         return mock_client
 
     return _create
+
+
+@pytest.fixture
+def mock_ai_http():
+    """Provide a mock httpx client for ai_client calls via _get_client."""
+    mock_client = AsyncMock()
+    with patch("src.ai_client._get_client", return_value=mock_client):
+        yield mock_client
+
+
+@pytest.fixture
+def mock_rate_limiter():
+    """Bypass rate limiting in tests."""
+    with patch.object(src.ai_client.rate_limiter, "acquire", new_callable=AsyncMock):
+        yield
+
+
+@pytest.fixture
+def no_fallback_keys():
+    """Clear all AI provider API keys so the fallback chain doesn't interfere."""
+    with (
+        patch("src.ai_client.settings.gemini_api_key", ""),
+        patch("src.ai_client.settings.anthropic_bot_api_key", ""),
+        patch("src.ai_client.settings.gpt_token", ""),
+        patch("src.ai_client.settings.groq_api_key", ""),
+        patch("src.ai_client.settings.openrouter_api_key", ""),
+    ):
+        yield
+
+
+@pytest.fixture
+def mock_ai_sleep():
+    """Mock asyncio.sleep in ai_client (no-op, suppress actual sleeping)."""
+    with patch("src.ai_client.asyncio.sleep", new_callable=AsyncMock):
+        yield
+
+
+@pytest.fixture
+def capture_ai_sleep():
+    """Mock asyncio.sleep in ai_client and capture call durations."""
+    calls: list[float] = []
+
+    async def _fake_sleep(seconds: float) -> None:
+        calls.append(seconds)
+
+    with patch("src.ai_client.asyncio.sleep", side_effect=_fake_sleep):
+        yield calls
 
 
 @pytest.fixture

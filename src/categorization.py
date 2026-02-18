@@ -1,6 +1,5 @@
 """Note categorization using AI providers."""
 
-import asyncio
 import logging
 
 from src import const
@@ -79,10 +78,16 @@ async def move_github_file(token: str, owner: str, repo: str, old_path: str, new
 
 
 async def categorize_note(
-    token: str, owner: str, repo: str, filename: str, content: str
+    token: str,
+    owner: str,
+    repo: str,
+    filename: str,
+    content: str,
+    existing_categories: list[str] | None = None,
 ) -> str | None:
     """Categorize a single note and move it to the appropriate folder."""
-    existing_categories = await get_existing_categories(token, owner, repo)
+    if existing_categories is None:
+        existing_categories = await get_existing_categories(token, owner, repo)
     category = await classify_note(content, existing_categories)
     if not category:
         return None
@@ -101,6 +106,7 @@ async def categorize_note(
 
 async def categorize_all_income(token: str, owner: str, repo: str) -> int:
     """Categorize all files in the income folder. Returns count of processed files."""
+    existing_categories = await get_existing_categories(token, owner, repo)
     contents = await get_repo_contents(token, owner, repo, OBSIDIAN_NOTES_FOLDER)
     processed = 0
 
@@ -117,9 +123,10 @@ async def categorize_all_income(token: str, owner: str, repo: str) -> int:
             continue
 
         content, _ = file_data
-        result = await categorize_note(token, owner, repo, item["name"], content)
+        result = await categorize_note(
+            token, owner, repo, item["name"], content, existing_categories
+        )
         if result:
             processed += 1
-        await asyncio.sleep(4)  # 15 RPM free tier
 
     return processed

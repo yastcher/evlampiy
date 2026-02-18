@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     # Groq
     groq_api_key: str = ""
     groq_model: str = "whisper-large-v3-turbo"
+    groq_llm_model: str = "llama-3.3-70b-versatile"
+
+    # OpenRouter
+    openrouter_api_key: str = ""
+    openrouter_model: str = "google/gemma-3-27b-it:free"
 
     # AI provider selection
     categorization_provider: str = "gemini"
