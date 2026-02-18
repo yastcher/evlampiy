@@ -10,6 +10,8 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Never simplify architecture by removing existing providers, configs, or feature flags unless explicitly asked.
 - When fixing linter/import issues: fix one file at a time, run tests after each change.
 - Always propose solutions that make sense. No workarounds or hacks unless explicitly asked.
+- Never claim something doesn't exist without verifying first. Check the actual files/directories before making statements.
+- Understand the purpose of each config file before modifying it (e.g., docker-compose.yml is for running the stack, not for development).
 
 ## Architecture
 
@@ -50,17 +52,31 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 - **Do not run git commit, checkout, reset, clean, stash, rebase** — these are blocked in settings.json. Ask user if needed.
 - Max ~500 lines of diff per commit — stop and propose a commit before continuing
 - Always work in the current branch — never switch branches
+- Do not run unnecessary git network operations (remote, fetch) — work with local state
+
+## Never do
+
+- Never hardcode secrets, tokens, or passwords in code — always use `settings.*` or environment variables
+- Never expose MongoDB port to host in docker-compose.yml
+- Never use absolute paths in code or configs
 
 ## Security review
 
 Before finishing any task, check for:
 
-- Secrets/tokens leaking into logs, responses, or error messages
+**P0 (блокирует merge):**
+- Secrets/tokens в коде, логах, ответах или ошибках
 - Injection: NoSQL, command injection, template injection
-- Input validation: all user input validated via Pydantic before use
-- Authorization: no endpoints accessible without proper auth checks
-- Rate limiting: new public endpoints must have rate limits
-- Dependencies: no known vulnerabilities in added packages
+- Эндпоинты без проверки авторизации
+
+**P1 (исправить до merge):**
+- Input не валидирован через Pydantic
+- Новый публичный эндпоинт без rate limiting
+- Known vulnerabilities in added packages
+
+**P2 (исправить или создать задачу):**
+- Отсутствие проверки граничных условий (пустые списки, null, off-by-one)
+- Проглоченные исключения (bare except, pass в except)
 
 ## Documentation
 
@@ -74,6 +90,7 @@ Always update documentation as part of the same task (not as a separate step):
 
 ## Before finishing
 
+0. `git diff --stat` — оцени scope изменений
 1. `uv run ruff check --fix`
 2. `uv run ruff format`
 3. `uv run pytest`
