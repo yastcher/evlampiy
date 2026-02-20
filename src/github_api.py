@@ -83,20 +83,26 @@ async def put_github_file(
 ) -> bool:
     content_base64 = base64.b64encode(content.encode("utf-8")).decode("utf-8")
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    payload: dict = {"message": commit_message, "content": content_base64}
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.put(
-                    url,
-                    headers=_github_headers(token),
-                    json={"message": commit_message, "content": content_base64},
-                )
+                response = await client.put(url, headers=_github_headers(token), json=payload)
             if response.status_code in (http.HTTPStatus.OK, http.HTTPStatus.CREATED):
                 return True
             if response.status_code == http.HTTPStatus.UNAUTHORIZED:
                 logger.error("GitHub token is invalid or expired")
                 return False
+            if response.status_code == http.HTTPStatus.UNPROCESSABLE_ENTITY:
+                # File already exists — fetch its SHA and retry with it
+                existing = await get_github_file(token, owner, repo, path)
+                if not existing:
+                    logger.error("GitHub API: file exists at %s but SHA fetch failed", path)
+                    return False
+                payload["sha"] = existing[1]
+                logger.debug("File already exists at %s, retrying with SHA", path)
+                continue
             logger.error("GitHub API error on attempt %s: status %s", attempt, response.status_code)
         except httpx.HTTPError as exc:
             logger.error("GitHub API network error on attempt %s: %s", attempt, exc)
@@ -140,7 +146,8 @@ async def delete_github_file(
     """Delete a file from GitHub repository."""
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
-        response = await client.delete(
+        response = await client.request(
+            "DELETE",
             url,
             headers=_github_headers(token),
             json={"message": commit_message, "sha": sha},

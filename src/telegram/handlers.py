@@ -6,6 +6,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from src import const
 from src.account_linking import generate_link_code, get_linked_whatsapp, unlink
+from src.ai_client import _PROVIDER_LIMITS, CATEGORIZATION_FALLBACK_CHAIN, GPT_FALLBACK_CHAIN
 from src.categorization import categorize_all_income
 from src.config import settings
 from src.credits import (
@@ -351,10 +352,18 @@ async def unlink_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin_user(str(update.effective_user.id)):
-        return
+def _provider_icon(name: str, keys: dict[str, bool]) -> str:
+    """Return ✅/❌ based on whether the provider has a key configured."""
+    return "✅" if keys.get(name) else "❌"
 
+
+def _provider_rpm(name: str) -> str:
+    rpm = _PROVIDER_LIMITS.get(name)
+    return f" {rpm}rpm" if rpm else ""
+
+
+async def build_stats_text() -> str:
+    """Build admin stats message text."""
     month = current_month_key()
     stats = await get_monthly_stats(month)
     wit_usage = await get_wit_usage_this_month()
@@ -373,9 +382,30 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if wit_usage < wit_limit * 0.8
         else ("Warning" if wit_usage < wit_limit * 0.95 else "CRITICAL")
     )
-    groq_status = "Configured" if settings.groq_api_key else "Not configured"
 
-    text = (
+    # LLM provider key status
+    keys: dict[str, bool] = {
+        const.PROVIDER_GROQ: bool(settings.groq_api_key),
+        const.PROVIDER_GEMINI: bool(settings.gemini_api_key),
+        const.PROVIDER_ANTHROPIC: bool(settings.anthropic_bot_api_key),
+        const.PROVIDER_OPENROUTER: bool(settings.openrouter_api_key),
+        const.PROVIDER_OPENAI: bool(settings.gpt_token),
+    }
+
+    def _chain_str(primary: str, fallback_chain: list[str]) -> str:
+        chain = [primary] + [p for p in fallback_chain if p != primary]
+        parts = [f"{p}{_provider_rpm(p)} {_provider_icon(p, keys)}" for p in chain]
+        return " → ".join(parts)
+
+    categ_chain = _chain_str(settings.categorization_provider, CATEGORIZATION_FALLBACK_CHAIN)
+    gpt_chain = _chain_str(settings.gpt_provider, GPT_FALLBACK_CHAIN)
+
+    # Providers with keys that are not part of any active chain
+    all_chain_providers = set(CATEGORIZATION_FALLBACK_CHAIN) | set(GPT_FALLBACK_CHAIN)
+    unused_with_key = [p for p, has_key in keys.items() if has_key and p not in all_chain_providers]
+    unused_line = f"\n• Not in chain: {', '.join(unused_with_key)}" if unused_with_key else ""
+
+    return (
         f"📊 <b>System Stats ({month})</b>\n\n"
         f"<b>Users</b>\n"
         f"• Total transcriptions: {total_transcriptions:,}\n"
@@ -386,12 +416,24 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• Revenue: ${revenue:.2f}\n\n"
         f"<b>Costs</b>\n"
         f"• Wit.ai: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)\n"
-        f"• Groq: {groq_audio_seconds} sec (${groq_cost:.2f})\n\n"
+        f"• Groq audio: {groq_audio_seconds} sec/mo (${groq_cost:.2f})"
+        f" | limit: {settings.groq_audio_daily_limit:,} sec/day\n\n"
+        f"<b>LLM Providers</b>\n"
+        f"• Categ: {categ_chain}\n"
+        f"• GPT:   {gpt_chain}"
+        f"{unused_line}\n\n"
         f"<b>Health</b>\n"
         f"• Wit.ai: {'✅' if wit_status == 'OK' else '⚠️' if wit_status == 'Warning' else '🚨'} "
         f"{wit_status}\n"
-        f"• Groq: {'✅' if settings.groq_api_key else '❌'} {groq_status}"
+        f"• Groq: {'✅' if settings.groq_api_key else '❌'} "
+        f"{'Configured' if settings.groq_api_key else 'Not configured'}"
     )
+
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin_user(str(update.effective_user.id)):
+        return
+    text = await build_stats_text()
     await update.message.reply_text(text, parse_mode="HTML")
 
 

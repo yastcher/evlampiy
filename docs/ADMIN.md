@@ -80,13 +80,20 @@ Revenue
 • Revenue: $1.25
 
 Costs
-• Wit.ai: 45,230 / 1,000,000 (4.5%)
-• Groq: 3,400 sec ($0.04)
+• Wit.ai: 45 / 500 (9.0%)
+• Groq audio: 3,400 sec/mo ($0.04) | limit: 7,200 sec/day
+
+LLM Providers
+• Categ: groq 30rpm ✅ → openrouter 10rpm ✅ → gemini 15rpm ✅
+• GPT:   groq 30rpm ✅ → openrouter 10rpm ✅ → gemini 15rpm ✅
+• Not in chain: anthropic
 
 Health
 • Wit.ai: ✅ OK
 • Groq: ✅ Configured
 ```
+
+The **LLM Providers** section shows the active provider chain with rate limits and key status. The **Not in chain** line only appears when a provider has a configured key but is not part of any fallback chain.
 
 ### Automatic Alerts
 
@@ -193,8 +200,13 @@ Revenue
 • Revenue: $1.25
 
 Costs
-• Wit.ai: 45,230 / 1,000,000 (4.5%)
-• Groq: 3,400 sec ($0.04)
+• Wit.ai: 45 / 500 (9.0%)
+• Groq audio: 3,400 sec/mo ($0.04) | limit: 7,200 sec/day
+
+LLM Providers
+• Categ: groq 30rpm ✅ → openrouter 10rpm ✅ → gemini 15rpm ✅
+• GPT:   groq 30rpm ✅ → openrouter 10rpm ✅ → gemini 15rpm ✅
+• Not in chain: anthropic
 
 Health
 • Wit.ai: ✅ OK

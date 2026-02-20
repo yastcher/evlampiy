@@ -109,10 +109,12 @@ ADMIN_USER_IDS=123456789
 FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
 
-# Optional: AI provider (gemini / anthropic / openai)
-CATEGORIZATION_PROVIDER=gemini
-GPT_PROVIDER=gemini
-GEMINI_API_KEY=your_gemini_api_key
+# Optional: AI provider for categorization and GPT (groq / gemini / openrouter / anthropic / openai)
+# groq is recommended — free tier, fast, no rate-limit issues
+# Fallback chain (auto): primary → groq → openrouter → gemini
+CATEGORIZATION_PROVIDER=groq
+GPT_PROVIDER=groq
+GEMINI_API_KEY=your_gemini_api_key  # optional fallback
 ```
 
 For WhatsApp setup instructions, see [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md).

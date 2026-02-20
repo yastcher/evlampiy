@@ -27,7 +27,7 @@ async def transcribe_audio(
     audio_format: str,
     language: str,
     provider: str = const.PROVIDER_WIT,
-) -> tuple[str, int]:
+) -> tuple[str, int, int]:
     """
     Transcribe audio to text.
 
@@ -38,21 +38,24 @@ async def transcribe_audio(
         provider: Transcription provider (const.PROVIDER_WIT or const.PROVIDER_GROQ)
 
     Returns:
-        Tuple of (transcribed text, duration in seconds)
+        Tuple of (transcribed text, duration in seconds, wit_requests_count).
+        wit_requests_count is the number of Wit.ai API calls made (>1 for chunked audio),
+        or 0 for non-Wit providers.
     """
     duration = get_audio_duration_seconds(audio_bytes, audio_format)
 
     if provider == const.PROVIDER_GROQ:
         text = await transcribe_with_groq(audio_bytes, language, audio_format)
+        wit_requests = 0
     else:
-        text = _transcribe_with_wit(audio_bytes, audio_format, language)
+        text, wit_requests = _transcribe_with_wit(audio_bytes, audio_format, language)
 
     logger.debug("Transcription result (%s): %s", provider, text)
-    return text, duration
+    return text, duration, wit_requests
 
 
-def _transcribe_with_wit(audio_bytes: bytes, audio_format: str, language: str) -> str:
-    """Original Wit.ai transcription logic."""
+def _transcribe_with_wit(audio_bytes: bytes, audio_format: str, language: str) -> tuple[str, int]:
+    """Wit.ai transcription. Returns (text, number_of_api_requests)."""
     audio_stream = BytesIO(audio_bytes)
     audio = AudioSegment.from_file(audio_stream, format=audio_format)
 
@@ -69,7 +72,6 @@ def _transcribe_with_wit(audio_bytes: bytes, audio_format: str, language: str) -
         response = translator.speech(
             audio_file=converted_stream, headers={"Content-Type": "audio/mpeg3"}
         )
-        text = response.get("text", "")
-        full_text += text
+        full_text += response.get("text", "")
 
-    return full_text
+    return full_text, len(chunks)

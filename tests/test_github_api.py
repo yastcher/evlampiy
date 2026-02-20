@@ -196,7 +196,7 @@ class TestDeleteGithubFile:
         """Returns True on successful delete."""
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
-            mock_client.delete.return_value = mock_httpx_response_factory(status_code=200)
+            mock_client.request.return_value = mock_httpx_response_factory(status_code=200)
 
             result = await delete_github_file(
                 "ghp_token", "owner", "repo", "path/file.md", "sha123", "Delete file"
@@ -210,7 +210,7 @@ class TestDeleteGithubFile:
         """Returns False on error."""
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
-            mock_client.delete.return_value = mock_httpx_response_factory(status_code=404)
+            mock_client.request.return_value = mock_httpx_response_factory(status_code=404)
 
             result = await delete_github_file(
                 "ghp_token", "owner", "repo", "nonexistent.md", "sha123", "Delete"

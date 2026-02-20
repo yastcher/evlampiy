@@ -12,7 +12,7 @@ ADMIN_ID = "12345"
 
 async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings):
     with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
-        mock_transcribe.return_value = ("привет мир", 5)
+        mock_transcribe.return_value = ("привет мир", 5, 1)
         await run_selftest(mock_bot)
 
     mock_bot.send_voice.assert_called_once_with(
@@ -26,7 +26,7 @@ async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings)
 
 async def test_sends_error_on_empty_transcription(mock_bot, _patch_settings):
     with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
-        mock_transcribe.return_value = ("", 5)
+        mock_transcribe.return_value = ("", 5, 0)
         await run_selftest(mock_bot)
 
     message_text = mock_bot.send_message.call_args[1]["text"]
@@ -44,7 +44,7 @@ async def test_sends_error_on_transcription_exception(mock_bot, _patch_settings)
 
 async def test_uses_russian_language(mock_bot, _patch_settings):
     with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
-        mock_transcribe.return_value = ("текст", 3)
+        mock_transcribe.return_value = ("текст", 3, 1)
         await run_selftest(mock_bot)
 
     mock_transcribe.assert_called_once_with(SAMPLE_AUDIO, "ogg", "ru", provider=const.PROVIDER_WIT)
@@ -55,7 +55,7 @@ async def test_uses_russian_language(mock_bot, _patch_settings):
 async def test_does_not_crash_on_send_failure(mock_bot, _patch_settings, caplog):
     mock_bot.send_message.side_effect = RuntimeError("chat not found")
     with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
-        mock_transcribe.return_value = ("text", 2)
+        mock_transcribe.return_value = ("text", 2, 1)
         await run_selftest(mock_bot)
 
     assert "Self-test failed for admin" in caplog.text
@@ -85,7 +85,7 @@ async def test_message_contains_version(mock_bot, _patch_settings):
         patch("src.selftest._get_version", return_value="0.7.0"),
         patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
     ):
-        mock_transcribe.return_value = ("text", 2)
+        mock_transcribe.return_value = ("text", 2, 1)
         await run_selftest(mock_bot)
 
     message_text = mock_bot.send_message.call_args[1]["text"]
@@ -94,7 +94,7 @@ async def test_message_contains_version(mock_bot, _patch_settings):
 
 async def test_groq_skipped_when_not_configured(mock_bot, _patch_settings):
     with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
-        mock_transcribe.return_value = ("текст", 3)
+        mock_transcribe.return_value = ("текст", 3, 1)
         await run_selftest(mock_bot)
 
     message_text = mock_bot.send_message.call_args[1]["text"]
@@ -105,7 +105,7 @@ async def test_groq_skipped_when_not_configured(mock_bot, _patch_settings):
 async def test_groq_success(mock_bot, _patch_settings):
     _patch_settings.groq_api_key = "test-key"
     with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
-        mock_transcribe.return_value = ("привет мир", 5)
+        mock_transcribe.return_value = ("привет мир", 5, 1)
         await run_selftest(mock_bot)
 
     message_text = mock_bot.send_message.call_args[1]["text"]
@@ -117,7 +117,7 @@ async def test_groq_success(mock_bot, _patch_settings):
 async def test_groq_error_wit_ok(mock_bot, _patch_settings):
     _patch_settings.groq_api_key = "test-key"
     with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
-        mock_transcribe.side_effect = [("привет мир", 5), RuntimeError("groq timeout")]
+        mock_transcribe.side_effect = [("привет мир", 5, 1), RuntimeError("groq timeout")]
         await run_selftest(mock_bot)
 
     message_text = mock_bot.send_message.call_args[1]["text"]
@@ -128,7 +128,7 @@ async def test_groq_error_wit_ok(mock_bot, _patch_settings):
 async def test_sends_to_multiple_admins(mock_bot, _patch_settings):
     _patch_settings.admin_user_ids = {"12345", "67890"}
     with patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe:
-        mock_transcribe.return_value = ("text", 2)
+        mock_transcribe.return_value = ("text", 2, 1)
         await run_selftest(mock_bot)
 
     assert mock_bot.send_voice.call_count == 2

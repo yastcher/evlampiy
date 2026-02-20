@@ -23,7 +23,7 @@ class TestTranscribeAudio:
             ),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
-            text, duration = await transcribe_audio(b"audio_data", "ogg", "en")
+            text, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
             assert text == "Hello world"
             assert duration == 5
@@ -54,7 +54,7 @@ class TestTranscribeAudio:
             ),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
-            text, duration = await transcribe_audio(b"audio_data", "ogg", "en")
+            text, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
             assert text == "Part one. Part two. Part three."
             assert duration == 40
@@ -76,7 +76,7 @@ class TestTranscribeAudio:
             ),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
-            text, _duration = await transcribe_audio(b"audio_data", "ogg", "en")
+            text, _duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
             assert text == ""
 
@@ -102,7 +102,7 @@ class TestTranscribeAudio:
                 {"ru": mock_wit_ru, "en": mock_wit_en},
             ),
         ):
-            text, _duration = await transcribe_audio(b"audio_data", "ogg", "ru")
+            text, _duration, _ = await transcribe_audio(b"audio_data", "ogg", "ru")
 
             assert text == "Привет мир"
             mock_wit_ru.speech.assert_called_once()
@@ -144,7 +144,7 @@ class TestTranscribeAudio:
             ),
             patch("src.transcription.service.transcribe_with_groq", mock_groq),
         ):
-            text, duration = await transcribe_audio(
+            text, duration, _ = await transcribe_audio(
                 b"audio_data", "ogg", "en", provider=const.PROVIDER_GROQ
             )
 
@@ -168,6 +168,6 @@ class TestTranscribeAudio:
             ),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
-            _, duration = await transcribe_audio(b"audio_data", "ogg", "en")
+            _, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
             assert duration == 15

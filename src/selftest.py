@@ -61,7 +61,7 @@ async def _test_provider(
 ) -> tuple[str, str | None]:
     """Run transcription for a single provider, return (text, error_message)."""
     try:
-        text, _ = await transcribe_audio(audio_bytes, audio_format, language, provider=provider)
+        text, _, _ = await transcribe_audio(audio_bytes, audio_format, language, provider=provider)
         return text, None
     except Exception as exc:
         return "", f"error: {exc}"

@@ -9,7 +9,7 @@ from src import const
 from src.credits import admin_add_credits, is_admin_user
 from src.localization import translates
 from src.mongo import add_user_role, get_users_by_role, remove_user_role
-from src.telegram.handlers import stats_command
+from src.telegram.handlers import build_stats_text
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,8 @@ async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
         await query.edit_message_text(text, parse_mode="HTML")
 
     elif action == "stats":
-        await stats_command(update, context)
+        text = await build_stats_text()
+        await query.edit_message_text(text, parse_mode="HTML")
 
     elif action == "credits":
         text = _t("admin_usage", command="/add_credits <user_id> <amount>")

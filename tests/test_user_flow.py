@@ -229,7 +229,7 @@ class TestVoiceMessageFlow:
         await add_credits(user_id, 100)
         mock_private_update.message.voice = None
         mock_private_update.message.audio = mock_telegram_audio
-        voice_external_mocks["transcribe"].return_value = ("Audio text", 30)
+        voice_external_mocks["transcribe"].return_value = ("Audio text", 30, 1)
 
         await from_voice_to_text(mock_private_update, mock_context)
 
@@ -287,7 +287,7 @@ class TestVoiceMessageFlow:
         await set_chat_language(chat_id, "en")
         await add_credits(user_id, 100)
         mock_private_update.message.voice = mock_telegram_voice
-        voice_external_mocks["transcribe"].return_value = ("Hello", 10)
+        voice_external_mocks["transcribe"].return_value = ("Hello", 10, 1)
 
         with (
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=False)),
@@ -316,7 +316,7 @@ class TestVoiceMessageFlow:
         await set_auto_categorize(chat_id, True)
 
         mock_private_update.message.voice = mock_telegram_voice
-        voice_external_mocks["transcribe"].return_value = ("Note content", 5)
+        voice_external_mocks["transcribe"].return_value = ("Note content", 5, 1)
         voice_external_mocks["obsidian"].return_value = (True, "note.md")
 
         await from_voice_to_text(mock_private_update, mock_context)
@@ -355,7 +355,7 @@ class TestVoiceMessageFlow:
         await add_credits(user_id, 100)
 
         mock_private_update.message.voice = mock_telegram_voice
-        voice_external_mocks["transcribe"].return_value = ("евлампий расскажи анекдот", 10)
+        voice_external_mocks["transcribe"].return_value = ("евлампий расскажи анекдот", 10, 1)
 
         await from_voice_to_text(mock_private_update, mock_context)
 
@@ -375,7 +375,7 @@ class TestVoiceMessageFlow:
         await add_credits(user_id, 100)
 
         mock_private_update.message.voice = mock_telegram_voice
-        voice_external_mocks["transcribe"].return_value = ("", 0)
+        voice_external_mocks["transcribe"].return_value = ("", 0, 0)
 
         await from_voice_to_text(mock_private_update, mock_context)
 
@@ -403,6 +403,7 @@ class TestVoiceMessageWithCleanup:
         voice_external_mocks["transcribe"].return_value = (
             "ну вот значит я хотел сказать что проект классный",
             5,
+            1,
         )
         voice_external_mocks["cleanup"].side_effect = None
         voice_external_mocks["cleanup"].return_value = "Я хотел сказать, что проект классный."

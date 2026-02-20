@@ -88,7 +88,7 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         return
 
     # WhatsApp voice messages are opus in ogg container
-    text, _ = await transcribe_audio(audio_bytes, audio_format="ogg", language=language)
+    text, _, _ = await transcribe_audio(audio_bytes, audio_format="ogg", language=language)
 
     if not text:
         logger.debug("Empty WhatsApp voice message from %s", phone_number)

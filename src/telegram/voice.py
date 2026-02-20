@@ -176,7 +176,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     voice_file = await voice.get_file()
     file_data = await voice_file.download_as_bytearray()
 
-    text, duration = await transcribe_audio(
+    text, duration, wit_requests = await transcribe_audio(
         bytes(file_data), audio_format="ogg", language=language, provider=provider
     )
 
@@ -204,7 +204,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     # 6. Track provider usage
     if provider == const.PROVIDER_WIT:
-        await increment_wit_usage()
+        await increment_wit_usage(wit_requests)
         await check_and_send_alerts(context.bot)
     elif provider == const.PROVIDER_GROQ:
         await record_groq_usage(duration)

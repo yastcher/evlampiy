@@ -5,14 +5,14 @@ from src.credits import current_month_key
 from src.dto import WitUsageStats
 
 
-async def increment_wit_usage() -> int:
+async def increment_wit_usage(count: int = 1) -> int:
     month_key = current_month_key()
     record = await WitUsageStats.find_one(WitUsageStats.month_key == month_key)
     if not record:
-        record = WitUsageStats(month_key=month_key, request_count=1)
+        record = WitUsageStats(month_key=month_key, request_count=count)
         await record.insert()
     else:
-        record.request_count += 1
+        record.request_count += count
         await record.save()
     return record.request_count
 

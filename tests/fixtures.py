@@ -171,7 +171,7 @@ def voice_external_mocks():
     with (
         patch(
             "src.telegram.voice.transcribe_audio",
-            AsyncMock(return_value=("Hello world", 5)),
+            AsyncMock(return_value=("Hello world", 5, 1)),
         ) as mock_transcribe,
         patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
         patch(

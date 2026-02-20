@@ -72,7 +72,7 @@ class TestHandleVoiceMessage:
 
         with (
             patch(
-                "src.whatsapp.handlers.transcribe_audio", AsyncMock(return_value=("Hello world", 5))
+                "src.whatsapp.handlers.transcribe_audio", AsyncMock(return_value=("Hello world", 5, 1))
             ),
             patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
             patch(
@@ -101,7 +101,7 @@ class TestHandleVoiceMessage:
         mock_whatsapp_message.from_user.wa_id = phone_number
 
         with (
-            patch("src.whatsapp.handlers.transcribe_audio", AsyncMock(return_value=("", 0))),
+            patch("src.whatsapp.handlers.transcribe_audio", AsyncMock(return_value=("", 0, 0))),
             patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
         ):
             mock_client = AsyncMock()
@@ -124,7 +124,7 @@ class TestHandleVoiceMessage:
 
         with (
             patch(
-                "src.whatsapp.handlers.transcribe_audio", AsyncMock(return_value=("Test", 3))
+                "src.whatsapp.handlers.transcribe_audio", AsyncMock(return_value=("Test", 3, 1))
             ) as mock_transcribe,
             patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
             patch(
@@ -187,7 +187,7 @@ class TestHandleVoiceMessage:
 
         with (
             patch(
-                "src.whatsapp.handlers.transcribe_audio", AsyncMock(return_value=("Note text", 5))
+                "src.whatsapp.handlers.transcribe_audio", AsyncMock(return_value=("Note text", 5, 1))
             ),
             patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
             patch(
