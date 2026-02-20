@@ -1,6 +1,6 @@
 [project]
 name = "evlampiy"
-version = "0.8.5"
+version = "0.8.6"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = [{ name = "Yast", email = "yastcher@gmail.com" }]
@@ -54,9 +54,7 @@ select = [
     "S", # flake8-bandit (security)
     "RUF", # ruff-specific
 ]
-ignore = [
-    "UP017", # datetime.UTC alias — conflicts with `import datetime` convention
-]
+ignore = []
 fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]

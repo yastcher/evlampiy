@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+import datetime
 from enum import Enum
 
 from beanie import Document
@@ -93,13 +93,13 @@ class MonthlyStats(Document):
 
 
 def _utc_now():
-    return datetime.now(timezone.utc)
+    return datetime.datetime.now(datetime.UTC)
 
 
 class AlertState(Document):
     alert_type: str
     month_key: str
-    sent_at: datetime = Field(default_factory=_utc_now)
+    sent_at: datetime.datetime = Field(default_factory=_utc_now)
 
     class Settings:
         name = "alert_state"
@@ -109,7 +109,7 @@ class UserRole(Document):
     user_id: str
     role: str  # "vip" or "tester"
     added_by: str
-    added_at: datetime = Field(default_factory=_utc_now)
+    added_at: datetime.datetime = Field(default_factory=_utc_now)
 
     class Settings:
         name = "user_roles"
@@ -126,7 +126,7 @@ class AccountLink(Document):
 class LinkCode(Document):
     code: str
     telegram_user_id: str
-    created_at: datetime = Field(default_factory=_utc_now)
+    created_at: datetime.datetime = Field(default_factory=_utc_now)
 
     class Settings:
         name = "link_codes"
@@ -135,8 +135,8 @@ class LinkCode(Document):
 class LinkAttempt(Document):
     whatsapp_phone: str
     attempt_count: int = 0
-    first_attempt_at: datetime = Field(default_factory=_utc_now)
-    locked_until: datetime | None = None
+    first_attempt_at: datetime.datetime = Field(default_factory=_utc_now)
+    locked_until: datetime.datetime | None = None
 
     class Settings:
         name = "link_attempts"

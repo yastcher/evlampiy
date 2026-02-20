@@ -216,3 +216,28 @@ def mock_whatsapp_client():
     wa.get_media_url.return_value = "https://example.com/audio.ogg"
     wa.send_message = MagicMock()
     return wa
+
+
+@pytest.fixture
+def mock_bot():
+    """Mock Telegram Bot for selftest."""
+    bot = AsyncMock()
+    bot.send_voice = AsyncMock()
+    bot.send_message = AsyncMock()
+    return bot
+
+
+@pytest.fixture
+def _patch_settings(tmp_path):
+    """Patch selftest settings with a temp audio file."""
+    sample_file = tmp_path / "test_sample.ogg"
+    sample_file.write_bytes(b"fake_ogg_audio_data")
+    with (
+        patch("src.selftest.settings") as mock_settings,
+        patch("src.selftest.get_audio_duration_seconds", return_value=5),
+    ):
+        mock_settings.admin_user_ids = {"12345"}
+        mock_settings.selftest_sample_path = str(sample_file)
+        mock_settings.default_language = "ru"
+        mock_settings.groq_api_key = ""
+        yield mock_settings

@@ -1,9 +1,9 @@
 """Account linking between Telegram and WhatsApp."""
 
+import datetime
 import logging
 import secrets
 import typing
-from datetime import datetime, timedelta, timezone
 
 from src.dto import AccountLink, LinkAttempt, LinkCode
 
@@ -27,16 +27,16 @@ async def generate_link_code(telegram_user_id: str) -> str:
     return code
 
 
-def _to_aware(dt: datetime) -> datetime:
+def _to_aware(dt: datetime.datetime) -> datetime.datetime:
     """Convert naive datetime to UTC-aware."""
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=datetime.UTC)
     return dt
 
 
 async def _check_rate_limit(whatsapp_phone: str) -> LinkAttempt | None:
     """Check rate limit and return attempt record. Returns None if rate limited."""
-    now = datetime.now(timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     attempt = await LinkAttempt.find_one(LinkAttempt.whatsapp_phone == whatsapp_phone)
 
     if not attempt:
@@ -65,7 +65,9 @@ async def _record_failed_attempt(attempt: LinkAttempt) -> None:
     """Record failed attempt and lock if limit exceeded."""
     attempt.attempt_count += 1
     if attempt.attempt_count >= LINK_MAX_ATTEMPTS:
-        attempt.locked_until = datetime.now(timezone.utc) + timedelta(seconds=LINK_LOCKOUT_SECONDS)
+        attempt.locked_until = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+            seconds=LINK_LOCKOUT_SECONDS
+        )
         logger.warning(
             "Phone %s locked after %d failed attempts",
             attempt.whatsapp_phone,
@@ -86,7 +88,7 @@ async def confirm_link(code: str, whatsapp_phone: str) -> LinkResult:
         return "invalid"
 
     created_at = _to_aware(record.created_at)
-    elapsed = (datetime.now(timezone.utc) - created_at).total_seconds()
+    elapsed = (datetime.datetime.now(datetime.UTC) - created_at).total_seconds()
     if elapsed > LINK_CODE_TTL_SECONDS:
         await record.delete()
         await _record_failed_attempt(attempt)

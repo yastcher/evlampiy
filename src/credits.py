@@ -1,9 +1,9 @@
 """Credit system for monetization."""
 
 import dataclasses
+import datetime
 import hashlib
 import math
-from datetime import datetime, timezone
 
 from src import const
 from src.config import settings
@@ -71,7 +71,7 @@ async def get_user_tier(user_id: str) -> UserTier:
 
 
 def current_month_key() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m")
+    return datetime.datetime.now(datetime.UTC).strftime("%Y-%m")
 
 
 # --- Lazy reset ---

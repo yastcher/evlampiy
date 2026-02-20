@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 import src.whatsapp.client
-from src.main import create_fastapi_app
 from src.mongo import set_auto_categorize, set_chat_language, set_github_settings
+from src.whatsapp.app import create_fastapi_app
 from src.whatsapp.client import WHATSAPP_CHAT_PREFIX, get_whatsapp_client
 from src.whatsapp.handlers import handle_link_command, handle_voice_message
 

@@ -19,8 +19,9 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
   exceptions.py
 - Constants: src/const.py, import as `from src import const`, use as `const.PROVIDER_GROQ`
 - Stdlib imports: `import datetime`, `import typing` — import the module, not names from it.
-  Use `datetime.datetime`, `datetime.timezone.utc`, `typing.Optional`, etc.
-  Never use `from datetime import UTC` — use `datetime.UTC` instead.
+  Use `datetime.datetime`, `datetime.UTC`, `typing.Optional`, etc.
+  Never use `from datetime import datetime, UTC, timezone` — always go through the module.
+  Prefer `datetime.UTC` over `datetime.timezone.utc` (Python 3.11+, enforced by ruff UP017).
 - Settings: split BaseSettings per module
 - Max 500 lines per file — decompose if exceeded
 - FastAPI conventions: see .claude/skills/fastapi.md

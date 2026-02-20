@@ -2,37 +2,12 @@
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
 from src import const
 from src.selftest import run_selftest
 
 SAMPLE_AUDIO = b"fake_ogg_audio_data"
 SAMPLE_DURATION = 5
 ADMIN_ID = "12345"
-
-
-@pytest.fixture
-def mock_bot():
-    bot = AsyncMock()
-    bot.send_voice = AsyncMock()
-    bot.send_message = AsyncMock()
-    return bot
-
-
-@pytest.fixture
-def _patch_settings(tmp_path):
-    sample_file = tmp_path / "test_sample.ogg"
-    sample_file.write_bytes(SAMPLE_AUDIO)
-    with (
-        patch("src.selftest.settings") as mock_settings,
-        patch("src.selftest.get_audio_duration_seconds", return_value=SAMPLE_DURATION),
-    ):
-        mock_settings.admin_user_ids = {ADMIN_ID}
-        mock_settings.selftest_sample_path = str(sample_file)
-        mock_settings.default_language = "ru"
-        mock_settings.groq_api_key = ""
-        yield mock_settings
 
 
 async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings):

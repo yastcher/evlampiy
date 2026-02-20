@@ -1,6 +1,6 @@
 """Tests for account linking between Telegram and WhatsApp."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 from src.account_linking import (
@@ -64,7 +64,7 @@ class TestAccountLinking:
 
         # Manually expire the code in DB
         record = await LinkCode.find_one(LinkCode.code == code)
-        record.created_at = datetime.now(timezone.utc) - timedelta(
+        record.created_at = datetime.now(UTC) - timedelta(
             seconds=LINK_CODE_TTL_SECONDS + 1
         )
         await record.save()
@@ -258,7 +258,7 @@ class TestRateLimiting:
 
         # Manually expire the lockout
         attempt = await LinkAttempt.find_one(LinkAttempt.whatsapp_phone == phone)
-        attempt.locked_until = datetime.now(timezone.utc) - timedelta(seconds=1)
+        attempt.locked_until = datetime.now(UTC) - timedelta(seconds=1)
         await attempt.save()
 
         # Generate valid code and confirm

@@ -12,7 +12,10 @@
       "Bash(ls *)",
       "Bash(git diff*)",
       "Bash(git status*)",
-      "Bash(git log*)"
+      "Bash(git log*)",
+      "Bash(git ls-files*)",
+      "Bash(git show*)",
+      "Bash(git blame*)"
     ],
     "deny": [
       "Bash(rm -rf*)",
