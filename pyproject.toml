@@ -1,10 +1,10 @@
 [project]
 name = "evlampiy"
-version = "0.8.7"
+version = "0.8.8"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = [{ name = "Yast", email = "yastcher@gmail.com" }]
-requires-python = "~=3.13"
+requires-python = "~=3.14.0"
 dependencies = [
     "python-telegram-bot~=21.11.1",
     "httpx[http2]>=0.28.1",
