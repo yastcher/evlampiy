@@ -219,6 +219,38 @@ def mock_whatsapp_client():
 
 
 @pytest.fixture
+def whatsapp_voice_external_mocks(mock_httpx_download_response):
+    """Mock external boundaries for WhatsApp voice handler (Trophy: real DB, mock I/O)."""
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_httpx_download_response)
+
+    with (
+        patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
+        patch(
+            "src.whatsapp.handlers.transcribe_audio",
+            AsyncMock(return_value=("Hello world", 5, 1)),
+        ) as mock_transcribe,
+        patch(
+            "src.whatsapp.handlers.save_transcription_to_obsidian",
+            AsyncMock(return_value=(True, "income/note.md")),
+        ) as mock_save,
+        patch("src.whatsapp.handlers.categorize_note", AsyncMock()) as mock_categorize,
+        patch(
+            "src.whatsapp.handlers.cleanup_transcript",
+            AsyncMock(side_effect=lambda t: t),
+        ) as mock_cleanup,
+    ):
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+        yield {
+            "http_client": mock_client,
+            "transcribe": mock_transcribe,
+            "save": mock_save,
+            "categorize": mock_categorize,
+            "cleanup": mock_cleanup,
+        }
+
+
+@pytest.fixture
 def mock_bot():
     """Mock Telegram Bot for selftest."""
     bot = AsyncMock()

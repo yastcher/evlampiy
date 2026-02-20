@@ -287,6 +287,21 @@ class TestAdminCommands:
         call_text = mock_callback_query.edit_message_text.call_args[0][0]
         assert "/add_credits" in call_text
 
+    async def test_admin_callback_stats(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """Admin stats callback builds stats text and updates message."""
+        mock_private_update.effective_user.id = 999
+        mock_callback_query.data = "adm_stats"
+        mock_private_update.callback_query = mock_callback_query
+
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await admin_callback_router(mock_private_update, mock_context)
+
+        mock_callback_query.edit_message_text.assert_called_once()
+        call_kwargs = mock_callback_query.edit_message_text.call_args[1]
+        assert call_kwargs.get("parse_mode") == "HTML"
+
     async def test_block_command(self, mock_private_update, mock_context):
         """Admin can block a user."""
         mock_private_update.effective_user.id = 999

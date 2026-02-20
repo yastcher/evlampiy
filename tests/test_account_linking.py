@@ -64,9 +64,7 @@ class TestAccountLinking:
 
         # Manually expire the code in DB
         record = await LinkCode.find_one(LinkCode.code == code)
-        record.created_at = datetime.now(UTC) - timedelta(
-            seconds=LINK_CODE_TTL_SECONDS + 1
-        )
+        record.created_at = datetime.now(UTC) - timedelta(seconds=LINK_CODE_TTL_SECONDS + 1)
         await record.save()
 
         result = await confirm_link(code, "79009999999")

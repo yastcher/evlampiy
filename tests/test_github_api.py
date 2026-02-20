@@ -1,7 +1,10 @@
 import base64
 from unittest.mock import patch
 
+import httpx
+
 from src.github_api import (
+    MAX_RETRIES,
     delete_github_file,
     get_github_file,
     get_or_create_obsidian_repo,
@@ -61,6 +64,38 @@ class TestGetOrCreateObsidianRepo:
 
         assert result is None
 
+    async def test_returns_none_on_unexpected_repo_check_status(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
+        """Returns None when repo check returns unexpected status (not 200 or 404)."""
+        user_response = mock_httpx_response_factory({"login": "testuser"}, 200)
+        error_response = mock_httpx_response_factory(status_code=500)
+
+        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.get.side_effect = [user_response, error_response]
+
+            result = await get_or_create_obsidian_repo("ghp_token")
+
+        assert result is None
+
+    async def test_returns_none_on_repo_creation_failure(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
+        """Returns None when repo creation request fails."""
+        user_response = mock_httpx_response_factory({"login": "testuser"}, 200)
+        not_found_response = mock_httpx_response_factory(status_code=404)
+        create_fail_response = mock_httpx_response_factory(status_code=422)
+
+        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.get.side_effect = [user_response, not_found_response]
+            mock_client.post.return_value = create_fail_response
+
+            result = await get_or_create_obsidian_repo("ghp_token")
+
+        assert result is None
+
 
 class TestPutGithubFile:
     """Test file creation in GitHub."""
@@ -103,6 +138,81 @@ class TestPutGithubFile:
 
         assert result is False
         mock_client.put.assert_called_once()
+
+    async def test_retries_with_sha_on_422(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
+        """On 422, fetches existing SHA and retries; returns True on success."""
+        encoded_content = base64.b64encode(b"existing content").decode()
+        file_response = mock_httpx_response_factory(
+            {"content": encoded_content, "sha": "existing-sha123"}, 200
+        )
+
+        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.put.side_effect = [
+                mock_httpx_response_factory(status_code=422),
+                mock_httpx_response_factory(status_code=201),
+            ]
+            mock_client.get.return_value = file_response
+
+            result = await put_github_file(
+                token="ghp_token",
+                owner="testuser",
+                repo="testrepo",
+                path="income/test.md",
+                content="New content",
+                commit_message="test commit",
+            )
+
+        assert result is True
+        assert mock_client.put.call_count == 2
+        # Second call should include the fetched SHA in payload
+        second_call_json = mock_client.put.call_args_list[1][1]["json"]
+        assert second_call_json["sha"] == "existing-sha123"
+
+    async def test_returns_false_when_sha_fetch_fails_on_422(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
+        """Returns False when 422 occurs but SHA fetch also fails."""
+        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.put.return_value = mock_httpx_response_factory(status_code=422)
+            mock_client.get.return_value = mock_httpx_response_factory(status_code=404)
+
+            result = await put_github_file(
+                token="ghp_token",
+                owner="testuser",
+                repo="testrepo",
+                path="income/test.md",
+                content="Hello",
+                commit_message="test commit",
+            )
+
+        assert result is False
+
+    async def test_returns_false_on_network_error(
+        self, mock_httpx_response_factory, mock_httpx_client_factory
+    ):
+        """Returns False after all retries exhausted due to network errors."""
+        with (
+            patch("src.github_api.httpx.AsyncClient") as mock_client_cls,
+            patch("src.github_api.asyncio.sleep"),
+        ):
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.put.side_effect = httpx.HTTPError("connection refused")
+
+            result = await put_github_file(
+                token="ghp_token",
+                owner="testuser",
+                repo="testrepo",
+                path="income/test.md",
+                content="Hello",
+                commit_message="test commit",
+            )
+
+        assert result is False
+        assert mock_client.put.call_count == MAX_RETRIES
 
 
 class TestGetRepoContents:
