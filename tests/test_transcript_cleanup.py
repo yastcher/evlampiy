@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, patch
 
-from src.transcript_cleanup import cleanup_transcript
+from src.transcript_cleanup import _build_cleanup_prompt, cleanup_transcript
 
 
 class TestCleanupTranscript:
@@ -59,3 +59,50 @@ class TestCleanupTranscript:
         ):
             result = await cleanup_transcript(original)
             assert result == original
+
+    async def test_vocabulary_included_in_prompt(self):
+        """Domain vocabulary is appended to the prompt when provided."""
+        text = "ну я занимаюсь кантоу и вот типа тренировка была"
+        vocabulary = {"sports": ["кантоу", "тренировка"]}
+        captured_prompts = []
+
+        async def capture(prompt, max_tokens):
+            captured_prompts.append(prompt)
+            return "cleaned"
+
+        with patch("src.transcript_cleanup.cleanup_text", side_effect=capture):
+            await cleanup_transcript(text, vocabulary=vocabulary)
+
+        assert len(captured_prompts) == 1
+        assert "кантоу" in captured_prompts[0]
+        assert "тренировка" in captured_prompts[0]
+        assert "Domain vocabulary" in captured_prompts[0]
+
+    async def test_context_included_in_prompt(self):
+        """Recent context notes are appended to the prompt when provided."""
+        text = "ну и сегодня про то же самое"
+        context = ["Вчера рассказывал про проект X.", "Обсуждали дедлайн на пятницу."]
+        captured_prompts = []
+
+        async def capture(prompt, max_tokens):
+            captured_prompts.append(prompt)
+            return "cleaned"
+
+        with patch("src.transcript_cleanup.cleanup_text", side_effect=capture):
+            await cleanup_transcript(text, context=context)
+
+        assert len(captured_prompts) == 1
+        assert "проект X" in captured_prompts[0]
+        assert "Context from recent notes" in captured_prompts[0]
+
+    async def test_no_context_no_vocabulary_prompt_has_no_extra_sections(self):
+        """Prompt with no extras contains no Context or Vocabulary sections."""
+        prompt = _build_cleanup_prompt("some text here", vocabulary=None, context=None)
+        assert "Context from recent" not in prompt
+        assert "Domain vocabulary" not in prompt
+        assert "Transcription:\nsome text here" in prompt
+
+    async def test_empty_context_list_not_included(self):
+        """Empty context list does not add a context section to the prompt."""
+        prompt = _build_cleanup_prompt("some text here", vocabulary=None, context=[])
+        assert "Context from recent" not in prompt

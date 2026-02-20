@@ -159,3 +159,54 @@ class TestSaveTranscriptionToObsidian:
 
         assert success is False
         assert filename is None
+
+    async def test_dual_save_includes_original_block(self):
+        """When original_text differs from text, an HTML comment block is appended."""
+        chat_id = "u_dual_save_test"
+        await set_save_to_obsidian(chat_id, True)
+        await set_github_settings(chat_id, "user", "notes", "ghp_abc")
+
+        cleaned = "Сегодня встреча по проекту."
+        original = "ну сегодня вот значит встреча по ну проекту"
+
+        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+            success, _filename = await save_transcription_to_obsidian(
+                chat_id, cleaned, "telegram", "ru", original_text=original
+            )
+
+        assert success is True
+        content = mock_put.call_args.kwargs["content"]
+        assert cleaned in content
+        assert "<!-- original" in content
+        assert original in content
+        assert "-->" in content
+
+    async def test_no_original_block_when_texts_are_same(self):
+        """No HTML comment block is added when original_text equals text."""
+        chat_id = "u_same_text_test"
+        await set_save_to_obsidian(chat_id, True)
+        await set_github_settings(chat_id, "user", "notes", "ghp_abc")
+
+        text = "Текст без изменений."
+
+        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+            await save_transcription_to_obsidian(
+                chat_id, text, "telegram", "ru", original_text=text
+            )
+
+        content = mock_put.call_args.kwargs["content"]
+        assert "<!-- original" not in content
+
+    async def test_no_original_block_when_original_text_is_none(self):
+        """No HTML comment block is added when original_text is None."""
+        chat_id = "u_none_original_test"
+        await set_save_to_obsidian(chat_id, True)
+        await set_github_settings(chat_id, "user", "notes", "ghp_abc")
+
+        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+            await save_transcription_to_obsidian(
+                chat_id, "Some text", "telegram", "ru", original_text=None
+            )
+
+        content = mock_put.call_args.kwargs["content"]
+        assert "<!-- original" not in content

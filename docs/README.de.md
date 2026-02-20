@@ -18,7 +18,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **Multiplattform** — Telegram und WhatsApp
 - **Mehrsprachig** — Englisch, Deutsch, Russisch, Spanisch
 - **Chat-Einstellungen** — Individuelle Sprache und Trigger für jeden Chat
-- **KI-Textbereinigung** — Optionale LLM-gestützte Bereinigung von Transkriptionen (entfernt Füllwörter, korrigiert Zeichensetzung)
+- **KI-Textbereinigung** — Optionale LLM-gestützte Bereinigung von Transkriptionen (entfernt Füllwörter, korrigiert Zeichensetzung). Wenn die Bereinigung deaktiviert ist, bleibt die Telegram-Antwort roh, Obsidian-Notizen werden jedoch stets bereinigt.
 
 ### Transkriptionsanbieter
 - **Wit.ai** — Standardanbieter mit monatlicher Limitüberwachung
@@ -33,6 +33,9 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **GitHub-Synchronisierung** — Automatisches Speichern von Transkriptionen in Ihrem Vault über GitHub API
 - **OAuth Device Flow** — Sichere Authentifizierung ohne Token-Offenlegung
 - **Auto-Kategorisierung** — KI-gestützte Notizklassifizierung (Google Gemini, Anthropic Claude, OpenAI)
+- **Duales Speichern** — Notizen enthalten bereinigten Text; die rohe Transkription wird in einem HTML-Kommentar aufbewahrt
+- **vocabulary.json** — Automatisch aufgebaute Stichwortliste je Kategorie; verbessert die Korrektur von Transkriptionsfehlern
+- **Bereinigungskontext** — Neueste Transkriptionen aus demselben Chat werden dem LLM zur präziseren Bereinigung übergeben
 
 ### Kontoverknüpfung
 - **Telegram ↔ WhatsApp** — Konten mit Einmalcodes verknüpfen

@@ -8,6 +8,7 @@ from src.dto import (
     LinkAttempt,
     LinkCode,
     MonthlyStats,
+    RecentTranscription,
     UsedTrial,
     UserCredits,
     UserMonthlyUsage,
@@ -28,6 +29,7 @@ ALL_DOCUMENT_MODELS = [
     LinkCode,
     LinkAttempt,
     UserMonthlyUsage,
+    RecentTranscription,
 ]
 
 
@@ -180,3 +182,30 @@ async def has_role(user_id: str, role: str) -> bool:
     """Check if a user has a specific role."""
     existing = await UserRole.find_one(UserRole.user_id == user_id, UserRole.role == role)
     return existing is not None
+
+
+_RECENT_TRANSCRIPTION_KEEP = 5
+
+
+async def save_recent_transcription(chat_id: str, text: str) -> None:
+    """Save cleaned transcription for cleanup context; keep only the last 5 per chat."""
+    await RecentTranscription(chat_id=chat_id, text=text).insert()
+    # Trim to keep only the most recent entries
+    all_docs = (
+        await RecentTranscription.find(RecentTranscription.chat_id == chat_id)
+        .sort("-created_at")
+        .to_list()
+    )
+    for doc in all_docs[_RECENT_TRANSCRIPTION_KEEP:]:
+        await doc.delete()
+
+
+async def get_recent_transcriptions(chat_id: str, limit: int = 3) -> list[str]:
+    """Get recent cleaned transcriptions for a chat, oldest-first (for LLM context)."""
+    docs = (
+        await RecentTranscription.find(RecentTranscription.chat_id == chat_id)
+        .sort("-created_at")
+        .limit(limit)
+        .to_list()
+    )
+    return [doc.text for doc in reversed(docs)]

@@ -18,7 +18,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Multi-platform** — Telegram and WhatsApp support
 - **Multi-language** — English, German, Russian, Spanish
 - **Per-chat settings** — Individual language and trigger preferences
-- **AI text cleanup** — Optional LLM-powered cleanup of transcriptions (removes filler words, fixes punctuation)
+- **AI text cleanup** — Optional LLM-powered cleanup of transcriptions (removes filler words, fixes punctuation). When `/settings` cleanup is OFF, reply text stays raw but Obsidian notes are still cleaned silently.
 
 ### Transcription Providers
 - **Wit.ai** — Default provider with monthly limit tracking
@@ -33,6 +33,9 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **GitHub sync** — Auto-save transcriptions to your vault via GitHub API
 - **OAuth Device Flow** — Secure authentication without exposing tokens
 - **Auto-categorization** — AI-powered note classification (Google Gemini, Anthropic Claude, OpenAI)
+- **Dual-save** — Notes contain cleaned text; raw transcription preserved in an HTML comment for reference
+- **vocabulary.json** — Auto-built per-category keyword list; improves transcription error correction over time
+- **Cleanup context** — Recent transcriptions from the same chat are passed to the cleanup LLM for better accuracy
 
 ### Account Linking
 - **Telegram ↔ WhatsApp** — Link accounts with one-time codes

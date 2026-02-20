@@ -9,7 +9,7 @@ dependencies = [
     "python-telegram-bot~=21.11.1",
     "httpx[http2]>=0.28.1",
     "python-dotenv~=1.0.1",
-    "pydantic-settings~=2.7.1",
+    "pydantic-settings>=2.7,<3",
     "wit~=6.0.1",
     "pydub~=0.25.1",
     "audioop-lts>=0.2; python_version>='3.13'",
@@ -58,8 +58,11 @@ ignore = []
 fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "PLR2004", "S105", "S106"]
+"tests/*" = ["S101", "PLR2004", "S105", "S106", "PLR0913"]
 "src/localization.py" = ["RUF001", "E501"]
+"src/transcript_cleanup.py" = ["RUF001"]
+"src/categorization.py" = ["PLR0913"]
+"src/telegram/voice.py" = ["PLR0912", "PLR0915"]
 "src/github_oauth.py" = ["S105"]
 "src/config.py" = ["S104"]
 

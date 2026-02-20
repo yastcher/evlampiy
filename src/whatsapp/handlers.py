@@ -13,7 +13,14 @@ from src.categorization import categorize_note
 from src.config import settings
 from src.credits import get_user_tier
 from src.dto import UserTier
-from src.mongo import get_auto_categorize, get_auto_cleanup, get_chat_language, get_github_settings
+from src.mongo import (
+    get_auto_categorize,
+    get_auto_cleanup,
+    get_chat_language,
+    get_github_settings,
+    get_recent_transcriptions,
+    save_recent_transcription,
+)
 from src.obsidian import save_transcription_to_obsidian
 from src.transcript_cleanup import cleanup_transcript
 from src.transcription.service import transcribe_audio
@@ -94,18 +101,29 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         logger.debug("Empty WhatsApp voice message from %s", phone_number)
         return
 
-    # Optional transcript cleanup (only for linked paid users)
+    # Cleanup: always for Obsidian, conditionally for reply (only for linked paid users)
     telegram_user_id = await get_linked_telegram_id(phone_number)
-    if telegram_user_id and await get_auto_cleanup(chat_id):
+    raw_text = text
+    obsidian_text = text
+    if telegram_user_id:
         tier = await get_user_tier(telegram_user_id)
         if tier != UserTier.FREE:
-            text = await cleanup_transcript(text)
+            context = await get_recent_transcriptions(chat_id)
+            if await get_auto_cleanup(chat_id):
+                text = await cleanup_transcript(raw_text, context=context)
+                obsidian_text = text  # no double call
+            else:
+                # Clean silently for Obsidian only
+                obsidian_text = await cleanup_transcript(raw_text, context=context)
+            await save_recent_transcription(chat_id, obsidian_text)
 
+    original_for_obsidian = raw_text if raw_text != obsidian_text else None
     saved, filename = await save_transcription_to_obsidian(
         chat_id,
-        text,
+        obsidian_text,
         const.SOURCE_WHATSAPP,
         language,
+        original_text=original_for_obsidian,
     )
     if saved and filename and await get_auto_categorize(chat_id):
         github_settings = await get_github_settings(chat_id)
@@ -115,7 +133,7 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
                 owner=github_settings["owner"],
                 repo=github_settings["repo"],
                 filename=filename,
-                content=text,
+                content=obsidian_text,
             )
 
     # Send transcription back

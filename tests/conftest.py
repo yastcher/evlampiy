@@ -8,6 +8,7 @@ from src.dto import (
     LinkAttempt,
     LinkCode,
     MonthlyStats,
+    RecentTranscription,
     UsedTrial,
     UserCredits,
     UserMonthlyUsage,
@@ -28,6 +29,7 @@ ALL_TEST_MODELS = [
     LinkCode,
     LinkAttempt,
     UserMonthlyUsage,
+    RecentTranscription,
 ]
 
 pytest_plugins = [
@@ -41,6 +43,5 @@ async def init_db():
     client = AsyncMongoMockClient()
     await init_beanie(database=client["test_db"], document_models=ALL_TEST_MODELS)
     yield
-    # Cleanup after test
     for model in ALL_TEST_MODELS:
         await model.delete_all()

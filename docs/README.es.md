@@ -18,7 +18,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Multiplataforma** — Telegram y WhatsApp
 - **Multilingüe** — Inglés, alemán, ruso, español
 - **Configuración por chat** — Idioma y trigger individual para cada chat
-- **Limpieza de texto con IA** — Limpieza opcional de transcripciones mediante LLM (elimina muletillas, corrige puntuación)
+- **Limpieza de texto con IA** — Limpieza opcional de transcripciones mediante LLM (elimina muletillas, corrige puntuación). Si la limpieza está desactivada, la respuesta en Telegram es el texto original, pero las notas en Obsidian siempre se limpian.
 
 ### Proveedores de transcripción
 - **Wit.ai** — Proveedor predeterminado con seguimiento del límite mensual
@@ -33,6 +33,9 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Sincronización GitHub** — Guardado automático de transcripciones en tu vault vía GitHub API
 - **OAuth Device Flow** — Autenticación segura sin exponer tokens
 - **Auto-categorización** — Clasificación de notas con IA (Google Gemini, Anthropic Claude, OpenAI)
+- **Guardado dual** — Las notas contienen texto limpio; la transcripción original se preserva en un comentario HTML
+- **vocabulary.json** — Lista de palabras clave por categoría, construida automáticamente para mejorar la corrección de errores
+- **Contexto de limpieza** — Las transcripciones recientes del mismo chat se pasan al LLM para mayor precisión
 
 ### Vinculación de cuentas
 - **Telegram ↔ WhatsApp** — Vincula cuentas con códigos de un solo uso

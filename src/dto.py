@@ -1,8 +1,10 @@
 import datetime
+import typing
 from enum import Enum
 
 from beanie import Document
 from pydantic import Field
+from pymongo import ASCENDING, IndexModel
 
 
 class UserSettings(Document):
@@ -140,3 +142,23 @@ class LinkAttempt(Document):
 
     class Settings:
         name = "link_attempts"
+
+
+_RECENT_TRANSCRIPTION_TTL_SECONDS = 7200  # 2 hours
+
+
+class RecentTranscription(Document):
+    """Stores recent cleaned transcriptions per chat for cleanup context (TTL 2h)."""
+
+    chat_id: str
+    text: str
+    created_at: datetime.datetime = Field(default_factory=_utc_now)
+
+    class Settings:
+        name = "recent_transcriptions"
+        indexes: typing.ClassVar = [
+            IndexModel(
+                [("created_at", ASCENDING)],
+                expireAfterSeconds=_RECENT_TRANSCRIPTION_TTL_SECONDS,
+            ),
+        ]

@@ -171,7 +171,7 @@ class TestHandleVoiceMessage:
 
         mocks = whatsapp_voice_external_mocks
         mocks["transcribe"].return_value = ("raw text", 5, 1)
-        mocks["cleanup"].side_effect = lambda t: f"clean {t}"
+        mocks["cleanup"].side_effect = lambda t, **kwargs: f"clean {t}"
 
         with (
             patch("src.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99999")),
@@ -180,7 +180,7 @@ class TestHandleVoiceMessage:
         ):
             await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
-        mocks["cleanup"].assert_called_once_with("raw text")
+        mocks["cleanup"].assert_called_once_with("raw text", context=[])
         mock_whatsapp_client.send_message.assert_called_once_with(
             to=phone_number, text="clean raw text"
         )

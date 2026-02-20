@@ -196,7 +196,7 @@ async def _anthropic_complete(prompt: str, max_tokens: int, temperature: float) 
 
 
 async def _openai_format_complete(
-    endpoint: "_OpenAIEndpoint", prompt: str, max_tokens: int, temperature: float
+    endpoint: _OpenAIEndpoint, prompt: str, max_tokens: int, temperature: float
 ) -> str | None:
     """Call an OpenAI-compatible Chat Completions API."""
     headers = {

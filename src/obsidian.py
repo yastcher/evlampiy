@@ -46,9 +46,13 @@ async def save_transcription_to_obsidian(
     source: str,
     language: str,
     settings_chat_id: str | None = None,
+    original_text: str | None = None,
 ) -> tuple[bool, str | None]:
     """
     Save transcription to Obsidian vault via GitHub.
+
+    If original_text is provided and differs from text, appends an HTML comment block
+    with the raw transcription so both versions are preserved in the note.
 
     Returns:
         tuple[bool, str | None]: (success, filename) where filename is just the name without path
@@ -75,6 +79,8 @@ async def save_transcription_to_obsidian(
         "---\n\n"
     )
     content = frontmatter + text
+    if original_text and original_text != text:
+        content += f"\n\n<!-- original\n{original_text}\n-->"
 
     result = await put_github_file(
         token=github_settings["token"],

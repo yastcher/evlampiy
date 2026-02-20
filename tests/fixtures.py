@@ -181,7 +181,7 @@ def voice_external_mocks():
         patch("src.telegram.voice.check_and_send_alerts", AsyncMock()) as mock_alerts,
         patch(
             "src.telegram.voice.cleanup_transcript",
-            AsyncMock(side_effect=lambda t: t),
+            AsyncMock(side_effect=lambda t, **kwargs: t),
         ) as mock_cleanup,
         patch(
             "src.telegram.voice.categorize_note",
@@ -237,7 +237,7 @@ def whatsapp_voice_external_mocks(mock_httpx_download_response):
         patch("src.whatsapp.handlers.categorize_note", AsyncMock()) as mock_categorize,
         patch(
             "src.whatsapp.handlers.cleanup_transcript",
-            AsyncMock(side_effect=lambda t: t),
+            AsyncMock(side_effect=lambda t, **kwargs: t),
         ) as mock_cleanup,
     ):
         mock_client_class.return_value.__aenter__.return_value = mock_client

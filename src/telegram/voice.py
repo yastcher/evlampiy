@@ -30,6 +30,8 @@ from src.mongo import (
     get_github_settings,
     get_gpt_command,
     get_preferred_provider,
+    get_recent_transcriptions,
+    save_recent_transcription,
 )
 from src.obsidian import save_transcription_to_obsidian
 from src.telegram.bot import send_response
@@ -74,7 +76,13 @@ def _select_provider(
     return const.PROVIDER_GROQ if groq_available else None
 
 
-async def _handle_obsidian_save(chat_id: str, text: str, language: str, user_id: str | None = None):
+async def _handle_obsidian_save(
+    chat_id: str,
+    text: str,
+    language: str,
+    user_id: str | None = None,
+    original_text: str | None = None,
+):
     """Save transcription to Obsidian and auto-categorize if enabled."""
     settings_chat_id = f"u_{user_id}" if chat_id.startswith("g_") and user_id else None
     saved, filename = await save_transcription_to_obsidian(
@@ -83,6 +91,7 @@ async def _handle_obsidian_save(chat_id: str, text: str, language: str, user_id:
         const.SOURCE_TELEGRAM,
         language,
         settings_chat_id=settings_chat_id,
+        original_text=original_text,
     )
     lookup_id = settings_chat_id or chat_id
     if not (saved and filename and await get_auto_categorize(lookup_id)):
@@ -212,13 +221,25 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await increment_transcription_stats()
     await increment_user_stats(user_id, audio_seconds=duration)
 
-    # 7. Optional transcript cleanup
+    # 7. Cleanup: always for Obsidian, conditionally for reply
     settings_chat_id = f"u_{user_id}" if chat_id.startswith("g_") and user_id else chat_id
-    if text and await get_auto_cleanup(settings_chat_id) and tier != UserTier.FREE:
-        text = await cleanup_transcript(text)
+    raw_text = text
+    obsidian_text = text
+    if tier != UserTier.FREE:
+        context = await get_recent_transcriptions(settings_chat_id)
+        if await get_auto_cleanup(settings_chat_id):
+            text = await cleanup_transcript(raw_text, context=context)
+            obsidian_text = text  # no double call
+        else:
+            # Clean silently for Obsidian only
+            obsidian_text = await cleanup_transcript(raw_text, context=context)
+        await save_recent_transcription(settings_chat_id, obsidian_text)
 
     # 8. Obsidian integration
-    await _handle_obsidian_save(chat_id, text, language, user_id=user_id)
+    original_for_obsidian = raw_text if raw_text != obsidian_text else None
+    await _handle_obsidian_save(
+        chat_id, obsidian_text, language, user_id=user_id, original_text=original_for_obsidian
+    )
 
     # 9. Send response
     gpt_command = await get_gpt_command(chat_id)
