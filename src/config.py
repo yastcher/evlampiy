@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "whisper-large-v3-turbo"
     groq_llm_model: str = "llama-3.3-70b-versatile"
+    # groq_llm_model: str = "llama-3.1-8b-instant"
     groq_audio_daily_limit: int = 7200  # free tier: 7,200 sec/day
 
     # OpenRouter

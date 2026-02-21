@@ -136,7 +136,10 @@ async def get_github_file(token: str, owner: str, repo: str, path: str) -> tuple
             data = response.json()
             content = base64.b64decode(data["content"]).decode("utf-8")
             return content, data["sha"]
-        logger.error("Failed to get file, status: %s", response.status_code)
+        if response.status_code == http.HTTPStatus.NOT_FOUND:
+            logger.debug("File not found: %s", path)
+        else:
+            logger.error("Failed to get file, status: %s", response.status_code)
         return None
 
 

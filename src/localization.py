@@ -226,6 +226,48 @@ translates = {
         RUSSIAN: "📝 Заметки",
         SPANISH: "📝 Notas",
     },
+    "obsidian_hub_connected": {
+        ENGLISH: (
+            "📝 <b>Notes</b> — <code>{owner}/{repo}</code>\n\n"
+            "<b>First-time setup:</b>\n"
+            "1. Install <b>obsidian-git</b> community plugin\n"
+            "2. Clone as a new vault:\n"
+            "   <code>https://github.com/{owner}/{repo}</code>\n"
+            "3. Enable auto-pull in plugin settings\n"
+            "4. New notes appear in <code>income/</code>\n\n"
+            '<a href="obsidian://open?vault={repo}">Open vault in Obsidian ↗</a>'
+        ),
+        GERMAN: (
+            "📝 <b>Notizen</b> — <code>{owner}/{repo}</code>\n\n"
+            "<b>Ersteinrichtung:</b>\n"
+            "1. Community-Plugin <b>obsidian-git</b> installieren\n"
+            "2. Als neues Vault klonen:\n"
+            "   <code>https://github.com/{owner}/{repo}</code>\n"
+            "3. Auto-Pull in den Plugin-Einstellungen aktivieren\n"
+            "4. Neue Notizen erscheinen in <code>income/</code>\n\n"
+            '<a href="obsidian://open?vault={repo}">Vault in Obsidian öffnen ↗</a>'
+        ),
+        RUSSIAN: (
+            "📝 <b>Заметки</b> — <code>{owner}/{repo}</code>\n\n"
+            "<b>Первоначальная настройка:</b>\n"
+            "1. Установить community-плагин <b>obsidian-git</b>\n"
+            "2. Клонировать как новый vault:\n"
+            "   <code>https://github.com/{owner}/{repo}</code>\n"
+            "3. Включить автопулл в настройках плагина\n"
+            "4. Новые заметки в папке <code>income/</code>\n\n"
+            '<a href="obsidian://open?vault={repo}">Открыть vault в Obsidian ↗</a>'
+        ),
+        SPANISH: (
+            "📝 <b>Notas</b> — <code>{owner}/{repo}</code>\n\n"
+            "<b>Configuración inicial:</b>\n"
+            "1. Instalar plugin comunitario <b>obsidian-git</b>\n"
+            "2. Clonar como nuevo vault:\n"
+            "   <code>https://github.com/{owner}/{repo}</code>\n"
+            "3. Activar auto-pull en los ajustes del plugin\n"
+            "4. Las nuevas notas aparecen en <code>income/</code>\n\n"
+            '<a href="obsidian://open?vault={repo}">Abrir vault en Obsidian ↗</a>'
+        ),
+    },
     "account_hub_title": {
         ENGLISH: "💰 Account",
         GERMAN: "💰 Konto",

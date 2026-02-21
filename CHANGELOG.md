@@ -1,3 +1,13 @@
+## [0.8.11] — 2026-02-21
+
+### Added
+
+- Obsidian-git setup instructions shown in `/obsidian` hub when GitHub is connected (all 4 languages)
+
+### Fixed
+
+- AI provider errors now log response body (up to 300 chars) for easier diagnosis
+
 ## [0.8.10] — 2026-02-21
 
 ### Fixed
@@ -6,6 +16,8 @@
   `AttributeError: 'list' object has no attribute 'bot'`; renamed to `recent_context`
 - OpenRouter default model `deepseek/deepseek-chat-v3-0324:free` returned 404; changed to `deepseek/deepseek-r1:free`
 - Groq moved to end of LLM fallback chain; fallback order is now openrouter → gemini → groq
+- `get_github_file` logged ERROR on 404 (e.g. `vocabulary.json` not yet created); now logs DEBUG for 404, ERROR for
+  other failures
 
 ## [0.8.9] — 2026-02-21
 

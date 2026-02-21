@@ -153,7 +153,7 @@ async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> 
     if response.status_code >= _HTTP_5XX_MIN:
         raise _ServerError(f"Gemini server error: {response.status_code}")
 
-    logger.error("Gemini API error, status: %s", response.status_code)
+    logger.error("Gemini API error, status: %s, body: %.300s", response.status_code, response.text)
     return None
 
 
@@ -224,7 +224,12 @@ async def _openai_format_complete(
     if response.status_code >= _HTTP_5XX_MIN:
         raise _ServerError(f"{endpoint.provider} server error: {response.status_code}")
 
-    logger.error("%s API error, status: %s", endpoint.provider, response.status_code)
+    logger.error(
+        "%s API error, status: %s, body: %.300s",
+        endpoint.provider,
+        response.status_code,
+        response.text,
+    )
     return None
 
 

@@ -544,8 +544,14 @@ async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    title = translates["obsidian_hub_title"][language]
-    await update.message.reply_text(title, reply_markup=reply_markup)
+    if github_settings:
+        title = translates["obsidian_hub_connected"][language].format(
+            owner=github_settings["owner"],
+            repo=github_settings["repo"],
+        )
+    else:
+        title = translates["obsidian_hub_title"][language]
+    await update.message.reply_text(title, reply_markup=reply_markup, parse_mode="HTML")
 
 
 async def account_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
