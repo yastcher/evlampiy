@@ -39,7 +39,7 @@ from src.mongo import (
 )
 from src.telegram.chat_params import get_chat_id, is_private_chat, is_user_admin, reply_text
 from src.telegram.payments import balance_command, buy_command
-from src.wit_tracking import get_wit_usage_this_month
+from src.wit_tracking import get_all_wit_usage_this_month
 
 logger = logging.getLogger(__name__)
 
@@ -366,8 +366,8 @@ async def build_stats_text() -> str:
     """Build admin stats message text."""
     month = current_month_key()
     stats = await get_monthly_stats(month)
-    wit_usage = await get_wit_usage_this_month()
     wit_limit = settings.wit_free_monthly_limit
+    wit_usage_by_lang = await get_all_wit_usage_this_month()
 
     total_transcriptions = stats.total_transcriptions if stats else 0
     total_payments = stats.total_payments if stats else 0
@@ -377,11 +377,12 @@ async def build_stats_text() -> str:
     revenue = total_credits_sold * const.STAR_TO_DOLLAR
     groq_cost = groq_audio_seconds / 3600 * 0.04
 
-    wit_status = (
-        "OK"
-        if wit_usage < wit_limit * 0.8
-        else ("Warning" if wit_usage < wit_limit * 0.95 else "CRITICAL")
-    )
+    def _wit_status(usage: int) -> str:
+        if usage >= wit_limit * 0.95:
+            return "CRITICAL"
+        if usage >= wit_limit * 0.8:
+            return "Warning"
+        return "OK"
 
     # LLM provider key status
     keys: dict[str, bool] = {
@@ -415,17 +416,27 @@ async def build_stats_text() -> str:
         f"• Credits sold: {total_credits_sold}\n"
         f"• Revenue: ${revenue:.2f}\n\n"
         f"<b>Costs</b>\n"
-        f"• Wit.ai: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)\n"
-        f"• Groq audio: {groq_audio_seconds} sec/mo (${groq_cost:.2f})"
+        f"• Wit.ai / {wit_limit:,} req/mo:\n"
+        + "".join(
+            f"  - {lang}: {usage:,} ({usage / wit_limit * 100:.1f}%)\n"
+            for lang, usage in sorted(wit_usage_by_lang.items())
+        )
+        + ("  - (no data yet)\n" if not wit_usage_by_lang else "")
+        + f"• Groq audio: {groq_audio_seconds} sec/mo (${groq_cost:.2f})"
         f" | limit: {settings.groq_audio_daily_limit:,} sec/day\n\n"
         f"<b>LLM Providers</b>\n"
         f"• Categ: {categ_chain}\n"
         f"• GPT:   {gpt_chain}"
         f"{unused_line}\n\n"
         f"<b>Health</b>\n"
-        f"• Wit.ai: {'✅' if wit_status == 'OK' else '⚠️' if wit_status == 'Warning' else '🚨'} "
-        f"{wit_status}\n"
-        f"• Groq: {'✅' if settings.groq_api_key else '❌'} "
+        + "".join(
+            f"• Wit.ai ({lang}): "
+            f"{'✅' if _wit_status(u) == 'OK' else '⚠️' if _wit_status(u) == 'Warning' else '🚨'} "
+            f"{_wit_status(u)}\n"
+            for lang, u in sorted(wit_usage_by_lang.items())
+        )
+        + ("• Wit.ai: ✅ OK (no data)\n" if not wit_usage_by_lang else "")
+        + f"• Groq: {'✅' if settings.groq_api_key else '❌'} "
         f"{'Configured' if settings.groq_api_key else 'Not configured'}"
     )
 

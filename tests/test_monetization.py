@@ -265,18 +265,18 @@ class TestWitUsageLimits:
         """Test complete Wit.ai usage tracking flow."""
         mock_settings.wit_free_monthly_limit = 3
 
-        assert await get_wit_usage_this_month() == 0
-        assert await is_wit_available() is True
+        assert await get_wit_usage_this_month("ru") == 0
+        assert await is_wit_available("ru") is True
 
-        count = await increment_wit_usage()
+        count = await increment_wit_usage(language="ru")
         assert count == 1
-        assert await get_wit_usage_this_month() == 1
+        assert await get_wit_usage_this_month("ru") == 1
 
-        await increment_wit_usage()
-        count = await increment_wit_usage()
+        await increment_wit_usage(language="ru")
+        count = await increment_wit_usage(language="ru")
         assert count == 3
 
-        assert await is_wit_available() is False
+        assert await is_wit_available("ru") is False
 
-        await increment_wit_usage()
-        assert await is_wit_available() is False
+        await increment_wit_usage(language="ru")
+        assert await is_wit_available("ru") is False

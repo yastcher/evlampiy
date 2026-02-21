@@ -154,7 +154,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     # 2. Tier + provider selection
     tier = await get_user_tier(user_id)
-    wit_available = await is_wit_available()
+    wit_available = await is_wit_available(language)
     preferred = await get_preferred_provider(chat_id)
     provider = _select_provider(tier, wit_available, preferred)
 
@@ -213,7 +213,7 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     # 6. Track provider usage
     if provider == const.PROVIDER_WIT:
-        await increment_wit_usage(wit_requests)
+        await increment_wit_usage(wit_requests, language=language)
         await check_and_send_alerts(context.bot)
     elif provider == const.PROVIDER_GROQ:
         await record_groq_usage(duration)

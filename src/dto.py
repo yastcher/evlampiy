@@ -77,6 +77,7 @@ class UsedTrial(Document):
 
 class WitUsageStats(Document):
     month_key: str  # "2026-01"
+    language: str = ""  # "en", "ru", "es", "de"; empty for legacy records
     request_count: int = 0
 
     class Settings:

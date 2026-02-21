@@ -86,6 +86,7 @@ Always update documentation as part of the same task (not as a separate step):
 - README.md + all localized READMEs (docs/README.ru.md, docs/README.es.md, docs/README.de.md) — if functionality, commands, or setup changed
 - docs/ADMIN.md — if admin commands or roles changed
 - User-facing help in localization.py — if commands/features changed (all 4 languages)
+- CHANGELOG.md — always update under `[Unreleased]` section: Added / Changed / Fixed / Removed. Use concise bullet points. Do not create a new version section — that is done manually on release.
 - Do not create separate doc files without necessity — keep README.md up to date
 - Documentation must be updated before running the "Before finishing" checklist, not after
 

@@ -8,7 +8,7 @@ from src import const
 from src.config import settings
 from src.credits import current_month_key, get_monthly_stats
 from src.dto import AlertState
-from src.wit_tracking import get_wit_usage_this_month
+from src.wit_tracking import get_all_wit_usage_this_month
 
 logger = logging.getLogger(__name__)
 
@@ -62,22 +62,23 @@ async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1):
                     )
                     await _mark_alert_sent(alert_type, month)
 
-    wit_usage = await get_wit_usage_this_month()
     wit_limit = settings.wit_free_monthly_limit
+    usage_by_lang = await get_all_wit_usage_this_month()
 
-    if wit_usage > wit_limit * 0.95:
-        if await _should_send_alert("wit_95", month):
+    for lang, wit_usage in usage_by_lang.items():
+        if wit_usage > wit_limit * 0.95:
+            if await _should_send_alert(f"wit_95_{lang}", month):
+                await send_admin_alert(
+                    bot,
+                    f"🚨 <b>Wit.ai CRITICAL ({lang})</b>\n\n"
+                    f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)\n\n"
+                    f"Free tier almost exhausted!",
+                )
+                await _mark_alert_sent(f"wit_95_{lang}", month)
+        elif wit_usage > wit_limit * 0.8 and await _should_send_alert(f"wit_80_{lang}", month):
             await send_admin_alert(
                 bot,
-                f"🚨 <b>Wit.ai CRITICAL</b>\n\n"
-                f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)\n\n"
-                f"Free tier almost exhausted!",
+                f"⚠️ <b>Wit.ai Warning ({lang})</b>\n\n"
+                f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)",
             )
-            await _mark_alert_sent("wit_95", month)
-    elif wit_usage > wit_limit * 0.8 and await _should_send_alert("wit_80", month):
-        await send_admin_alert(
-            bot,
-            f"⚠️ <b>Wit.ai Warning</b>\n\n"
-            f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)",
-        )
-        await _mark_alert_sent("wit_80", month)
+            await _mark_alert_sent(f"wit_80_{lang}", month)

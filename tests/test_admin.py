@@ -446,7 +446,7 @@ class TestAlerts:
     async def test_wit_warning_at_80_percent(self, mock_context):
         """Wit.ai warning sent at 80% usage."""
         month = current_month_key()
-        await WitUsageStats(month_key=month, request_count=450).insert()
+        await WitUsageStats(month_key=month, language="ru", request_count=450).insert()
 
         with (
             patch.object(settings, "admin_user_ids_raw", "999"),
@@ -460,7 +460,7 @@ class TestAlerts:
     async def test_wit_critical_at_95_percent(self, mock_context):
         """Wit.ai critical alert sent at 95% usage."""
         month = current_month_key()
-        await WitUsageStats(month_key=month, request_count=480).insert()
+        await WitUsageStats(month_key=month, language="ru", request_count=480).insert()
 
         with (
             patch.object(settings, "admin_user_ids_raw", "999"),
@@ -474,8 +474,8 @@ class TestAlerts:
     async def test_alert_not_duplicated(self, mock_context):
         """Same alert not sent twice in same month."""
         month = current_month_key()
-        await WitUsageStats(month_key=month, request_count=450).insert()
-        await AlertState(alert_type="wit_80", month_key=month).insert()
+        await WitUsageStats(month_key=month, language="ru", request_count=450).insert()
+        await AlertState(alert_type="wit_80_ru", month_key=month).insert()
 
         with (
             patch.object(settings, "admin_user_ids_raw", "999"),

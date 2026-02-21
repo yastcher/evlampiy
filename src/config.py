@@ -65,11 +65,12 @@ class Settings(BaseSettings):
 
     # OpenRouter
     openrouter_api_key: str = ""
-    openrouter_model: str = "google/gemma-3-27b-it:free"
+    # openrouter_model: str = "google/gemma-3-27b-it:free"
+    openrouter_model: str = "deepseek/deepseek-chat-v3-0324:free"
 
     # AI provider selection
-    categorization_provider: str = "gemini"
-    gpt_provider: str = "gemini"
+    categorization_provider: str = "openrouter"
+    gpt_provider: str = "openrouter"
 
     # Gemini
     gemini_api_key: str = ""
