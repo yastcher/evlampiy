@@ -6,14 +6,23 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from src import const
+from src.config import settings
 from src.credits import admin_add_credits, is_admin_user
 from src.localization import translates
-from src.mongo import add_user_role, get_users_by_role, remove_user_role
+from src.mongo import (
+    add_user_role,
+    get_bot_config,
+    get_users_by_role,
+    remove_user_role,
+    set_bot_config,
+)
 from src.telegram.handlers import build_stats_text
 
 logger = logging.getLogger(__name__)
 
 ADMIN_LANG = "en"
+
+_LLM_PROVIDERS = [const.PROVIDER_OPENROUTER, const.PROVIDER_GEMINI, const.PROVIDER_GROQ]
 
 
 def _t(key: str, **kwargs) -> str:
@@ -22,6 +31,42 @@ def _t(key: str, **kwargs) -> str:
     if kwargs:
         return text.format(**kwargs)
     return text
+
+
+def _hub_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(_t("btn_manage_vip"), callback_data="adm_vip")],
+            [InlineKeyboardButton(_t("btn_manage_testers"), callback_data="adm_testers")],
+            [InlineKeyboardButton(_t("btn_manage_blocked"), callback_data="adm_blocked")],
+            [InlineKeyboardButton(_t("btn_admin_stats"), callback_data="adm_stats")],
+            [InlineKeyboardButton(_t("btn_add_credits"), callback_data="adm_credits")],
+            [InlineKeyboardButton("🤖 LLM Providers", callback_data="adm_providers")],
+        ]
+    )
+
+
+async def _build_providers_panel() -> tuple[str, InlineKeyboardMarkup]:
+    categ = await get_bot_config("categorization_provider", settings.categorization_provider)
+    gpt = await get_bot_config("gpt_provider", settings.gpt_provider)
+
+    text = (
+        f"🤖 <b>LLM Providers</b>\n\n"
+        f"• Categ: <code>{categ}</code>\n"
+        f"• GPT:   <code>{gpt}</code>\n\n"
+        f"Select to change:"
+    )
+
+    def _btn(prefix: str, current: str, p: str) -> InlineKeyboardButton:
+        label = f"✓ {p}" if p == current else p
+        return InlineKeyboardButton(label, callback_data=f"adm_prov_{prefix}_{p}")
+
+    keyboard = [
+        [_btn("c", categ, p) for p in _LLM_PROVIDERS],
+        [_btn("g", gpt, p) for p in _LLM_PROVIDERS],
+        [InlineKeyboardButton("← Back", callback_data="adm_back")],
+    ]
+    return text, InlineKeyboardMarkup(keyboard)
 
 
 def _parse_user_id(args: list[str]) -> str | None:
@@ -39,15 +84,7 @@ async def admin_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin_user(str(update.effective_user.id)):
         return
 
-    keyboard = [
-        [InlineKeyboardButton(_t("btn_manage_vip"), callback_data="adm_vip")],
-        [InlineKeyboardButton(_t("btn_manage_testers"), callback_data="adm_testers")],
-        [InlineKeyboardButton(_t("btn_manage_blocked"), callback_data="adm_blocked")],
-        [InlineKeyboardButton(_t("btn_admin_stats"), callback_data="adm_stats")],
-        [InlineKeyboardButton(_t("btn_add_credits"), callback_data="adm_credits")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(_t("admin_hub_title"), reply_markup=reply_markup)
+    await update.message.reply_text(_t("admin_hub_title"), reply_markup=_hub_keyboard())
 
 
 async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -85,6 +122,27 @@ async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
     elif action == "credits":
         text = _t("admin_usage", command="/add_credits <user_id> <amount>")
         await query.edit_message_text(text)
+
+    elif action == "providers":
+        text, markup = await _build_providers_panel()
+        await query.edit_message_text(text, reply_markup=markup, parse_mode="HTML")
+
+    elif action == "back":
+        await query.edit_message_text(_t("admin_hub_title"), reply_markup=_hub_keyboard())
+
+    elif action.startswith("prov_c_"):
+        provider = action.removeprefix("prov_c_")
+        if provider in _LLM_PROVIDERS:
+            await set_bot_config("categorization_provider", provider)
+        text, markup = await _build_providers_panel()
+        await query.edit_message_text(text, reply_markup=markup, parse_mode="HTML")
+
+    elif action.startswith("prov_g_"):
+        provider = action.removeprefix("prov_g_")
+        if provider in _LLM_PROVIDERS:
+            await set_bot_config("gpt_provider", provider)
+        text, markup = await _build_providers_panel()
+        await query.edit_message_text(text, reply_markup=markup, parse_mode="HTML")
 
 
 async def add_vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

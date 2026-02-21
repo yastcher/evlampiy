@@ -75,6 +75,16 @@ class UsedTrial(Document):
         name = "used_trials"
 
 
+class BotConfig(Document):
+    """Global runtime settings overridable by admin without restart."""
+
+    key: str
+    value: str
+
+    class Settings:
+        name = "bot_config"
+
+
 class WitUsageStats(Document):
     month_key: str  # "2026-01"
     language: str = ""  # "en", "ru", "es", "de"; empty for legacy records

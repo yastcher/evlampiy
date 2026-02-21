@@ -5,6 +5,7 @@ from mongomock_motor import AsyncMongoMockClient
 from src.dto import (
     AccountLink,
     AlertState,
+    BotConfig,
     LinkAttempt,
     LinkCode,
     MonthlyStats,
@@ -30,6 +31,7 @@ ALL_TEST_MODELS = [
     LinkAttempt,
     UserMonthlyUsage,
     RecentTranscription,
+    BotConfig,
 ]
 
 pytest_plugins = [

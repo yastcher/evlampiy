@@ -17,6 +17,8 @@
 
 ### Added
 
+- Admin panel: LLM provider switcher (Categ / GPT) via inline keyboard — changes take effect immediately without
+  restart; stored in MongoDB (`BotConfig`)
 - Dual-save in Obsidian: notes contain cleaned text + `<!-- original ... -->` HTML comment with raw transcription when
   texts differ
 - Recent transcription context: last 3 notes from the same chat (TTL 2h, keep last 5) are passed to the cleanup LLM for

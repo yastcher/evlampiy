@@ -9,6 +9,7 @@ import httpx
 
 from src import const
 from src.config import settings
+from src.mongo import get_bot_config
 
 logger = logging.getLogger(__name__)
 
@@ -361,20 +362,20 @@ async def _ai_complete(
 
 async def classify_text(prompt: str) -> str | None:
     """Classify text using the configured categorization provider with fallback."""
-    primary = settings.categorization_provider
+    primary = await get_bot_config("categorization_provider", settings.categorization_provider)
     chain = [primary] + [p for p in CATEGORIZATION_FALLBACK_CHAIN if p != primary]
     return await _ai_complete(chain, prompt, max_tokens=50, temperature=0.0)
 
 
 async def cleanup_text(prompt: str, max_tokens: int) -> str | None:
     """Clean up text using the configured GPT provider with fallback."""
-    primary = settings.gpt_provider
+    primary = await get_bot_config("gpt_provider", settings.gpt_provider)
     chain = [primary] + [p for p in GPT_FALLBACK_CHAIN if p != primary]
     return await _ai_complete(chain, prompt, max_tokens=max_tokens, temperature=0.0)
 
 
 async def gpt_chat(prompt: str) -> str | None:
     """Generate a chat response using the configured GPT provider with fallback."""
-    primary = settings.gpt_provider
+    primary = await get_bot_config("gpt_provider", settings.gpt_provider)
     chain = [primary] + [p for p in GPT_FALLBACK_CHAIN if p != primary]
     return await _ai_complete(chain, prompt, max_tokens=2048, temperature=0.7)

@@ -86,7 +86,12 @@ Always update documentation as part of the same task (not as a separate step):
 - README.md + all localized READMEs (docs/README.ru.md, docs/README.es.md, docs/README.de.md) — if functionality, commands, or setup changed
 - docs/ADMIN.md — if admin commands or roles changed
 - User-facing help in localization.py — if commands/features changed (all 4 languages)
-- CHANGELOG.md — always update under `[Unreleased]` section: Added / Changed / Fixed / Removed. Use concise bullet points. Do not create a new version section — that is done manually on release.
+- CHANGELOG.md — steps:
+  1. Read `pyproject.toml` to get the current `version`.
+  2. Read CHANGELOG.md and check the top section heading (e.g. `## [0.8.9]`).
+  3. **If versions match** → append the new bullet to the existing matching subsection (Added / Changed / Fixed / Removed). Do NOT create a duplicate subsection. If the subsection doesn't exist yet, add it in order: Added → Changed → Fixed → Removed.
+  4. **If versions differ** (pyproject.toml has a newer version) → create a new section at the top: `## [X.Y.Z] — YYYY-MM-DD` with the appropriate subsection and bullet.
+  5. Use concise bullet points. Version bumping in pyproject.toml is done by the user — do not change it.
 - Do not create separate doc files without necessity — keep README.md up to date
 - Documentation must be updated before running the "Before finishing" checklist, not after
 

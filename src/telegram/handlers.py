@@ -24,6 +24,7 @@ from src.mongo import (
     clear_github_settings,
     get_auto_categorize,
     get_auto_cleanup,
+    get_bot_config,
     get_chat_language,
     get_github_settings,
     get_gpt_command,
@@ -398,8 +399,12 @@ async def build_stats_text() -> str:
         parts = [f"{p}{_provider_rpm(p)} {_provider_icon(p, keys)}" for p in chain]
         return " → ".join(parts)
 
-    categ_chain = _chain_str(settings.categorization_provider, CATEGORIZATION_FALLBACK_CHAIN)
-    gpt_chain = _chain_str(settings.gpt_provider, GPT_FALLBACK_CHAIN)
+    categ_primary = await get_bot_config(
+        "categorization_provider", settings.categorization_provider
+    )
+    gpt_primary = await get_bot_config("gpt_provider", settings.gpt_provider)
+    categ_chain = _chain_str(categ_primary, CATEGORIZATION_FALLBACK_CHAIN)
+    gpt_chain = _chain_str(gpt_primary, GPT_FALLBACK_CHAIN)
 
     # Providers with keys that are not part of any active chain
     all_chain_providers = set(CATEGORIZATION_FALLBACK_CHAIN) | set(GPT_FALLBACK_CHAIN)

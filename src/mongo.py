@@ -5,6 +5,7 @@ from src.config import settings
 from src.dto import (
     AccountLink,
     AlertState,
+    BotConfig,
     LinkAttempt,
     LinkCode,
     MonthlyStats,
@@ -30,6 +31,7 @@ ALL_DOCUMENT_MODELS = [
     LinkAttempt,
     UserMonthlyUsage,
     RecentTranscription,
+    BotConfig,
 ]
 
 
@@ -209,3 +211,19 @@ async def get_recent_transcriptions(chat_id: str, limit: int = 3) -> list[str]:
         .to_list()
     )
     return [doc.text for doc in reversed(docs)]
+
+
+async def get_bot_config(key: str, default: str = "") -> str:
+    """Get a runtime bot config value; falls back to default if not set."""
+    doc = await BotConfig.find_one(BotConfig.key == key)
+    return doc.value if doc else default
+
+
+async def set_bot_config(key: str, value: str) -> None:
+    """Set a runtime bot config value (upsert)."""
+    doc = await BotConfig.find_one(BotConfig.key == key)
+    if doc:
+        doc.value = value
+        await doc.save()
+    else:
+        await BotConfig(key=key, value=value).insert()
