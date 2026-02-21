@@ -22,14 +22,14 @@ _PROVIDER_LIMITS: dict[str, int] = {
 
 # Fallback chains: order in which providers are tried on rate limit exhaustion
 CATEGORIZATION_FALLBACK_CHAIN: list[str] = [
+    const.PROVIDER_OPENROUTER,
     const.PROVIDER_GEMINI,
     const.PROVIDER_GROQ,
-    const.PROVIDER_OPENROUTER,
 ]
 GPT_FALLBACK_CHAIN: list[str] = [
+    const.PROVIDER_OPENROUTER,
     const.PROVIDER_GEMINI,
     const.PROVIDER_GROQ,
-    const.PROVIDER_OPENROUTER,
 ]
 
 _MAX_RETRIES = 3

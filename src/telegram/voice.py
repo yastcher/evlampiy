@@ -226,13 +226,13 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     raw_text = text
     obsidian_text = text
     if tier != UserTier.FREE:
-        context = await get_recent_transcriptions(settings_chat_id)
+        recent_context = await get_recent_transcriptions(settings_chat_id)
         if await get_auto_cleanup(settings_chat_id):
-            text = await cleanup_transcript(raw_text, context=context)
+            text = await cleanup_transcript(raw_text, context=recent_context)
             obsidian_text = text  # no double call
         else:
             # Clean silently for Obsidian only
-            obsidian_text = await cleanup_transcript(raw_text, context=context)
+            obsidian_text = await cleanup_transcript(raw_text, context=recent_context)
         await save_recent_transcription(settings_chat_id, obsidian_text)
 
     # 8. Obsidian integration

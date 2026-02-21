@@ -108,13 +108,13 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
     if telegram_user_id:
         tier = await get_user_tier(telegram_user_id)
         if tier != UserTier.FREE:
-            context = await get_recent_transcriptions(chat_id)
+            recent_context = await get_recent_transcriptions(chat_id)
             if await get_auto_cleanup(chat_id):
-                text = await cleanup_transcript(raw_text, context=context)
+                text = await cleanup_transcript(raw_text, context=recent_context)
                 obsidian_text = text  # no double call
             else:
                 # Clean silently for Obsidian only
-                obsidian_text = await cleanup_transcript(raw_text, context=context)
+                obsidian_text = await cleanup_transcript(raw_text, context=recent_context)
             await save_recent_transcription(chat_id, obsidian_text)
 
     original_for_obsidian = raw_text if raw_text != obsidian_text else None

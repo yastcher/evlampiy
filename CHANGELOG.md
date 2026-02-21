@@ -1,3 +1,12 @@
+## [0.8.10] — 2026-02-21
+
+### Fixed
+
+- `context` variable in `voice.py` shadowed the Telegram `context` parameter when storing recent transcriptions, causing
+  `AttributeError: 'list' object has no attribute 'bot'`; renamed to `recent_context`
+- OpenRouter default model `deepseek/deepseek-chat-v3-0324:free` returned 404; changed to `deepseek/deepseek-r1:free`
+- Groq moved to end of LLM fallback chain; fallback order is now openrouter → gemini → groq
+
 ## [0.8.9] — 2026-02-21
 
 ### Fixed
