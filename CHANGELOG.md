@@ -1,3 +1,18 @@
+## [0.8.12] — 2026-02-22
+
+### Fixed
+
+- DeepSeek API (`deepseek-chat`) added as primary AI provider for cleanup and categorization
+- Qwen (Alibaba DashScope international) added as AI provider; fallback chain: deepseek → qwen → openrouter → gemini →
+  groq
+- "Setup Obsidian" button in `/obsidian` hub: creates `.obsidian/plugins/obsidian-git/data.json` in the repo with
+  auto-pull pre-configured
+- Empty response from AI provider (e.g. DeepSeek R1 returns empty `content`) now falls through to next provider in chain
+  instead of silently stopping
+- HTTP read timeout reduced to 45s per request to prevent reasoning models from stalling the chain for minutes
+- Qwen removed from default fallback chain (config/implementation kept for manual selection)
+- `no_fallback_keys` test fixture now also clears `deepseek_api_key` and `qwen_api_key`
+
 ## [0.8.11] — 2026-02-21
 
 ### Added

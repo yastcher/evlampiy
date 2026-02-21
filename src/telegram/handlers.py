@@ -17,7 +17,7 @@ from src.credits import (
     is_admin_user,
 )
 from src.dto import UserCredits, UserTier
-from src.github_api import get_or_create_obsidian_repo
+from src.github_api import create_obsidian_git_config, get_or_create_obsidian_repo
 from src.github_oauth import get_github_device_code, poll_github_for_token
 from src.localization import translates
 from src.mongo import (
@@ -537,6 +537,12 @@ async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             [
                 InlineKeyboardButton(
+                    translates["btn_setup_obsidian_git"][language],
+                    callback_data="hub_setup_obsidian_git",
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     translates["btn_disconnect_github"][language],
                     callback_data="hub_disconnect_github",
                 )
@@ -652,6 +658,23 @@ async def _hub_show_provider(update: Update, _context: ContextTypes.DEFAULT_TYPE
     await _show_provider_menu(update)
 
 
+async def setup_obsidian_git(update: Update, _context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    chat_id = get_chat_id(update)
+    language = await get_chat_language(chat_id)
+    github_settings = await get_github_settings(chat_id)
+    if not github_settings:
+        await query.edit_message_text(translates["github_not_connected"][language])
+        return
+    success = await create_obsidian_git_config(
+        token=github_settings["token"],
+        owner=github_settings["owner"],
+        repo=github_settings["repo"],
+    )
+    key = "obsidian_git_setup_done" if success else "obsidian_git_setup_failed"
+    await query.answer(translates[key][language], show_alert=True)
+
+
 _HUB_ACTIONS = {
     "language": _hub_show_language_menu,
     "buy": buy_command,
@@ -661,6 +684,7 @@ _HUB_ACTIONS = {
     "toggle_categorize": toggle_categorize,
     "toggle_cleanup": toggle_cleanup,
     "categorize": categorize_all,
+    "setup_obsidian_git": setup_obsidian_git,
     "connect_github": connect_github,
     "disconnect_github": disconnect_github,
     "link_whatsapp": link_whatsapp,

@@ -143,6 +143,29 @@ async def get_github_file(token: str, owner: str, repo: str, path: str) -> tuple
         return None
 
 
+_OBSIDIAN_GIT_CONFIG_PATH = ".obsidian/plugins/obsidian-git/data.json"
+_OBSIDIAN_GIT_CONFIG = """{
+  "autoPullInterval": 10,
+  "autoPullOnBoot": true,
+  "pullBeforePush": true,
+  "commitMessage": "vault backup: {{date}}",
+  "syncMethod": "rebase"
+}
+"""
+
+
+async def create_obsidian_git_config(token: str, owner: str, repo: str) -> bool:
+    """Create or update obsidian-git plugin config in the repo."""
+    return await put_github_file(
+        token=token,
+        owner=owner,
+        repo=repo,
+        path=_OBSIDIAN_GIT_CONFIG_PATH,
+        content=_OBSIDIAN_GIT_CONFIG,
+        commit_message="Add obsidian-git config",
+    )
+
+
 async def delete_github_file(
     token: str, owner: str, repo: str, path: str, sha: str, commit_message: str
 ) -> bool:

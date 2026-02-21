@@ -142,6 +142,8 @@ def no_fallback_keys():
         patch("src.ai_client.settings.gpt_token", ""),
         patch("src.ai_client.settings.groq_api_key", ""),
         patch("src.ai_client.settings.openrouter_api_key", ""),
+        patch("src.ai_client.settings.deepseek_api_key", ""),
+        patch("src.ai_client.settings.qwen_api_key", ""),
     ):
         yield
 

@@ -236,7 +236,8 @@ translates = {
             "3. Enable auto-pull in plugin settings\n"
             "4. New notes appear in <code>income/</code>\n\n"
             "Open vault (tap to copy, paste in browser):\n"
-            "<code>obsidian://open?vault={repo}</code>"
+            "<code>obsidian://open?vault={repo}</code>\n\n"
+            "Use <b>Setup Obsidian</b> below to pre-configure obsidian-git in the repo."
         ),
         GERMAN: (
             "📝 <b>Notizen</b> — <code>{owner}/{repo}</code>\n\n"
@@ -244,10 +245,11 @@ translates = {
             "1. Community-Plugin <b>obsidian-git</b> installieren\n"
             "2. Als neues Vault klonen:\n"
             "   <code>https://github.com/{owner}/{repo}</code>\n"
-            "3. Auto-Pull in den Plugin-Einstellungen aktivieren\n"
+            "3. Repo als Vault öffnen — Plugin ist bereits konfiguriert\n"
             "4. Neue Notizen erscheinen in <code>income/</code>\n\n"
             "Vault öffnen (tippen zum Kopieren, im Browser einfügen):\n"
-            "<code>obsidian://open?vault={repo}</code>"
+            "<code>obsidian://open?vault={repo}</code>\n\n"
+            "<b>Obsidian einrichten</b> unten konfiguriert obsidian-git automatisch."
         ),
         RUSSIAN: (
             "📝 <b>Заметки</b> — <code>{owner}/{repo}</code>\n\n"
@@ -255,10 +257,11 @@ translates = {
             "1. Установить community-плагин <b>obsidian-git</b>\n"
             "2. Клонировать как новый vault:\n"
             "   <code>https://github.com/{owner}/{repo}</code>\n"
-            "3. Включить автопулл в настройках плагина\n"
+            "3. Открыть как vault — плагин уже настроен\n"
             "4. Новые заметки в папке <code>income/</code>\n\n"
             "Открыть vault (нажми для копирования, вставь в браузер):\n"
-            "<code>obsidian://open?vault={repo}</code>"
+            "<code>obsidian://open?vault={repo}</code>\n\n"
+            "Кнопка <b>Настроить Obsidian</b> создаёт конфиг плагина в репозитории."
         ),
         SPANISH: (
             "📝 <b>Notas</b> — <code>{owner}/{repo}</code>\n\n"
@@ -266,10 +269,11 @@ translates = {
             "1. Instalar plugin comunitario <b>obsidian-git</b>\n"
             "2. Clonar como nuevo vault:\n"
             "   <code>https://github.com/{owner}/{repo}</code>\n"
-            "3. Activar auto-pull en los ajustes del plugin\n"
+            "3. Abrir como vault — el plugin ya está configurado\n"
             "4. Las nuevas notas aparecen en <code>income/</code>\n\n"
             "Abrir vault (toca para copiar, pega en el navegador):\n"
-            "<code>obsidian://open?vault={repo}</code>"
+            "<code>obsidian://open?vault={repo}</code>\n\n"
+            "El botón <b>Configurar Obsidian</b> crea el config del plugin en el repo."
         ),
     },
     "account_hub_title": {
@@ -344,6 +348,24 @@ translates = {
         GERMAN: "📂 Alle kategorisieren",
         RUSSIAN: "📂 Категоризировать всё",
         SPANISH: "📂 Categorizar todo",
+    },
+    "btn_setup_obsidian_git": {
+        ENGLISH: "⚙️ Setup Obsidian",
+        GERMAN: "⚙️ Obsidian einrichten",
+        RUSSIAN: "⚙️ Настроить Obsidian",
+        SPANISH: "⚙️ Configurar Obsidian",
+    },
+    "obsidian_git_setup_done": {
+        ENGLISH: "Config created! Clone the repo, open as vault, enable obsidian-git — done.",
+        GERMAN: "Konfiguration erstellt! Repo klonen, als Vault öffnen, obsidian-git aktivieren — fertig.",
+        RUSSIAN: "Конфиг создан! Клонируй репо, открой как vault, включи obsidian-git — готово.",
+        SPANISH: "¡Configuración creada! Clona el repo, ábrelo como vault, activa obsidian-git — listo.",
+    },
+    "obsidian_git_setup_failed": {
+        ENGLISH: "Failed to create config. Check GitHub connection.",
+        GERMAN: "Konfiguration fehlgeschlagen. GitHub-Verbindung prüfen.",
+        RUSSIAN: "Не удалось создать конфиг. Проверь подключение к GitHub.",
+        SPANISH: "Error al crear la configuración. Verifica la conexión de GitHub.",
     },
     "btn_disconnect_github": {
         ENGLISH: "❌ Disconnect GitHub",

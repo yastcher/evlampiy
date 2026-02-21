@@ -18,15 +18,19 @@ _PROVIDER_LIMITS: dict[str, int] = {
     const.PROVIDER_GEMINI: 15,
     const.PROVIDER_GROQ: 30,
     const.PROVIDER_OPENROUTER: 10,
+    const.PROVIDER_QWEN: 60,
+    const.PROVIDER_DEEPSEEK: 60,
 }
 
 # Fallback chains: order in which providers are tried on rate limit exhaustion
 CATEGORIZATION_FALLBACK_CHAIN: list[str] = [
+    const.PROVIDER_DEEPSEEK,
     const.PROVIDER_OPENROUTER,
     const.PROVIDER_GEMINI,
     const.PROVIDER_GROQ,
 ]
 GPT_FALLBACK_CHAIN: list[str] = [
+    const.PROVIDER_DEEPSEEK,
     const.PROVIDER_OPENROUTER,
     const.PROVIDER_GEMINI,
     const.PROVIDER_GROQ,
@@ -94,7 +98,10 @@ _http_client: httpx.AsyncClient | None = None
 async def _get_client() -> httpx.AsyncClient:
     global _http_client
     if _http_client is None or _http_client.is_closed:
-        _http_client = httpx.AsyncClient(timeout=30.0)
+        # read=45 to allow reasoning models to think, but not stall the chain forever
+        _http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=10.0, read=45.0, write=10.0, pool=5.0)
+        )
     return _http_client
 
 
@@ -263,6 +270,36 @@ async def _groq_complete(prompt: str, max_tokens: int, temperature: float) -> st
     return await _openai_format_complete(endpoint, prompt, max_tokens, temperature)
 
 
+async def _deepseek_complete(prompt: str, max_tokens: int, temperature: float) -> str | None:
+    """Call DeepSeek API (OpenAI-compatible)."""
+    if not settings.deepseek_api_key:
+        logger.warning("DeepSeek API key not configured")
+        return None
+
+    endpoint = _OpenAIEndpoint(
+        provider=const.PROVIDER_DEEPSEEK,
+        url=f"{const.DEEPSEEK_API_BASE}/chat/completions",
+        api_key=settings.deepseek_api_key,
+        model=settings.deepseek_model,
+    )
+    return await _openai_format_complete(endpoint, prompt, max_tokens, temperature)
+
+
+async def _qwen_complete(prompt: str, max_tokens: int, temperature: float) -> str | None:
+    """Call Alibaba Qwen API (OpenAI-compatible, international endpoint)."""
+    if not settings.qwen_api_key:
+        logger.warning("Qwen API key not configured")
+        return None
+
+    endpoint = _OpenAIEndpoint(
+        provider=const.PROVIDER_QWEN,
+        url=f"{const.QWEN_API_BASE}/chat/completions",
+        api_key=settings.qwen_api_key,
+        model=settings.qwen_model,
+    )
+    return await _openai_format_complete(endpoint, prompt, max_tokens, temperature)
+
+
 async def _openrouter_complete(prompt: str, max_tokens: int, temperature: float) -> str | None:
     """Call OpenRouter API (OpenAI-compatible)."""
     if not settings.openrouter_api_key:
@@ -300,6 +337,8 @@ _PROVIDERS: dict[str, _ProviderFn] = {
     const.PROVIDER_OPENAI: _openai_complete,
     const.PROVIDER_GROQ: _groq_complete,
     const.PROVIDER_OPENROUTER: _openrouter_complete,
+    const.PROVIDER_QWEN: _qwen_complete,
+    const.PROVIDER_DEEPSEEK: _deepseek_complete,
 }
 
 
@@ -359,7 +398,10 @@ async def _ai_complete(
             continue
 
         if raw is not None:
-            return _strip_backticks(raw)
+            result = _strip_backticks(raw)
+            if result:
+                return result
+            logger.warning("Provider %s returned empty response, trying next", provider)
 
     logger.error("All providers in chain exhausted or failed")
     return None

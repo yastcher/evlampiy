@@ -121,6 +121,8 @@ class TestFallbackOnExhausted:
             patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
             patch("src.ai_client.settings.groq_api_key", "groq-key"),
             patch("src.ai_client.settings.openrouter_api_key", ""),
+            patch("src.ai_client.settings.deepseek_api_key", ""),
+            patch("src.ai_client.settings.qwen_api_key", ""),
             patch("src.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")

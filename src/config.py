@@ -64,17 +64,24 @@ class Settings(BaseSettings):
     # groq_llm_model: str = "llama-3.1-8b-instant"
     groq_audio_daily_limit: int = 7200  # free tier: 7,200 sec/day
 
+    # DeepSeek
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-chat"
+
+    # Qwen (Alibaba DashScope international)
+    qwen_api_key: str = ""
+    qwen_model: str = "qwen-turbo"
+
     # OpenRouter
     openrouter_api_key: str = ""
-    openrouter_model: str = "deepseek/deepseek-r1-0528:free"
-    # openrouter_model: str = "google/gemma-3-27b-it:free"    # OK
-    # openrouter_model: str = "z-ai/glm-4.5-air:free"         # OK (Zhipu AI)
-    # openrouter_model: str = "stepfun/step-3.5-flash:free"   # OK (StepFun)
-    # openrouter_model: str = "qwen/qwen3-4b:free"            # 429: rate limited
+    openrouter_model: str = "google/gemma-3-27b-it:free"
+    # openrouter_model: str = "arcee-ai/trinity-large-preview:free"  # OK, 2.5s
+    # openrouter_model: str = "deepseek/deepseek-r1-0528:free"  # reasoning, slow + empty content
+    # openrouter_model: str = "qwen/qwen3-4b:free"                   # 429: rate limited
 
     # AI provider selection
-    categorization_provider: str = "openrouter"
-    gpt_provider: str = "openrouter"
+    categorization_provider: str = "deepseek"
+    gpt_provider: str = "deepseek"
 
     # Gemini
     gemini_api_key: str = ""
