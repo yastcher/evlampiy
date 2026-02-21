@@ -66,8 +66,11 @@ class Settings(BaseSettings):
 
     # OpenRouter
     openrouter_api_key: str = ""
-    # openrouter_model: str = "google/gemma-3-27b-it:free"
-    openrouter_model: str = "deepseek/deepseek-r1:free"
+    openrouter_model: str = "deepseek/deepseek-r1-0528:free"
+    # openrouter_model: str = "google/gemma-3-27b-it:free"    # OK
+    # openrouter_model: str = "z-ai/glm-4.5-air:free"         # OK (Zhipu AI)
+    # openrouter_model: str = "stepfun/step-3.5-flash:free"   # OK (StepFun)
+    # openrouter_model: str = "qwen/qwen3-4b:free"            # 429: rate limited
 
     # AI provider selection
     categorization_provider: str = "openrouter"

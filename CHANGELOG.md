@@ -6,6 +6,7 @@
 
 ### Fixed
 
+- OpenRouter default model changed to `deepseek/deepseek-r1-0528:free`
 - AI provider errors now log response body (up to 300 chars) for easier diagnosis
 
 ## [0.8.10] — 2026-02-21

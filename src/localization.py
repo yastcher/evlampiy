@@ -235,7 +235,8 @@ translates = {
             "   <code>https://github.com/{owner}/{repo}</code>\n"
             "3. Enable auto-pull in plugin settings\n"
             "4. New notes appear in <code>income/</code>\n\n"
-            '<a href="obsidian://open?vault={repo}">Open vault in Obsidian ↗</a>'
+            "Open vault (tap to copy, paste in browser):\n"
+            "<code>obsidian://open?vault={repo}</code>"
         ),
         GERMAN: (
             "📝 <b>Notizen</b> — <code>{owner}/{repo}</code>\n\n"
@@ -245,7 +246,8 @@ translates = {
             "   <code>https://github.com/{owner}/{repo}</code>\n"
             "3. Auto-Pull in den Plugin-Einstellungen aktivieren\n"
             "4. Neue Notizen erscheinen in <code>income/</code>\n\n"
-            '<a href="obsidian://open?vault={repo}">Vault in Obsidian öffnen ↗</a>'
+            "Vault öffnen (tippen zum Kopieren, im Browser einfügen):\n"
+            "<code>obsidian://open?vault={repo}</code>"
         ),
         RUSSIAN: (
             "📝 <b>Заметки</b> — <code>{owner}/{repo}</code>\n\n"
@@ -255,7 +257,8 @@ translates = {
             "   <code>https://github.com/{owner}/{repo}</code>\n"
             "3. Включить автопулл в настройках плагина\n"
             "4. Новые заметки в папке <code>income/</code>\n\n"
-            '<a href="obsidian://open?vault={repo}">Открыть vault в Obsidian ↗</a>'
+            "Открыть vault (нажми для копирования, вставь в браузер):\n"
+            "<code>obsidian://open?vault={repo}</code>"
         ),
         SPANISH: (
             "📝 <b>Notas</b> — <code>{owner}/{repo}</code>\n\n"
@@ -265,7 +268,8 @@ translates = {
             "   <code>https://github.com/{owner}/{repo}</code>\n"
             "3. Activar auto-pull en los ajustes del plugin\n"
             "4. Las nuevas notas aparecen en <code>income/</code>\n\n"
-            '<a href="obsidian://open?vault={repo}">Abrir vault en Obsidian ↗</a>'
+            "Abrir vault (toca para copiar, pega en el navegador):\n"
+            "<code>obsidian://open?vault={repo}</code>"
         ),
     },
     "account_hub_title": {
