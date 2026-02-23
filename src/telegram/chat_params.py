@@ -7,6 +7,12 @@ from telegram.ext import ContextTypes
 from src import const
 
 
+def is_bot_sender(update: Update) -> bool:
+    """Return True if the update was sent by a Telegram bot account."""
+    user = update.effective_user
+    return user is not None and user.is_bot
+
+
 def is_private_chat(update: Update) -> bool:
     if update.effective_chat is None:
         return False

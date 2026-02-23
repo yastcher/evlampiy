@@ -3,6 +3,7 @@
 ### Added
 
 - Strict mypy type checking (`strict = true`) with per-module overrides for untyped third-party libraries
+- Bot-sender guard: `TypeHandler` at group=-1 rejects all updates from Telegram bot accounts via `effective_user.is_bot`
 
 ## [0.8.12] — 2026-02-22
 

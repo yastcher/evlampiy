@@ -2,15 +2,18 @@
 
 import logging
 
-from telegram import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
+from telegram import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat, Update
 from telegram.ext import (
     Application,
     ApplicationBuilder,
+    ApplicationHandlerStop,
     CallbackQueryHandler,
     CommandHandler,
+    ContextTypes,
     ConversationHandler,
     MessageHandler,
     PreCheckoutQueryHandler,
+    TypeHandler,
     filters,
 )
 
@@ -18,6 +21,7 @@ from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.selftest import run_selftest
 from src.telegram import admin, handlers
+from src.telegram.chat_params import is_bot_sender
 from src.telegram.payments import (
     balance_command,
     buy_command,
@@ -98,6 +102,16 @@ ADMIN_COMMANDS = [
 ]
 
 
+async def _reject_bot_senders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Block any update originating from another Telegram bot."""
+    if is_bot_sender(update):
+        logger.debug(
+            "Rejected update from bot sender: user_id=%s",
+            update.effective_user.id,  # type: ignore[union-attr]
+        )
+        raise ApplicationHandlerStop
+
+
 async def post_init(application: Application) -> None:  # type: ignore[type-arg]
     bot = application.bot
 
@@ -123,6 +137,8 @@ def build_application() -> Application:  # type: ignore[type-arg]
     application = (
         ApplicationBuilder().token(settings.telegram_bot_token).post_init(post_init).build()
     )
+
+    application.add_handler(TypeHandler(Update, _reject_bot_senders), group=-1)
 
     for command_name, command_handler in COMMAND_HANDLERS.items():
         application.add_handler(CommandHandler(command_name, command_handler))
