@@ -5,9 +5,10 @@ import logging
 
 import httpx
 
+from src import const
+
 logger = logging.getLogger(__name__)
 
-GITHUB_API_BASE = "https://api.github.com"
 OBSIDIAN_DEFAULT_REPO_NAME = "obsidian-notes"
 OBSIDIAN_NOTES_FOLDER = "income"
 MAX_RETRIES = 3
@@ -22,7 +23,7 @@ def _github_headers(token: str) -> dict:
 
 async def get_github_username(token: str) -> str | None:
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{GITHUB_API_BASE}/user", headers=_github_headers(token))
+        response = await client.get(f"{const.GITHUB_API_BASE}/user", headers=_github_headers(token))
         if response.status_code == http.HTTPStatus.OK:
             return response.json()["login"]
         logger.error("Failed to get GitHub username, status: %s", response.status_code)
@@ -41,7 +42,7 @@ async def get_or_create_obsidian_repo(
     async with httpx.AsyncClient() as client:
         # Check if repo exists
         response = await client.get(
-            f"{GITHUB_API_BASE}/repos/{username}/{repo_name}",
+            f"{const.GITHUB_API_BASE}/repos/{username}/{repo_name}",
             headers=headers,
         )
         if response.status_code == http.HTTPStatus.OK:
@@ -54,7 +55,7 @@ async def get_or_create_obsidian_repo(
 
         # Create private repo
         create_response = await client.post(
-            f"{GITHUB_API_BASE}/user/repos",
+            f"{const.GITHUB_API_BASE}/user/repos",
             headers=headers,
             json={"name": repo_name, "private": True, "auto_init": True},
         )
@@ -70,7 +71,7 @@ async def get_or_create_obsidian_repo(
         # Create income/ folder via .gitkeep
         gitkeep_content = base64.b64encode(b"").decode("utf-8")
         await client.put(
-            f"{GITHUB_API_BASE}/repos/{username}/{repo_name}/contents/{OBSIDIAN_NOTES_FOLDER}/.gitkeep",
+            f"{const.GITHUB_API_BASE}/repos/{username}/{repo_name}/contents/{OBSIDIAN_NOTES_FOLDER}/.gitkeep",
             headers=headers,
             json={"message": "Init income folder", "content": gitkeep_content},
         )
@@ -82,7 +83,7 @@ async def put_github_file(
     token: str, owner: str, repo: str, path: str, content: str, commit_message: str
 ) -> bool:
     content_base64 = base64.b64encode(content.encode("utf-8")).decode("utf-8")
-    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     payload: dict = {"message": commit_message, "content": content_base64}
 
     for attempt in range(1, MAX_RETRIES + 1):
@@ -115,7 +116,7 @@ async def put_github_file(
 
 async def get_repo_contents(token: str, owner: str, repo: str, path: str = "") -> list[dict]:
     """Get list of files/folders in a repository path."""
-    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=_github_headers(token))
         if response.status_code == http.HTTPStatus.OK:
@@ -129,7 +130,7 @@ async def get_repo_contents(token: str, owner: str, repo: str, path: str = "") -
 
 async def get_github_file(token: str, owner: str, repo: str, path: str) -> tuple[str, str] | None:
     """Get file content and SHA. Returns (content, sha) or None."""
-    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=_github_headers(token))
         if response.status_code == http.HTTPStatus.OK:
@@ -170,7 +171,7 @@ async def delete_github_file(
     token: str, owner: str, repo: str, path: str, sha: str, commit_message: str
 ) -> bool:
     """Delete a file from GitHub repository."""
-    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
         response = await client.request(
             "DELETE",

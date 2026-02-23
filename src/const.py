@@ -22,7 +22,13 @@ GROQ_API_BASE = "https://api.groq.com"
 OPENROUTER_API_BASE = "https://openrouter.ai"
 QWEN_API_BASE = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 DEEPSEEK_API_BASE = "https://api.deepseek.com/v1"
+GITHUB_API_BASE = "https://api.github.com"
 EXCLUDED_CATEGORIES = ("income", "trash")
+
+# AI generation parameters
+CLASSIFY_MAX_TOKENS = 50
+GPT_CHAT_MAX_TOKENS = 2048
+GPT_CHAT_TEMPERATURE = 0.7
 
 ROLE_VIP = "vip"
 ROLE_TESTER = "tester"

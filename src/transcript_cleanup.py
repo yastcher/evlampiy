@@ -3,21 +3,9 @@
 import logging
 
 from src.ai_client import cleanup_text
+from src.prompts import CLEANUP_PROMPT_BASE
 
 logger = logging.getLogger(__name__)
-
-_CLEANUP_PROMPT_BASE = (
-    "Clean up this voice transcription. Your primary goal is to capture the speaker's "
-    "intent — NOT to rephrase or rewrite their words.\n\n"
-    "Rules:\n"
-    "1. Remove filler words and false starts (ну, то есть, аа, эм, like, you know, etc.).\n"
-    "2. Fix obvious transcription errors (misheard words, garbled phrases). "
-    "If unsure what a garbled word means, leave it as-is.\n"
-    "3. Do NOT rephrase, restructure, or add information.\n"
-    "4. Preserve the original language. Fix punctuation minimally.\n"
-    "5. If two fragments were concatenated without a break, split into sentences.\n"
-    "Return only the cleaned text, nothing else.\n"
-)
 
 _MIN_TEXT_LENGTH = 20
 _MIN_TOKENS = 200
@@ -29,7 +17,7 @@ def _build_cleanup_prompt(
     vocabulary: dict | None,
     context: list[str] | None,
 ) -> str:
-    parts = [_CLEANUP_PROMPT_BASE]
+    parts = [CLEANUP_PROMPT_BASE]
     if context:
         context_notes = "\n---\n".join(context)
         parts.append(

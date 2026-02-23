@@ -411,7 +411,7 @@ async def classify_text(prompt: str) -> str | None:
     """Classify text using the configured categorization provider with fallback."""
     primary = await get_bot_config("categorization_provider", settings.categorization_provider)
     chain = [primary] + [p for p in CATEGORIZATION_FALLBACK_CHAIN if p != primary]
-    return await _ai_complete(chain, prompt, max_tokens=50, temperature=0.0)
+    return await _ai_complete(chain, prompt, max_tokens=const.CLASSIFY_MAX_TOKENS, temperature=0.0)
 
 
 async def cleanup_text(prompt: str, max_tokens: int) -> str | None:
@@ -425,4 +425,6 @@ async def gpt_chat(prompt: str) -> str | None:
     """Generate a chat response using the configured GPT provider with fallback."""
     primary = await get_bot_config("gpt_provider", settings.gpt_provider)
     chain = [primary] + [p for p in GPT_FALLBACK_CHAIN if p != primary]
-    return await _ai_complete(chain, prompt, max_tokens=2048, temperature=0.7)
+    return await _ai_complete(
+        chain, prompt, max_tokens=const.GPT_CHAT_MAX_TOKENS, temperature=const.GPT_CHAT_TEMPERATURE
+    )

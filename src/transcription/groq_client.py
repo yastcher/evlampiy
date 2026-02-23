@@ -5,11 +5,12 @@ from io import BytesIO
 
 import httpx
 
+from src import const
 from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-GROQ_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
+GROQ_API_URL = f"{const.GROQ_API_BASE}/openai/v1/audio/transcriptions"
 GROQ_TIMEOUT = 30.0
 
 LANGUAGE_MAP = {"en": "en", "ru": "ru", "es": "es", "de": "de"}

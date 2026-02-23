@@ -12,6 +12,7 @@ from src.github_api import (
     get_repo_contents,
     put_github_file,
 )
+from src.prompts import CATEGORIZE_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
@@ -77,18 +78,10 @@ async def classify_note(
         flat = ", ".join(kw for keywords in vocabulary.values() for kw in keywords)
         vocab_hint = f"\nDomain vocabulary: {flat}"
 
-    prompt = (
-        f"Analyze this note and return JSON only:\n"
-        f'{{"category": "<name>", "keywords": ["word1", "word2"]}}\n\n'
-        f"Keywords: domain-specific words/phrases from this note that characterize the category "
-        f"(up to 5). These help recognize similar notes and fix transcription errors.\n\n"
-        f"Rules for category:\n"
-        f"1. If the note fits an existing category, return that category name exactly.\n"
-        f"2. If no existing category fits, suggest a new short name "
-        f"(1-2 words, lowercase, no spaces, use underscores).\n\n"
-        f"Existing categories: {categories_list}"
-        f"{vocab_hint}\n\n"
-        f"Note:\n{text}"
+    prompt = CATEGORIZE_PROMPT_TEMPLATE.format(
+        categories_list=categories_list,
+        vocab_hint=vocab_hint,
+        text=text,
     )
 
     result = await classify_text(prompt)
