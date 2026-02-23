@@ -24,6 +24,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ruff~=0.14.0",
+    "mypy~=1.15",
     "pytest>=9.0.2",
     "pytest-asyncio~=1.3",
     "pytest-mock==3.15.1",
@@ -59,6 +60,10 @@ fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "PLR2004", "S105", "S106", "PLR0913"]
+# assert used for PTB type narrowing (effective_user/message are guaranteed non-None by handler context)
+# todo =Y remove it later and remove types.Any
+"src/telegram/*" = ["S101"]
+"src/gpt_commands.py" = ["S101"]
 "src/localization.py" = ["RUF001", "E501"]
 "src/transcript_cleanup.py" = ["RUF001"]
 "src/categorization.py" = ["PLR0913"]
@@ -80,6 +85,25 @@ known-local-folder = [
 quote-style = "double"
 indent-style = "space"
 # skip-magic-trailing-comma = true
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["wit.*", "pydub.*", "mongomock_motor.*", "audioop.*", "uvicorn.*", "motor.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pywa.*"
+ignore_missing_imports = true
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 addopts = [

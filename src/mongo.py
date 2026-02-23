@@ -1,3 +1,5 @@
+import typing
+
 from beanie import init_beanie
 from motor import motor_asyncio
 
@@ -35,11 +37,11 @@ ALL_DOCUMENT_MODELS = [
 ]
 
 
-async def init_beanie_models():
+async def init_beanie_models() -> None:
     """
     to call only once
     """
-    mongo_client = motor_asyncio.AsyncIOMotorClient(settings.mongo_uri)
+    mongo_client: typing.Any = motor_asyncio.AsyncIOMotorClient(settings.mongo_uri)
     await init_beanie(database=mongo_client["user_settings"], document_models=ALL_DOCUMENT_MODELS)
 
 
@@ -52,7 +54,7 @@ async def get_or_create_user(chat_id: str) -> UserSettings:
     return user
 
 
-async def set_chat_language(chat_id: str, language: str):
+async def set_chat_language(chat_id: str, language: str) -> None:
     user = await get_or_create_user(chat_id)
     user.language = language
     await user.save()
@@ -65,7 +67,7 @@ async def get_chat_language(chat_id: str) -> str:
     return user.language or settings.default_language
 
 
-async def set_gpt_command(chat_id: str, command: str):
+async def set_gpt_command(chat_id: str, command: str) -> None:
     user = await get_or_create_user(chat_id)
     user.command = command
     await user.save()
@@ -78,7 +80,7 @@ async def get_gpt_command(chat_id: str) -> str:
     return user.command or settings.telegram_bot_command
 
 
-async def set_github_settings(chat_id: str, owner: str, repo: str, token: str):
+async def set_github_settings(chat_id: str, owner: str, repo: str, token: str) -> None:
     user = await get_or_create_user(chat_id)
     user.github_settings = {
         "owner": owner,
@@ -88,7 +90,7 @@ async def set_github_settings(chat_id: str, owner: str, repo: str, token: str):
     await user.save()
 
 
-async def get_github_settings(chat_id: str) -> dict:
+async def get_github_settings(chat_id: str) -> dict[str, str]:
     user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
     if not user or not user.github_settings:
         return {}
@@ -97,7 +99,7 @@ async def get_github_settings(chat_id: str) -> dict:
     return {}
 
 
-async def clear_github_settings(chat_id: str):
+async def clear_github_settings(chat_id: str) -> None:
     user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
     if user:
         user.github_settings = None
@@ -105,7 +107,7 @@ async def clear_github_settings(chat_id: str):
         await user.save()
 
 
-async def set_save_to_obsidian(chat_id: str, enabled: bool):
+async def set_save_to_obsidian(chat_id: str, enabled: bool) -> None:
     user = await get_or_create_user(chat_id)
     user.save_to_obsidian = enabled
     await user.save()
@@ -118,7 +120,7 @@ async def get_save_to_obsidian(chat_id: str) -> bool:
     return user.save_to_obsidian
 
 
-async def set_auto_categorize(chat_id: str, enabled: bool):
+async def set_auto_categorize(chat_id: str, enabled: bool) -> None:
     user = await get_or_create_user(chat_id)
     user.auto_categorize = enabled
     await user.save()
@@ -131,7 +133,7 @@ async def get_auto_categorize(chat_id: str) -> bool:
     return user.auto_categorize
 
 
-async def set_auto_cleanup(chat_id: str, enabled: bool):
+async def set_auto_cleanup(chat_id: str, enabled: bool) -> None:
     user = await get_or_create_user(chat_id)
     user.auto_cleanup = enabled
     await user.save()
@@ -144,7 +146,7 @@ async def get_auto_cleanup(chat_id: str) -> bool:
     return user.auto_cleanup
 
 
-async def set_preferred_provider(chat_id: str, provider: str | None):
+async def set_preferred_provider(chat_id: str, provider: str | None) -> None:
     user = await get_or_create_user(chat_id)
     user.preferred_provider = provider
     await user.save()
@@ -157,7 +159,7 @@ async def get_preferred_provider(chat_id: str) -> str | None:
     return user.preferred_provider
 
 
-async def add_user_role(user_id: str, role: str, added_by: str):
+async def add_user_role(user_id: str, role: str, added_by: str) -> None:
     """Add a role to a user (upsert)."""
     existing = await UserRole.find_one(UserRole.user_id == user_id, UserRole.role == role)
     if existing:

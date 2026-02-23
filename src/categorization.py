@@ -30,14 +30,15 @@ async def get_existing_categories(token: str, owner: str, repo: str) -> list[str
     return categories
 
 
-async def get_vocabulary_from_repo(token: str, owner: str, repo: str) -> dict:
+async def get_vocabulary_from_repo(token: str, owner: str, repo: str) -> dict[str, list[str]]:
     """Read vocabulary.json from repo root. Returns {} if absent or invalid."""
     file_data = await get_github_file(token, owner, repo, _VOCABULARY_PATH)
     if not file_data:
         return {}
     content, _ = file_data
     try:
-        return json.loads(content)
+        data: dict[str, list[str]] = json.loads(content)
+        return data
     except (json.JSONDecodeError, ValueError):
         logger.warning("vocabulary.json is invalid JSON, ignoring")
         return {}
@@ -66,7 +67,7 @@ async def update_vocabulary_in_repo(
 async def classify_note(
     text: str,
     existing_categories: list[str],
-    vocabulary: dict | None = None,
+    vocabulary: dict[str, list[str]] | None = None,
 ) -> tuple[str | None, list[str]]:
     """Classify note text into a category using the configured AI provider.
 
@@ -136,7 +137,7 @@ async def categorize_note(
     filename: str,
     content: str,
     existing_categories: list[str] | None = None,
-    vocabulary: dict | None = None,
+    vocabulary: dict[str, list[str]] | None = None,
 ) -> str | None:
     """Categorize a single note and move it to the appropriate folder."""
     if existing_categories is None:

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 REVENUE_MILESTONES = [10, 50, 100, 500, 1000]
 
 
-async def send_admin_alert(bot: Bot, message: str):
+async def send_admin_alert(bot: Bot, message: str) -> None:
     for admin_id in settings.admin_user_ids:
         try:
             await bot.send_message(chat_id=admin_id, text=message, parse_mode="HTML")
@@ -31,11 +31,11 @@ async def _should_send_alert(alert_type: str, month: str) -> bool:
     return existing is None
 
 
-async def _mark_alert_sent(alert_type: str, month: str):
+async def _mark_alert_sent(alert_type: str, month: str) -> None:
     await AlertState(alert_type=alert_type, month_key=month).insert()
 
 
-async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1):
+async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1) -> None:
     if not settings.admin_user_ids:
         return
 

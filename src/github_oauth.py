@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import typing
 
 import httpx
 
@@ -13,14 +14,15 @@ GITHUB_OAUTH_SCOPE = "repo"
 GITHUB_OAUTH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
 
 
-async def get_github_device_code() -> dict:
+async def get_github_device_code() -> dict[str, typing.Any]:
     async with httpx.AsyncClient() as client:
         response = await client.post(
             GITHUB_DEVICE_CODE_URL,
             data={"client_id": settings.github_client_id, "scope": GITHUB_OAUTH_SCOPE},
             headers={"Accept": "application/json"},
         )
-        return response.json()
+        data: dict[str, typing.Any] = response.json()
+        return data
 
 
 async def poll_github_for_token(device_code: str, interval: int, expires_in: int) -> str | None:
@@ -41,10 +43,10 @@ async def poll_github_for_token(device_code: str, interval: int, expires_in: int
                 },
                 headers={"Accept": "application/json"},
             )
-            body = response.json()
+            body: dict[str, typing.Any] = response.json()
 
             if "error" not in body:
-                return body["access_token"]
+                return str(body["access_token"])
 
             error = body["error"]
             if error == "authorization_pending":

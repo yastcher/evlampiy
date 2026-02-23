@@ -30,6 +30,7 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 
 - Lint: `uv run ruff check --fix`
 - Format: `uv run ruff format`
+- Typecheck: `uv run mypy src`
 - Test: `uv run pytest`
 - Coverage must be >= 85%
 

@@ -44,14 +44,15 @@ from src.wit_tracking import get_all_wit_usage_this_month
 
 logger = logging.getLogger(__name__)
 
-_background_tasks: set[asyncio.Task] = set()
+_background_tasks: set[asyncio.Task[None]] = set()
 WAITING_FOR_COMMAND = 1
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
+    assert update.message is not None
     chat_id = get_chat_id(update)
     chat_language = await get_chat_language(chat_id)
     gpt_command = await get_gpt_command(chat_id)
@@ -62,10 +63,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text_to_send, parse_mode="HTML")
 
 
-async def choose_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def choose_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
+    assert update.message is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
 
@@ -82,11 +84,14 @@ async def choose_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(prompt, reply_markup=reply_markup)
 
 
-async def lang_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def lang_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
     query = update.callback_query
+    assert query is not None
+    assert query.data is not None
+    assert query.from_user is not None
     await query.answer()
 
     lang_code = query.data.split("_")[-1]
@@ -94,21 +99,25 @@ async def lang_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_private_chat(update):
         chat_id = f"{const.CHAT_PREFIX_USER}{query.from_user.id}"
     else:
+        assert query.message is not None
         chat_id = f"{const.CHAT_PREFIX_GROUP}{query.message.chat.id}"
 
     await query.edit_message_text(text=translates["choose_my_language"][lang_code])
     await set_chat_language(chat_id, lang_code)
 
 
-async def enter_your_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def enter_your_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
     if not await is_user_admin(update, context):
         return ConversationHandler.END
 
+    assert update.message is not None
     await update.message.reply_text("Please enter your command for GPT:")
     return WAITING_FOR_COMMAND
 
 
-async def handle_command_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_command_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    assert update.message is not None
+    assert update.message.text is not None
     chat_id = get_chat_id(update)
     gpt_command = update.message.text
     await set_gpt_command(chat_id, gpt_command)
@@ -116,10 +125,11 @@ async def handle_command_input(update: Update, context: ContextTypes.DEFAULT_TYP
     return ConversationHandler.END
 
 
-async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
+    assert update.effective_chat is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
 
@@ -148,18 +158,20 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await reply_text(update, text)
 
-    async def _poll_and_setup():
+    effective_chat_id = update.effective_chat.id
+
+    async def _poll_and_setup() -> None:
         token = await poll_github_for_token(
-            device_code=device_info["device_code"],
-            interval=interval,
-            expires_in=expires_in,
+            device_code=str(device_info["device_code"]),
+            interval=int(interval),
+            expires_in=int(expires_in),
         )
         if not token:
             text = translates["github_auth_timeout"].get(
                 language, translates["github_auth_timeout"]["en"]
             )
             await context.bot.send_message(
-                chat_id=update.effective_chat.id,
+                chat_id=effective_chat_id,
                 text=text,
             )
             return
@@ -170,7 +182,7 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 language, translates["github_repo_failed"]["en"]
             )
             await context.bot.send_message(
-                chat_id=update.effective_chat.id,
+                chat_id=effective_chat_id,
                 text=text,
             )
             return
@@ -189,7 +201,7 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
         await context.bot.send_message(
-            chat_id=update.effective_chat.id,
+            chat_id=effective_chat_id,
             text=text,
         )
 
@@ -198,7 +210,7 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
     task.add_done_callback(_background_tasks.discard)
 
 
-async def toggle_obsidian(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def toggle_obsidian(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
@@ -212,7 +224,7 @@ async def toggle_obsidian(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_text(update, translates[key].get(language, translates[key]["en"]))
 
 
-async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
@@ -225,7 +237,8 @@ async def disconnect_github(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    assert update.effective_user is not None
     user_id = str(update.effective_user.id)
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
@@ -252,7 +265,7 @@ async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_text(update, text, parse_mode="HTML")
 
 
-async def toggle_categorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def toggle_categorize(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
@@ -267,7 +280,7 @@ async def toggle_categorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_text(update, text)
 
 
-async def toggle_cleanup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def toggle_cleanup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
@@ -282,7 +295,7 @@ async def toggle_cleanup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_text(update, text)
 
 
-async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
@@ -313,10 +326,11 @@ async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await reply_text(update, text)
 
 
-async def link_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def link_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_private_chat(update):
         return
 
+    assert update.effective_user is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
     user_id = str(update.effective_user.id)
@@ -330,10 +344,11 @@ async def link_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_text(update, text)
 
 
-async def unlink_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def unlink_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_private_chat(update):
         return
 
+    assert update.effective_user is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
     user_id = str(update.effective_user.id)
@@ -446,17 +461,20 @@ async def build_stats_text() -> str:
     )
 
 
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    assert update.effective_user is not None
     if not is_admin_user(str(update.effective_user.id)):
         return
+    assert update.message is not None
     text = await build_stats_text()
     await update.message.reply_text(text, parse_mode="HTML")
 
 
-async def settings_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def settings_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
+    assert update.message is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
 
@@ -500,10 +518,11 @@ async def settings_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(title, reply_markup=reply_markup)
 
 
-async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
+    assert update.message is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
     github_settings = await get_github_settings(chat_id)
@@ -560,10 +579,12 @@ async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(title, reply_markup=reply_markup, parse_mode="HTML")
 
 
-async def account_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def account_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_private_chat(update):
         return
 
+    assert update.effective_user is not None
+    assert update.message is not None
     chat_id = get_chat_id(update)
     user_id = str(update.effective_user.id)
     language = await get_chat_language(chat_id)
@@ -598,8 +619,9 @@ async def account_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(title, reply_markup=reply_markup)
 
 
-async def _show_provider_menu(update: Update):
+async def _show_provider_menu(update: Update) -> None:
     query = update.callback_query
+    assert query is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
     current = await get_preferred_provider(chat_id)
@@ -636,8 +658,9 @@ async def _show_provider_menu(update: Update):
     await query.edit_message_text(prompt, reply_markup=reply_markup)
 
 
-async def _hub_show_language_menu(update: Update, _context: ContextTypes.DEFAULT_TYPE):
+async def _hub_show_language_menu(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
+    assert query is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
     prompt = translates["choose_language_prompt"].get(
@@ -654,12 +677,13 @@ async def _hub_show_language_menu(update: Update, _context: ContextTypes.DEFAULT
     await query.edit_message_text(prompt, reply_markup=reply_markup)
 
 
-async def _hub_show_provider(update: Update, _context: ContextTypes.DEFAULT_TYPE):
+async def _hub_show_provider(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
     await _show_provider_menu(update)
 
 
-async def setup_obsidian_git(update: Update, _context: ContextTypes.DEFAULT_TYPE):
+async def setup_obsidian_git(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
+    assert query is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
     github_settings = await get_github_settings(chat_id)
@@ -693,8 +717,10 @@ _HUB_ACTIONS = {
 }
 
 
-async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
+    assert query is not None
+    assert query.data is not None
     await query.answer()
 
     action = query.data.replace("hub_", "")
@@ -703,11 +729,14 @@ async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE
         await handler(update, context)
 
 
-async def provider_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def provider_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await is_user_admin(update, context):
         return
 
     query = update.callback_query
+    assert query is not None
+    assert query.data is not None
+    assert query.from_user is not None
     await query.answer()
 
     choice = query.data.replace("set_prov_", "")
@@ -715,6 +744,7 @@ async def provider_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_private_chat(update):
         chat_id = f"{const.CHAT_PREFIX_USER}{query.from_user.id}"
     else:
+        assert query.message is not None
         chat_id = f"{const.CHAT_PREFIX_GROUP}{query.message.chat.id}"
 
     language = await get_chat_language(chat_id)
@@ -732,8 +762,10 @@ async def provider_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def enter_your_command_from_hub(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def enter_your_command_from_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
+    assert query is not None
+    assert query.message is not None
     await query.answer()
-    await query.message.reply_text("Please enter your command for GPT:")
+    await query.message.reply_text("Please enter your command for GPT:")  # type: ignore[attr-defined]
     return WAITING_FOR_COMMAND

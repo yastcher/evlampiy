@@ -218,7 +218,7 @@ async def grant_initial_credits_if_eligible(user_id: str) -> bool:
 # --- Usage tracking ---
 
 
-async def increment_user_stats(user_id: str, audio_seconds: int = 0):
+async def increment_user_stats(user_id: str, audio_seconds: int = 0) -> None:
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
         record = UserCredits(
@@ -241,7 +241,7 @@ async def record_user_usage(
     tokens: int,
     free_used: int,
     purchased_used: int,
-):
+) -> None:
     """Record per-user monthly usage."""
     month = current_month_key()
     record = await UserMonthlyUsage.find_one(
@@ -272,19 +272,19 @@ async def _get_or_create_monthly_stats() -> MonthlyStats:
     return record
 
 
-async def increment_transcription_stats():
+async def increment_transcription_stats() -> None:
     record = await _get_or_create_monthly_stats()
     record.total_transcriptions += 1
     await record.save()
 
 
-async def record_groq_usage(duration_seconds: int):
+async def record_groq_usage(duration_seconds: int) -> None:
     record = await _get_or_create_monthly_stats()
     record.groq_audio_seconds += duration_seconds
     await record.save()
 
 
-async def increment_payment_stats(credits_sold: int):
+async def increment_payment_stats(credits_sold: int) -> None:
     record = await _get_or_create_monthly_stats()
     record.total_payments += 1
     record.total_credits_sold += credits_sold

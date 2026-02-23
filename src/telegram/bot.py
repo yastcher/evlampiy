@@ -1,3 +1,5 @@
+import typing
+
 from telegram import InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
@@ -10,8 +12,9 @@ async def send_response(
     context: ContextTypes.DEFAULT_TYPE,
     response: str,
     keyboard: InlineKeyboardMarkup | None = None,
-    **kwargs,
+    **kwargs: typing.Any,
 ) -> None:
+    assert update.effective_chat is not None
     chunks = [
         response[i : i + MAX_TELEGRAM_MESSAGE_LENGTH]
         for i in range(0, len(response), MAX_TELEGRAM_MESSAGE_LENGTH)

@@ -1,6 +1,7 @@
 """Telegram voice message handler."""
 
 import logging
+import typing
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -82,7 +83,7 @@ async def _handle_obsidian_save(
     language: str,
     user_id: str | None = None,
     original_text: str | None = None,
-):
+) -> None:
     """Save transcription to Obsidian and auto-categorize if enabled."""
     settings_chat_id = f"u_{user_id}" if chat_id.startswith("g_") and user_id else None
     saved, filename = await save_transcription_to_obsidian(
@@ -107,7 +108,7 @@ async def _handle_obsidian_save(
         )
 
 
-def _build_voice_response(text: str, gpt_command: str, message_id: int) -> dict:
+def _build_voice_response(text: str, gpt_command: str, message_id: int) -> dict[str, typing.Any]:
     """Build response kwargs for voice transcription."""
     if text.lower().startswith(gpt_command):
         return {
@@ -117,8 +118,9 @@ def _build_voice_response(text: str, gpt_command: str, message_id: int) -> dict:
     return {"response": text, "reply_to_message_id": message_id}
 
 
-async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle incoming voice/audio message from Telegram."""
+    assert update.message is not None
     voice = update.message.voice or update.message.audio
     if not voice:
         return

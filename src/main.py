@@ -26,7 +26,7 @@ for logger_name in trash_loggers:
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main() -> None:
     if not settings.telegram_bot_token:
         raise ValueError("need TELEGRAM_BOT_TOKEN env variables")
 

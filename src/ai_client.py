@@ -152,7 +152,7 @@ async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> 
         if not candidates:
             logger.error("Gemini returned empty candidates")
             return None
-        return candidates[0]["content"]["parts"][0]["text"]
+        return str(candidates[0]["content"]["parts"][0]["text"])
 
     if response.status_code == http.HTTPStatus.TOO_MANY_REQUESTS:
         raise RateLimitError(const.PROVIDER_GEMINI)
@@ -191,7 +191,7 @@ async def _anthropic_complete(prompt: str, max_tokens: int, temperature: float) 
 
     if response.status_code == http.HTTPStatus.OK:
         data = response.json()
-        return data["content"][0]["text"]
+        return str(data["content"][0]["text"])
 
     if response.status_code == http.HTTPStatus.TOO_MANY_REQUESTS:
         raise RateLimitError(const.PROVIDER_ANTHROPIC)
@@ -223,7 +223,7 @@ async def _openai_format_complete(
 
     if response.status_code == http.HTTPStatus.OK:
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        return str(data["choices"][0]["message"]["content"])
 
     if response.status_code == http.HTTPStatus.TOO_MANY_REQUESTS:
         raise RateLimitError(endpoint.provider)

@@ -9,8 +9,9 @@ from src.telegram.bot import send_response
 logger = logging.getLogger(__name__)
 
 
-async def evlampiy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text
+async def evlampiy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    assert update.message is not None
+    user_message = update.message.text or ""
 
     try:
         gpt_response = await gpt_chat(user_message)

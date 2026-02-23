@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 def register_handlers(wa: WhatsApp) -> None:
     """Register WhatsApp message handlers."""
 
-    @wa.on_message()
-    async def handle_message(client: WhatsApp, message: Message):
+    @wa.on_message()  # type: ignore[untyped-decorator]
+    async def handle_message(client: WhatsApp, message: Message) -> None:
         """Handle incoming WhatsApp messages."""
         if message.text and message.text.strip().lower().startswith("link "):
             await handle_link_command(client, message)

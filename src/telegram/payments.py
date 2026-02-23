@@ -1,6 +1,7 @@
 """Telegram Stars payment handlers."""
 
 import logging
+import typing
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, Update
 from telegram.ext import ContextTypes
@@ -22,7 +23,15 @@ from src.telegram.chat_params import get_chat_id, reply_text
 
 logger = logging.getLogger(__name__)
 
-CREDIT_PACKAGES = [
+
+class _Package(typing.TypedDict):
+    name: str
+    stars: int
+    tokens: int
+    callback: str
+
+
+CREDIT_PACKAGES: list[_Package] = [
     {"name": "Small", "stars": 10, "tokens": 10, "callback": "buy_pkg_0"},
     {"name": "Medium", "stars": 25, "tokens": 30, "callback": "buy_pkg_1"},
     {"name": "Large", "stars": 50, "tokens": 65, "callback": "buy_pkg_2"},
@@ -39,7 +48,7 @@ def _format_duration(seconds: int) -> str:
     return f"{secs}s"
 
 
-async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show credit packages for purchase."""
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
@@ -54,14 +63,17 @@ async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_text(update, text, reply_markup=reply_markup)
 
 
-async def buy_package_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def buy_package_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle package selection and send invoice."""
     query = update.callback_query
+    assert query is not None
+    assert query.data is not None
     await query.answer()
 
     idx = int(query.data.split("_")[-1])
     pkg = CREDIT_PACKAGES[idx]
 
+    assert update.effective_chat is not None
     await context.bot.send_invoice(
         chat_id=update.effective_chat.id,
         title=f"{pkg['name']} Token Package",
@@ -72,13 +84,17 @@ async def buy_package_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 
-async def handle_pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Approve pre-checkout query."""
+    assert update.pre_checkout_query is not None
     await update.pre_checkout_query.answer(ok=True)
 
 
-async def handle_successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle successful payment — add tokens to user."""
+    assert update.effective_user is not None
+    assert update.message is not None
+    assert update.message.successful_payment is not None
     user_id = str(update.effective_user.id)
     payment = update.message.successful_payment
 
@@ -102,14 +118,17 @@ async def handle_successful_payment(update: Update, context: ContextTypes.DEFAUL
     )
 
     total = await get_total_credits(user_id)
+    assert update.effective_chat is not None
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=f"Tokens added: +{tokens_to_add}\nBalance: {total}",
     )
 
 
-async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show detailed credit balance."""
+    assert update.effective_user is not None
+    assert update.effective_chat is not None
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
     user_id = str(update.effective_user.id)
@@ -138,6 +157,6 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     )
     await context.bot.send_message(
-        chat_id=update.effective_chat.id,
+        chat_id=update.effective_chat.id,  # already asserted above
         text=text,
     )

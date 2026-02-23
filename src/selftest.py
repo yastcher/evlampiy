@@ -29,7 +29,7 @@ def _get_version() -> str:
     for path in candidates:
         try:
             with path.open("rb") as f:
-                return tomllib.load(f)["project"]["version"]
+                return str(tomllib.load(f)["project"]["version"])
         except Exception:
             logger.debug("Could not read version from %s", path)
     return "unknown"

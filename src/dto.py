@@ -105,7 +105,7 @@ class MonthlyStats(Document):
         name = "monthly_stats"
 
 
-def _utc_now():
+def _utc_now() -> datetime.datetime:
     return datetime.datetime.now(datetime.UTC)
 
 
@@ -167,7 +167,7 @@ class RecentTranscription(Document):
 
     class Settings:
         name = "recent_transcriptions"
-        indexes: typing.ClassVar = [
+        indexes: typing.ClassVar[list[IndexModel]] = [
             IndexModel(
                 [("created_at", ASCENDING)],
                 expireAfterSeconds=_RECENT_TRANSCRIPTION_TTL_SECONDS,

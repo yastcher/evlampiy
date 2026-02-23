@@ -14,7 +14,7 @@ _MAX_TOKENS = 4096
 
 def _build_cleanup_prompt(
     text: str,
-    vocabulary: dict | None,
+    vocabulary: dict[str, list[str]] | None,
     context: list[str] | None,
 ) -> str:
     parts = [CLEANUP_PROMPT_BASE]
@@ -35,7 +35,7 @@ def _build_cleanup_prompt(
 
 async def cleanup_transcript(
     text: str,
-    vocabulary: dict | None = None,
+    vocabulary: dict[str, list[str]] | None = None,
     context: list[str] | None = None,
 ) -> str:
     """Clean up raw transcription using LLM. Returns original text on failure."""

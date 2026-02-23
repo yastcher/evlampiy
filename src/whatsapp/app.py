@@ -23,7 +23,7 @@ def create_fastapi_app() -> FastAPI:
         logger.info("WhatsApp webhook configured")
 
     @app.get("/health")
-    async def health_check():
+    async def health_check() -> dict[str, str]:
         return {"status": "ok"}
 
     return app

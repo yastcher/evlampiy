@@ -1,3 +1,9 @@
+## [0.8.13] — 2026-02-23
+
+### Added
+
+- Strict mypy type checking (`strict = true`) with per-module overrides for untyped third-party libraries
+
 ## [0.8.12] — 2026-02-22
 
 ### Fixed

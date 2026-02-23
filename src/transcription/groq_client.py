@@ -53,7 +53,7 @@ async def transcribe_with_groq(
         async with httpx.AsyncClient(timeout=GROQ_TIMEOUT) as client:
             response = await client.post(
                 GROQ_API_URL,
-                files=files,
+                files=files,  # type: ignore[arg-type]
                 headers=headers,
             )
             response.raise_for_status()

@@ -98,7 +98,7 @@ ADMIN_COMMANDS = [
 ]
 
 
-async def post_init(application: Application):
+async def post_init(application: Application) -> None:  # type: ignore[type-arg]
     bot = application.bot
 
     for lang_code, commands in BOT_COMMANDS.items():
@@ -118,7 +118,7 @@ async def post_init(application: Application):
     await run_selftest(bot)
 
 
-def build_application() -> Application:
+def build_application() -> Application:  # type: ignore[type-arg]
     """Build and configure the Telegram Application with all handlers."""
     application = (
         ApplicationBuilder().token(settings.telegram_bot_token).post_init(post_init).build()

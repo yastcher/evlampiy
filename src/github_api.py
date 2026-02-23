@@ -2,6 +2,7 @@ import asyncio
 import base64
 import http
 import logging
+import typing
 
 import httpx
 
@@ -14,7 +15,7 @@ OBSIDIAN_NOTES_FOLDER = "income"
 MAX_RETRIES = 3
 
 
-def _github_headers(token: str) -> dict:
+def _github_headers(token: str) -> dict[str, str]:
     return {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
@@ -25,14 +26,14 @@ async def get_github_username(token: str) -> str | None:
     async with httpx.AsyncClient() as client:
         response = await client.get(f"{const.GITHUB_API_BASE}/user", headers=_github_headers(token))
         if response.status_code == http.HTTPStatus.OK:
-            return response.json()["login"]
+            return str(response.json()["login"])
         logger.error("Failed to get GitHub username, status: %s", response.status_code)
         return None
 
 
 async def get_or_create_obsidian_repo(
     token: str, repo_name: str = OBSIDIAN_DEFAULT_REPO_NAME
-) -> dict | None:
+) -> dict[str, str] | None:
     username = await get_github_username(token)
     if not username:
         return None
@@ -84,7 +85,7 @@ async def put_github_file(
 ) -> bool:
     content_base64 = base64.b64encode(content.encode("utf-8")).decode("utf-8")
     url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
-    payload: dict = {"message": commit_message, "content": content_base64}
+    payload: dict[str, typing.Any] = {"message": commit_message, "content": content_base64}
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -114,13 +115,15 @@ async def put_github_file(
     return False
 
 
-async def get_repo_contents(token: str, owner: str, repo: str, path: str = "") -> list[dict]:
+async def get_repo_contents(
+    token: str, owner: str, repo: str, path: str = ""
+) -> list[dict[str, typing.Any]]:
     """Get list of files/folders in a repository path."""
     url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=_github_headers(token))
         if response.status_code == http.HTTPStatus.OK:
-            data = response.json()
+            data: list[dict[str, typing.Any]] | dict[str, typing.Any] = response.json()
             if isinstance(data, list):
                 return data
             return [data]
@@ -134,9 +137,9 @@ async def get_github_file(token: str, owner: str, repo: str, path: str) -> tuple
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=_github_headers(token))
         if response.status_code == http.HTTPStatus.OK:
-            data = response.json()
+            data: dict[str, typing.Any] = response.json()
             content = base64.b64decode(data["content"]).decode("utf-8")
-            return content, data["sha"]
+            return content, str(data["sha"])
         if response.status_code == http.HTTPStatus.NOT_FOUND:
             logger.debug("File not found: %s", path)
         else:
