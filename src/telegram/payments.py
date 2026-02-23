@@ -66,14 +66,15 @@ async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def buy_package_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle package selection and send invoice."""
     query = update.callback_query
-    assert query is not None
-    assert query.data is not None
+    if query is None or query.data is None:
+        return
     await query.answer()
 
     idx = int(query.data.split("_")[-1])
     pkg = CREDIT_PACKAGES[idx]
 
-    assert update.effective_chat is not None
+    if update.effective_chat is None:
+        return
     await context.bot.send_invoice(
         chat_id=update.effective_chat.id,
         title=f"{pkg['name']} Token Package",
@@ -86,15 +87,17 @@ async def buy_package_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Approve pre-checkout query."""
-    assert update.pre_checkout_query is not None
+    if update.pre_checkout_query is None:
+        return
     await update.pre_checkout_query.answer(ok=True)
 
 
 async def handle_successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle successful payment — add tokens to user."""
-    assert update.effective_user is not None
-    assert update.message is not None
-    assert update.message.successful_payment is not None
+    if update.effective_user is None or update.message is None:
+        return
+    if update.message.successful_payment is None:
+        return
     user_id = str(update.effective_user.id)
     payment = update.message.successful_payment
 
@@ -118,7 +121,8 @@ async def handle_successful_payment(update: Update, context: ContextTypes.DEFAUL
     )
 
     total = await get_total_credits(user_id)
-    assert update.effective_chat is not None
+    if update.effective_chat is None:
+        return
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=f"Tokens added: +{tokens_to_add}\nBalance: {total}",
@@ -127,8 +131,8 @@ async def handle_successful_payment(update: Update, context: ContextTypes.DEFAUL
 
 async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show detailed credit balance."""
-    assert update.effective_user is not None
-    assert update.effective_chat is not None
+    if update.effective_user is None or update.effective_chat is None:
+        return
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
     user_id = str(update.effective_user.id)
@@ -157,6 +161,6 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
     )
     await context.bot.send_message(
-        chat_id=update.effective_chat.id,  # already asserted above
+        chat_id=update.effective_chat.id,
         text=text,
     )

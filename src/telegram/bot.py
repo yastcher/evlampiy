@@ -14,7 +14,8 @@ async def send_response(
     keyboard: InlineKeyboardMarkup | None = None,
     **kwargs: typing.Any,
 ) -> None:
-    assert update.effective_chat is not None
+    if update.effective_chat is None:
+        return
     chunks = [
         response[i : i + MAX_TELEGRAM_MESSAGE_LENGTH]
         for i in range(0, len(response), MAX_TELEGRAM_MESSAGE_LENGTH)

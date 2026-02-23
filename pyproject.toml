@@ -60,14 +60,11 @@ fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "PLR2004", "S105", "S106", "PLR0913"]
-# assert used for PTB type narrowing (effective_user/message are guaranteed non-None by handler context)
-# todo =Y remove it later and remove types.Any
-"src/telegram/*" = ["S101"]
-"src/gpt_commands.py" = ["S101"]
 "src/localization.py" = ["RUF001", "E501"]
 "src/transcript_cleanup.py" = ["RUF001"]
 "src/categorization.py" = ["PLR0913"]
-"src/telegram/voice.py" = ["PLR0912", "PLR0915"]
+"src/telegram/admin.py" = ["PLR0912"]
+"src/telegram/voice.py" = ["PLR0912", "PLR0911", "PLR0915"]
 "src/github_oauth.py" = ["S105"]
 "src/config.py" = ["S104"]
 
@@ -115,3 +112,14 @@ addopts = [
 ]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.report]
+exclude_also = [
+    # PTB handler guards - framework guarantees effective_user/message/etc. non-None in handler context
+    "if update\\.message is None",
+    "if update\\.effective_user is None",
+    "if update\\.effective_chat is None",
+    "if update\\.pre_checkout_query is None",
+    "if update\\.message\\.successful_payment is None",
+    "if query is None",
+]

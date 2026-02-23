@@ -82,8 +82,8 @@ def _parse_user_id(args: list[str]) -> str | None:
 
 async def admin_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Admin panel with inline keyboard."""
-    assert update.effective_user is not None
-    assert update.message is not None
+    if update.effective_user is None or update.message is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 
@@ -92,13 +92,14 @@ async def admin_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Route admin hub button presses."""
-    assert update.effective_user is not None
+    if update.effective_user is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 
     query = update.callback_query
-    assert query is not None
-    assert query.data is not None
+    if query is None or query.data is None:
+        return
     await query.answer()
 
     action = query.data.replace("adm_", "")
@@ -153,8 +154,8 @@ async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def add_vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Add a user to VIP list. Usage: /add_vip <user_id>"""
-    assert update.effective_user is not None
-    assert update.message is not None
+    if update.effective_user is None or update.message is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 
@@ -170,8 +171,8 @@ async def add_vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def remove_vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove a user from VIP list. Usage: /remove_vip <user_id>"""
-    assert update.effective_user is not None
-    assert update.message is not None
+    if update.effective_user is None or update.message is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 
@@ -189,8 +190,8 @@ async def remove_vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def add_tester_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Add a user to tester list. Usage: /add_tester <user_id>"""
-    assert update.effective_user is not None
-    assert update.message is not None
+    if update.effective_user is None or update.message is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 
@@ -206,8 +207,8 @@ async def add_tester_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def remove_tester_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove a user from tester list. Usage: /remove_tester <user_id>"""
-    assert update.effective_user is not None
-    assert update.message is not None
+    if update.effective_user is None or update.message is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 
@@ -225,8 +226,8 @@ async def remove_tester_command(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def block_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Block a user. Usage: /block <user_id> [reason]"""
-    assert update.effective_user is not None
-    assert update.message is not None
+    if update.effective_user is None or update.message is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 
@@ -248,8 +249,8 @@ async def block_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def unblock_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Unblock a user. Usage: /unblock <user_id>"""
-    assert update.effective_user is not None
-    assert update.message is not None
+    if update.effective_user is None or update.message is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 
@@ -267,8 +268,8 @@ async def unblock_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def add_credits_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Add credits to a user. Usage: /add_credits <user_id> <amount>"""
-    assert update.effective_user is not None
-    assert update.message is not None
+    if update.effective_user is None or update.message is None:
+        return
     if not is_admin_user(str(update.effective_user.id)):
         return
 

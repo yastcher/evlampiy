@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 async def evlampiy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    assert update.message is not None
+    if update.message is None:
+        return
     user_message = update.message.text or ""
 
     try:

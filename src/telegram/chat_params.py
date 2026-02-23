@@ -8,13 +8,14 @@ from src import const
 
 
 def is_private_chat(update: Update) -> bool:
-    assert update.effective_chat is not None
+    if update.effective_chat is None:
+        return False
     return update.effective_chat.type == const.PRIVATE_CHAT_TYPE
 
 
 def get_chat_id(update: Update) -> str:
-    assert update.effective_chat is not None
-    assert update.effective_user is not None
+    if update.effective_chat is None or update.effective_user is None:
+        raise ValueError("get_chat_id requires effective_chat and effective_user")
     if is_private_chat(update):
         return f"{const.CHAT_PREFIX_USER}{update.effective_user.id}"
     else:
@@ -22,8 +23,8 @@ def get_chat_id(update: Update) -> str:
 
 
 async def is_user_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    assert update.effective_chat is not None
-    assert update.effective_user is not None
+    if update.effective_chat is None or update.effective_user is None:
+        return False
     if is_private_chat(update):
         return True
     else:
@@ -38,8 +39,10 @@ async def reply_text(update: Update, text: str, **kwargs: typing.Any) -> None:
     """Reply via callback query message or regular message."""
     if update.callback_query:
         msg = update.callback_query.message
-        if msg is not None:
-            await msg.reply_text(text, **kwargs)  # type: ignore[attr-defined]
+        if msg is None:  # pragma: no cover
+            return
+        await msg.reply_text(text, **kwargs)  # type: ignore[attr-defined]
     else:
-        assert update.message is not None
+        if update.message is None:
+            return
         await update.message.reply_text(text, **kwargs)

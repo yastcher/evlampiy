@@ -120,7 +120,8 @@ def _build_voice_response(text: str, gpt_command: str, message_id: int) -> dict[
 
 async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle incoming voice/audio message from Telegram."""
-    assert update.message is not None
+    if update.message is None:
+        return
     voice = update.message.voice or update.message.audio
     if not voice:
         return
