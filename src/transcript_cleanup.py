@@ -1,6 +1,7 @@
 """Optional LLM-based cleanup of raw voice transcriptions."""
 
 import logging
+from collections.abc import Mapping, Sequence
 
 from src.ai_client import cleanup_text
 from src.prompts import CLEANUP_PROMPT_BASE
@@ -14,8 +15,8 @@ _MAX_TOKENS = 4096
 
 def _build_cleanup_prompt(
     text: str,
-    vocabulary: dict[str, list[str]] | None,
-    context: list[str] | None,
+    vocabulary: Mapping[str, Sequence[str]] | None,
+    context: Sequence[str] | None,
 ) -> str:
     parts = [CLEANUP_PROMPT_BASE]
     if context:
@@ -35,8 +36,8 @@ def _build_cleanup_prompt(
 
 async def cleanup_transcript(
     text: str,
-    vocabulary: dict[str, list[str]] | None = None,
-    context: list[str] | None = None,
+    vocabulary: Mapping[str, Sequence[str]] | None = None,
+    context: Sequence[str] | None = None,
 ) -> str:
     """Clean up raw transcription using LLM. Returns original text on failure."""
     if len(text) < _MIN_TEXT_LENGTH:

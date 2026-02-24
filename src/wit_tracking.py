@@ -3,9 +3,10 @@
 from src.config import settings
 from src.credits import current_month_key
 from src.dto import WitUsageStats
+from src.types import Language
 
 
-async def increment_wit_usage(count: int = 1, language: str = "ru") -> int:
+async def increment_wit_usage(count: int = 1, language: Language = "ru") -> int:
     month_key = current_month_key()
     record = await WitUsageStats.find_one(
         WitUsageStats.month_key == month_key,
@@ -20,7 +21,7 @@ async def increment_wit_usage(count: int = 1, language: str = "ru") -> int:
     return record.request_count
 
 
-async def get_wit_usage_this_month(language: str) -> int:
+async def get_wit_usage_this_month(language: Language) -> int:
     month_key = current_month_key()
     record = await WitUsageStats.find_one(
         WitUsageStats.month_key == month_key,
@@ -38,6 +39,6 @@ async def get_all_wit_usage_this_month() -> dict[str, int]:
     return {r.language: r.request_count for r in records if r.language}
 
 
-async def is_wit_available(language: str) -> bool:
+async def is_wit_available(language: Language) -> bool:
     usage = await get_wit_usage_this_month(language)
     return usage < settings.wit_free_monthly_limit

@@ -2,6 +2,7 @@
 
 import logging
 import typing
+from collections.abc import Sequence
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
@@ -70,7 +71,7 @@ async def _build_providers_panel() -> tuple[str, InlineKeyboardMarkup]:
     return text, InlineKeyboardMarkup(keyboard)
 
 
-def _parse_user_id(args: list[str]) -> str | None:
+def _parse_user_id(args: Sequence[str]) -> str | None:
     """Extract and validate user_id from command arguments."""
     if not args:
         return None

@@ -2,6 +2,7 @@
 
 import json
 import logging
+from collections.abc import Mapping, Sequence
 
 from src import const
 from src.ai_client import classify_text
@@ -45,13 +46,13 @@ async def get_vocabulary_from_repo(token: str, owner: str, repo: str) -> dict[st
 
 
 async def update_vocabulary_in_repo(
-    token: str, owner: str, repo: str, category: str, keywords: list[str]
+    token: str, owner: str, repo: str, category: str, keywords: Sequence[str]
 ) -> None:
     """Merge new keywords into vocabulary.json, deduplicating and capping at 50 per category."""
     vocabulary = await get_vocabulary_from_repo(token, owner, repo)
     existing = vocabulary.get(category, [])
     # dict.fromkeys preserves insertion order and deduplicates
-    merged = list(dict.fromkeys(existing + keywords))
+    merged = list(dict.fromkeys(existing + list(keywords)))
     vocabulary[category] = merged[:_VOCABULARY_MAX_KEYWORDS_PER_CATEGORY]
     content = json.dumps(vocabulary, ensure_ascii=False, indent=2)
     await put_github_file(
@@ -66,8 +67,8 @@ async def update_vocabulary_in_repo(
 
 async def classify_note(
     text: str,
-    existing_categories: list[str],
-    vocabulary: dict[str, list[str]] | None = None,
+    existing_categories: Sequence[str],
+    vocabulary: Mapping[str, Sequence[str]] | None = None,
 ) -> tuple[str | None, list[str]]:
     """Classify note text into a category using the configured AI provider.
 
@@ -136,8 +137,8 @@ async def categorize_note(
     repo: str,
     filename: str,
     content: str,
-    existing_categories: list[str] | None = None,
-    vocabulary: dict[str, list[str]] | None = None,
+    existing_categories: Sequence[str] | None = None,
+    vocabulary: Mapping[str, Sequence[str]] | None = None,
 ) -> str | None:
     """Categorize a single note and move it to the appropriate folder."""
     if existing_categories is None:

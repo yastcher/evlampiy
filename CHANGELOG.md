@@ -10,6 +10,9 @@
 
 - `uv run mypy src` added as a required step in GitHub Actions CI pipeline
 - `src/prompts.py`: LLM prompt strings centralized into a single module
+- `src/types.py`: domain TypeAlias (`UserId`, `ChatId`, `MonthKey`, `Language`)
+- Input parameters with `list[X]` replaced by `Sequence[X]` where the function does not mutate the collection;
+  `dict[K,V]` replaced by `Mapping[K,V]` where only read
 
 ## [0.8.12] — 2026-02-22
 

@@ -26,6 +26,13 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Max 500 lines per file — decompose if exceeded
 - FastAPI conventions: see .claude/skills/fastapi.md
 
+## Type hints
+
+- Domain identifiers: use TypeAlias from `src/types.py` (UserId, ChatId, Language, MonthKey) instead of bare `str`
+- Input parameters: prefer `Sequence[X]` over `list[X]` if the function does not mutate the list
+- Return types: use concrete types (`list`, `dict`), not abstract
+- Import Sequence/Mapping from `collections.abc`, not from `typing`
+
 ## Commands
 
 - Lint: `uv run ruff check --fix`

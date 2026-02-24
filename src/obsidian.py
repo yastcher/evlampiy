@@ -3,11 +3,12 @@ import logging
 
 from src.github_api import OBSIDIAN_NOTES_FOLDER, put_github_file
 from src.mongo import get_github_settings, get_save_to_obsidian
+from src.types import ChatId, Language
 
 logger = logging.getLogger(__name__)
 
 
-async def add_short_note_to_obsidian(chat_id: str, text: str) -> bool:
+async def add_short_note_to_obsidian(chat_id: ChatId, text: str) -> bool:
     """
     Creates a short note in the GitHub repository's `income` folder.
     """
@@ -41,11 +42,11 @@ async def add_short_note_to_obsidian(chat_id: str, text: str) -> bool:
 
 
 async def save_transcription_to_obsidian(
-    chat_id: str,
+    chat_id: ChatId,
     text: str,
     source: str,
-    language: str,
-    settings_chat_id: str | None = None,
+    language: Language,
+    settings_chat_id: ChatId | None = None,
     original_text: str | None = None,
 ) -> tuple[bool, str | None]:
     """

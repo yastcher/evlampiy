@@ -6,14 +6,16 @@ from beanie import Document
 from pydantic import Field
 from pymongo import ASCENDING, IndexModel
 
+from src.types import ChatId, Language, MonthKey, UserId
+
 
 class UserSettings(Document):
     """
     User model MongoDB for Beanie.
     """
 
-    chat_id: str
-    language: str | None = None
+    chat_id: ChatId
+    language: Language | None = None
     command: str | None = None
     github_settings: dict[str, str] | None = None
     save_to_obsidian: bool = False
@@ -33,7 +35,7 @@ class UserTier(str, Enum):
 
 
 class UserCredits(Document):
-    user_id: str
+    user_id: UserId
 
     # Balance
     free_credits: int = 10
@@ -55,8 +57,8 @@ class UserCredits(Document):
 
 
 class UserMonthlyUsage(Document):
-    user_id: str
-    month_key: str  # "2026-02"
+    user_id: UserId
+    month_key: MonthKey  # "2026-02"
 
     transcriptions: int = 0
     audio_seconds: int = 0
@@ -86,8 +88,8 @@ class BotConfig(Document):
 
 
 class WitUsageStats(Document):
-    month_key: str  # "2026-01"
-    language: str = ""  # "en", "ru", "es", "de"; empty for legacy records
+    month_key: MonthKey  # "2026-01"
+    language: Language = ""  # "en", "ru", "es", "de"; empty for legacy records
     request_count: int = 0
 
     class Settings:
@@ -95,7 +97,7 @@ class WitUsageStats(Document):
 
 
 class MonthlyStats(Document):
-    month_key: str  # "2026-01"
+    month_key: MonthKey  # "2026-01"
     total_transcriptions: int = 0
     total_payments: int = 0
     total_credits_sold: int = 0
@@ -111,7 +113,7 @@ def _utc_now() -> datetime.datetime:
 
 class AlertState(Document):
     alert_type: str
-    month_key: str
+    month_key: MonthKey
     sent_at: datetime.datetime = Field(default_factory=_utc_now)
 
     class Settings:
@@ -119,7 +121,7 @@ class AlertState(Document):
 
 
 class UserRole(Document):
-    user_id: str
+    user_id: UserId
     role: str  # "vip" or "tester"
     added_by: str
     added_at: datetime.datetime = Field(default_factory=_utc_now)
@@ -161,7 +163,7 @@ _RECENT_TRANSCRIPTION_TTL_SECONDS = 7200  # 2 hours
 class RecentTranscription(Document):
     """Stores recent cleaned transcriptions per chat for cleanup context (TTL 2h)."""
 
-    chat_id: str
+    chat_id: ChatId
     text: str
     created_at: datetime.datetime = Field(default_factory=_utc_now)
 

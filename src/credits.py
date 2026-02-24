@@ -9,6 +9,7 @@ from src import const
 from src.config import settings
 from src.dto import MonthlyStats, UsedTrial, UserCredits, UserMonthlyUsage, UserTier
 from src.mongo import has_role
+from src.types import UserId
 
 
 @dataclasses.dataclass
@@ -18,7 +19,7 @@ class DeductResult:
     overdraft: bool  # True = balance was insufficient, deducted what was available
 
 
-def hash_user_id(user_id: str) -> str:
+def hash_user_id(user_id: UserId) -> str:
     return hashlib.sha256(user_id.encode()).hexdigest()
 
 
@@ -27,39 +28,39 @@ def calculate_token_cost(duration_seconds: int) -> int:
     return max(1, math.ceil(duration_seconds / const.SECONDS_PER_TOKEN))
 
 
-async def is_blocked_user(user_id: str) -> bool:
+async def is_blocked_user(user_id: UserId) -> bool:
     """Check if user is blocked."""
     return await has_role(user_id, const.ROLE_BLOCKED)
 
 
-async def is_vip_user(user_id: str) -> bool:
+async def is_vip_user(user_id: UserId) -> bool:
     """Check VIP status: DB first, then env fallback."""
     if await has_role(user_id, const.ROLE_VIP):
         return True
     return user_id in settings.vip_user_ids
 
 
-def is_admin_user(user_id: str) -> bool:
+def is_admin_user(user_id: UserId) -> bool:
     return user_id in settings.admin_user_ids
 
 
-async def is_tester_user(user_id: str) -> bool:
+async def is_tester_user(user_id: UserId) -> bool:
     return await has_role(user_id, const.ROLE_TESTER)
 
 
-async def has_unlimited_access(user_id: str) -> bool:
+async def has_unlimited_access(user_id: UserId) -> bool:
     """VIP or admin — unlimited everything."""
     return await is_vip_user(user_id) or is_admin_user(user_id)
 
 
-async def has_unlimited_voice_access(user_id: str) -> bool:
+async def has_unlimited_voice_access(user_id: UserId) -> bool:
     """VIP, admin, or tester — unlimited voice transcription."""
     if await has_unlimited_access(user_id):
         return True
     return await is_tester_user(user_id)
 
 
-async def get_user_tier(user_id: str) -> UserTier:
+async def get_user_tier(user_id: UserId) -> UserTier:
     if await is_vip_user(user_id) or is_admin_user(user_id):
         return UserTier.VIP
     if await is_tester_user(user_id):
@@ -87,7 +88,7 @@ async def _ensure_fresh_free_credits(record: UserCredits) -> UserCredits:
     return record
 
 
-async def _get_or_create_user_credits(user_id: str) -> UserCredits:
+async def _get_or_create_user_credits(user_id: UserId) -> UserCredits:
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
         record = UserCredits(
@@ -102,7 +103,7 @@ async def _get_or_create_user_credits(user_id: str) -> UserCredits:
 # --- Credit queries ---
 
 
-async def get_credits(user_id: str) -> tuple[int, int]:
+async def get_credits(user_id: UserId) -> tuple[int, int]:
     """Return (free_credits, purchased_credits) with lazy reset."""
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
@@ -111,13 +112,13 @@ async def get_credits(user_id: str) -> tuple[int, int]:
     return (record.free_credits, record.purchased_credits)
 
 
-async def get_total_credits(user_id: str) -> int:
+async def get_total_credits(user_id: UserId) -> int:
     """Return total available credits (free + purchased)."""
     free, purchased = await get_credits(user_id)
     return free + purchased
 
 
-async def can_perform_operation(user_id: str, cost: int) -> tuple[bool, str]:
+async def can_perform_operation(user_id: UserId, cost: int) -> tuple[bool, str]:
     if await has_unlimited_access(user_id):
         return True, ""
     free, purchased = await get_credits(user_id)
@@ -129,7 +130,7 @@ async def can_perform_operation(user_id: str, cost: int) -> tuple[bool, str]:
 # --- Credit mutations ---
 
 
-async def add_credits(user_id: str, amount: int) -> int:
+async def add_credits(user_id: UserId, amount: int) -> int:
     """Add purchased credits. Returns new purchased balance."""
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
@@ -150,7 +151,7 @@ async def add_credits(user_id: str, amount: int) -> int:
     return record.purchased_credits
 
 
-async def admin_add_credits(user_id: str, amount: int) -> int:
+async def admin_add_credits(user_id: UserId, amount: int) -> int:
     """Add credits without changing tier (for admin top-ups)."""
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
@@ -167,7 +168,7 @@ async def admin_add_credits(user_id: str, amount: int) -> int:
     return record.purchased_credits
 
 
-async def deduct_credits(user_id: str, cost: int) -> DeductResult:
+async def deduct_credits(user_id: UserId, cost: int) -> DeductResult:
     """Deduct tokens: free first, then purchased.
 
     Never goes below 0. If not enough — deducts what's available (overdraft).
@@ -197,7 +198,7 @@ async def deduct_credits(user_id: str, cost: int) -> DeductResult:
 # --- Legacy (kept for backward compat, no longer called from handlers) ---
 
 
-async def grant_initial_credits_if_eligible(user_id: str) -> bool:
+async def grant_initial_credits_if_eligible(user_id: UserId) -> bool:
     user_hash = hash_user_id(user_id)
     existing = await UsedTrial.find_one(UsedTrial.user_hash == user_hash)
     if existing:
@@ -218,7 +219,7 @@ async def grant_initial_credits_if_eligible(user_id: str) -> bool:
 # --- Usage tracking ---
 
 
-async def increment_user_stats(user_id: str, audio_seconds: int = 0) -> None:
+async def increment_user_stats(user_id: UserId, audio_seconds: int = 0) -> None:
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
         record = UserCredits(
@@ -236,7 +237,7 @@ async def increment_user_stats(user_id: str, audio_seconds: int = 0) -> None:
 
 
 async def record_user_usage(
-    user_id: str,
+    user_id: UserId,
     audio_seconds: int,
     tokens: int,
     free_used: int,

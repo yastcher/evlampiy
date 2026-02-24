@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections.abc import Mapping, Sequence
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
@@ -375,7 +376,7 @@ async def unlink_whatsapp(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
 
 
-def _provider_icon(name: str, keys: dict[str, bool]) -> str:
+def _provider_icon(name: str, keys: Mapping[str, bool]) -> str:
     """Return ✅/❌ based on whether the provider has a key configured."""
     return "✅" if keys.get(name) else "❌"
 
@@ -416,7 +417,7 @@ async def build_stats_text() -> str:
         const.PROVIDER_OPENAI: bool(settings.gpt_token),
     }
 
-    def _chain_str(primary: str, fallback_chain: list[str]) -> str:
+    def _chain_str(primary: str, fallback_chain: Sequence[str]) -> str:
         chain = [primary] + [p for p in fallback_chain if p != primary]
         parts = [f"{p}{_provider_rpm(p)} {_provider_icon(p, keys)}" for p in chain]
         return " → ".join(parts)

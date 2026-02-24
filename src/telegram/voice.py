@@ -39,6 +39,7 @@ from src.telegram.bot import send_response
 from src.telegram.chat_params import get_chat_id
 from src.transcript_cleanup import cleanup_transcript
 from src.transcription.service import transcribe_audio
+from src.types import ChatId, Language, UserId
 from src.wit_tracking import increment_wit_usage, is_wit_available
 
 logger = logging.getLogger(__name__)
@@ -78,10 +79,10 @@ def _select_provider(
 
 
 async def _handle_obsidian_save(
-    chat_id: str,
+    chat_id: ChatId,
     text: str,
-    language: str,
-    user_id: str | None = None,
+    language: Language,
+    user_id: UserId | None = None,
     original_text: str | None = None,
 ) -> None:
     """Save transcription to Obsidian and auto-categorize if enabled."""
