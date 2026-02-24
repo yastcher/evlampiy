@@ -146,6 +146,9 @@ uv run pytest
 # Linter ausführen
 uv run ruff check
 
+# Typprüfung ausführen
+uv run mypy src
+
 # Mit Coverage ausführen
 uv run pytest --cov=src --cov-fail-under=85
 ```

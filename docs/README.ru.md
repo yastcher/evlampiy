@@ -146,6 +146,9 @@ uv run pytest
 # Запуск линтера
 uv run ruff check
 
+# Проверка типов
+uv run mypy src
+
 # Запуск с покрытием
 uv run pytest --cov=src --cov-fail-under=85
 ```

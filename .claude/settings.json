@@ -9,13 +9,14 @@
       "Write",
       "Bash(uv run pytest*)",
       "Bash(uv run ruff*)",
+      "Bash(uv run mypy*)",
       "Bash(ls *)",
-      "Bash(git diff*)",
-      "Bash(git status*)",
-      "Bash(git log*)",
-      "Bash(git ls-files*)",
-      "Bash(git show*)",
-      "Bash(git blame*)"
+      "Bash(git * diff *)",
+      "Bash(git * status *)",
+      "Bash(git * log *)",
+      "Bash(git * ls-files *)",
+      "Bash(git * show *)",
+      "Bash(git * blame *)"
     ],
     "deny": [
       "Bash(rm -rf*)",
