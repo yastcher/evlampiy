@@ -277,57 +277,108 @@ class TestMoveGithubFile:
 
 
 class TestCategorizeNote:
-    """Test single note categorization."""
+    """Trophy integration: mock at external boundary (GitHub HTTP + AI), let internals flow."""
 
     async def test_categorizes_and_moves_note(self):
-        """Note is classified and moved to category folder."""
+        """Full pipeline: categories → vocabulary → classify → move → update vocab."""
+        vocab = {"work": ["project"]}
+
+        async def fake_get_repo_contents(token, owner, repo, path=""):
+            return [
+                {"name": "income", "type": "dir"},
+                {"name": "work", "type": "dir"},
+                {"name": "personal", "type": "dir"},
+            ]
+
+        async def fake_get_github_file(token, owner, repo, path):
+            if path == "vocabulary.json":
+                return (json.dumps(vocab), "sha_vocab")
+            if path.startswith("income/"):
+                return ("Meeting notes about project X", "sha_note")
+            return None
+
+        put_calls = []
+
+        async def fake_put(token, owner, repo, path, content, commit_message):
+            put_calls.append({"path": path, "content": content})
+            return True
+
         with (
+            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("src.categorization.put_github_file", side_effect=fake_put),
+            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
             patch(
-                "src.categorization.get_existing_categories",
-                AsyncMock(return_value=["work", "personal"]),
+                "src.categorization.classify_text",
+                AsyncMock(
+                    return_value=json.dumps(
+                        {"category": "work", "keywords": ["meeting", "project"]}
+                    )
+                ),
             ),
-            patch(
-                "src.categorization.get_vocabulary_from_repo",
-                AsyncMock(return_value={}),
-            ),
-            patch(
-                "src.categorization.classify_note",
-                AsyncMock(return_value=("work", ["meeting", "project"])),
-            ),
-            patch("src.categorization.move_github_file", AsyncMock(return_value=True)),
-            patch("src.categorization.update_vocabulary_in_repo", AsyncMock()) as mock_update,
         ):
             result = await categorize_note("token", "owner", "repo", "note.md", "Meeting notes")
 
         assert result == "work"
-        mock_update.assert_called_once()
+        # File was moved to work/note.md
+        assert any(c["path"] == "work/note.md" for c in put_calls)
+        # Vocabulary was updated with merged keywords
+        vocab_puts = [c for c in put_calls if c["path"] == "vocabulary.json"]
+        assert len(vocab_puts) == 1
+        updated_vocab = json.loads(vocab_puts[0]["content"])
+        assert "meeting" in updated_vocab["work"]
+        assert "project" in updated_vocab["work"]
+        # Deduplication: "project" appears only once
+        assert updated_vocab["work"].count("project") == 1
 
     async def test_skips_vocabulary_update_when_no_keywords(self):
-        """update_vocabulary_in_repo is not called when classify_note returns no keywords."""
+        """No vocabulary write when classify_text returns empty keywords."""
+
+        async def fake_get_repo_contents(token, owner, repo, path=""):
+            return [{"name": "work", "type": "dir"}]
+
+        async def fake_get_github_file(token, owner, repo, path):
+            if path == "vocabulary.json":
+                return None
+            if path.startswith("income/"):
+                return ("Some content", "sha_note")
+            return None
+
+        put_paths = []
+
+        async def fake_put(token, owner, repo, path, content, commit_message):
+            put_paths.append(path)
+            return True
+
         with (
-            patch("src.categorization.get_existing_categories", AsyncMock(return_value=[])),
-            patch("src.categorization.get_vocabulary_from_repo", AsyncMock(return_value={})),
+            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("src.categorization.put_github_file", side_effect=fake_put),
+            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
             patch(
-                "src.categorization.classify_note",
-                AsyncMock(return_value=("work", [])),
+                "src.categorization.classify_text",
+                AsyncMock(return_value=json.dumps({"category": "work", "keywords": []})),
             ),
-            patch("src.categorization.move_github_file", AsyncMock(return_value=True)),
-            patch("src.categorization.update_vocabulary_in_repo", AsyncMock()) as mock_update,
         ):
             result = await categorize_note("token", "owner", "repo", "note.md", "Some content")
 
         assert result == "work"
-        mock_update.assert_not_called()
+        # Only the file move put, no vocabulary update
+        assert put_paths == ["work/note.md"]
 
     async def test_returns_none_when_classification_fails(self):
-        """Returns None when classification fails."""
+        """Returns None when AI returns None."""
+
+        async def fake_get_repo_contents(token, owner, repo, path=""):
+            return []
+
+        async def fake_get_github_file(token, owner, repo, path):
+            return None
+
         with (
-            patch("src.categorization.get_existing_categories", AsyncMock(return_value=[])),
-            patch("src.categorization.get_vocabulary_from_repo", AsyncMock(return_value={})),
-            patch(
-                "src.categorization.classify_note",
-                AsyncMock(return_value=(None, [])),
-            ),
+            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("src.categorization.classify_text", AsyncMock(return_value=None)),
         ):
             result = await categorize_note("token", "owner", "repo", "note.md", "Some content")
 
@@ -335,95 +386,134 @@ class TestCategorizeNote:
 
 
 class TestCategorizeAllIncome:
-    """Test batch categorization of income folder."""
+    """Trophy integration: mock at external boundary, test full pipeline."""
 
     async def test_processes_markdown_files(self):
-        """Processes .md files and skips others."""
-        mock_contents = [
-            {"name": "note1.md", "type": "file"},
-            {"name": "note2.md", "type": "file"},
-            {"name": ".gitkeep", "type": "file"},
-            {"name": "subfolder", "type": "dir"},
-        ]
+        """Processes .md files and skips .gitkeep and directories."""
+
+        async def fake_get_repo_contents(token, owner, repo, path=""):
+            if path == "":
+                return [{"name": "work", "type": "dir"}]
+            if path == "income":
+                return [
+                    {"name": "note1.md", "type": "file"},
+                    {"name": "note2.md", "type": "file"},
+                    {"name": ".gitkeep", "type": "file"},
+                    {"name": "subfolder", "type": "dir"},
+                ]
+            return []
+
+        async def fake_get_github_file(token, owner, repo, path):
+            if path == "vocabulary.json":
+                return None
+            if path.startswith("income/") and path.endswith(".md"):
+                return ("content", "sha")
+            return None
 
         with (
-            patch("src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)),
+            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("src.categorization.put_github_file", AsyncMock(return_value=True)),
+            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
             patch(
-                "src.categorization.get_github_file",
-                AsyncMock(return_value=("content", "sha")),
+                "src.categorization.classify_text",
+                AsyncMock(return_value=json.dumps({"category": "work", "keywords": []})),
             ),
-            patch(
-                "src.categorization.get_vocabulary_from_repo",
-                AsyncMock(return_value={}),
-            ),
-            patch("src.categorization.categorize_note", AsyncMock(return_value="work")),
         ):
             result = await categorize_all_income("token", "owner", "repo")
 
         assert result == 2
 
-    async def test_passes_vocabulary_to_categorize_note(self):
-        """Loads vocabulary once and passes it to each categorize_note call."""
-        mock_contents = [
-            {"name": "note1.md", "type": "file"},
-        ]
+    async def test_vocabulary_included_in_classification_prompt(self):
+        """Vocabulary loaded once and included in every classify_text prompt."""
         vocab = {"work": ["project"]}
-        captured_calls = []
+        captured_prompts = []
 
-        async def fake_categorize(
-            token, owner, repo, name, content, existing_categories, vocabulary
-        ):
-            captured_calls.append(vocabulary)
-            return "work"
+        async def fake_classify(prompt):
+            captured_prompts.append(prompt)
+            return json.dumps({"category": "work", "keywords": []})
+
+        async def fake_get_repo_contents(token, owner, repo, path=""):
+            if path == "":
+                return [{"name": "work", "type": "dir"}]
+            if path == "income":
+                return [{"name": "note1.md", "type": "file"}]
+            return []
+
+        async def fake_get_github_file(token, owner, repo, path):
+            if path == "vocabulary.json":
+                return (json.dumps(vocab), "sha")
+            if path.startswith("income/"):
+                return ("content", "sha")
+            return None
 
         with (
-            patch("src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)),
-            patch(
-                "src.categorization.get_github_file",
-                AsyncMock(return_value=("content", "sha")),
-            ),
-            patch(
-                "src.categorization.get_vocabulary_from_repo",
-                AsyncMock(return_value=vocab),
-            ),
-            patch("src.categorization.categorize_note", side_effect=fake_categorize),
+            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("src.categorization.put_github_file", AsyncMock(return_value=True)),
+            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("src.categorization.classify_text", side_effect=fake_classify),
         ):
             await categorize_all_income("token", "owner", "repo")
 
-        assert len(captured_calls) == 1
-        assert captured_calls[0] == vocab
+        assert len(captured_prompts) == 1
+        assert "project" in captured_prompts[0]
 
     async def test_returns_zero_on_empty_folder(self):
         """Returns 0 when income folder is empty."""
+
+        async def fake_get_repo_contents(token, owner, repo, path=""):
+            if path == "":
+                return []
+            if path == "income":
+                return []
+            return []
+
+        async def fake_get_github_file(token, owner, repo, path):
+            return None
+
         with (
-            patch("src.categorization.get_repo_contents", AsyncMock(return_value=[])),
-            patch("src.categorization.get_vocabulary_from_repo", AsyncMock(return_value={})),
+            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
         ):
             result = await categorize_all_income("token", "owner", "repo")
 
         assert result == 0
 
     async def test_counts_only_successful_categorizations(self):
-        """Only counts successfully categorized files."""
-        mock_contents = [
-            {"name": "note1.md", "type": "file"},
-            {"name": "note2.md", "type": "file"},
-        ]
+        """Only counts files where classification succeeded."""
+        call_count = 0
+
+        async def fake_classify(prompt):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return json.dumps({"category": "work", "keywords": []})
+            return None
+
+        async def fake_get_repo_contents(token, owner, repo, path=""):
+            if path == "":
+                return [{"name": "work", "type": "dir"}]
+            if path == "income":
+                return [
+                    {"name": "note1.md", "type": "file"},
+                    {"name": "note2.md", "type": "file"},
+                ]
+            return []
+
+        async def fake_get_github_file(token, owner, repo, path):
+            if path == "vocabulary.json":
+                return None
+            if path.startswith("income/"):
+                return ("content", "sha")
+            return None
 
         with (
-            patch("src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)),
-            patch(
-                "src.categorization.get_github_file",
-                AsyncMock(return_value=("content", "sha")),
-            ),
-            patch(
-                "src.categorization.get_vocabulary_from_repo",
-                AsyncMock(return_value={}),
-            ),
-            patch(
-                "src.categorization.categorize_note",
-                AsyncMock(side_effect=["work", None]),
-            ),
+            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("src.categorization.put_github_file", AsyncMock(return_value=True)),
+            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("src.categorization.classify_text", side_effect=fake_classify),
         ):
             result = await categorize_all_income("token", "owner", "repo")
 

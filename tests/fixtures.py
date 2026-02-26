@@ -253,6 +253,33 @@ def whatsapp_voice_external_mocks(mock_httpx_download_response):
 
 
 @pytest.fixture
+def make_update_factory():
+    """Factory for creating Update mocks with configurable is_bot flag."""
+
+    def _create(*, is_bot: bool | None) -> MagicMock:
+        update = MagicMock()
+        if is_bot is None:
+            update.effective_user = None
+        else:
+            update.effective_user = MagicMock()
+            update.effective_user.is_bot = is_bot
+            update.effective_user.id = 999
+        return update
+
+    return _create
+
+
+@pytest.fixture
+def mock_selftest_cleanup():
+    """Factory for mocking selftest cleanup_text with configurable return value."""
+
+    def _create(return_value="cleaned text"):
+        return patch("src.selftest.cleanup_text", new_callable=AsyncMock, return_value=return_value)
+
+    return _create
+
+
+@pytest.fixture
 def mock_bot():
     """Mock Telegram Bot for selftest."""
     bot = AsyncMock()
