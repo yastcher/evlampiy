@@ -274,4 +274,8 @@ def _patch_settings(tmp_path):
         mock_settings.selftest_sample_path = str(sample_file)
         mock_settings.default_language = "ru"
         mock_settings.groq_api_key = ""
+        mock_settings.gpt_provider = "deepseek"
+        mock_settings.categorization_provider = "deepseek"
+        mock_settings.deepseek_api_key = "test-key"
+        mock_settings.wit_ru_token = "test-token"
         yield mock_settings

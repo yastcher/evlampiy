@@ -8,11 +8,15 @@ import tomllib
 import telegram
 
 from src import const
-from src.config import RUSSIAN, settings
+from src.ai_client import cleanup_text
+from src.config import LANGUAGES, RUSSIAN, settings
+from src.localization import translates
 from src.transcription.service import get_audio_duration_seconds, transcribe_audio
 
 logger = logging.getLogger(__name__)
 
+_ResultList = list[tuple[str, str, str | None]]
+_Section = tuple[str, _ResultList]
 
 _PYPROJECT_PATH = pathlib.Path(__file__).resolve().parent.parent / "pyproject.toml"
 
@@ -37,22 +41,40 @@ def _get_version() -> str:
 
 _WIT_LABEL = "Wit.ai"
 _GROQ_LABEL = "Groq"
+_CLEANUP_LABEL = "LLM cleanup"
+_L10N_LABEL = "Localization"
+_CONFIG_LABEL = "Config"
+
+_CLEANUP_SAMPLE = "ну эм значит вот я сегодня аа ходил в магазин и купил молоко"  # noqa: RUF001
+
+_PROVIDER_KEY_MAP: dict[str, str] = {
+    const.PROVIDER_DEEPSEEK: "deepseek_api_key",
+    const.PROVIDER_GEMINI: "gemini_api_key",
+    const.PROVIDER_GROQ: "groq_api_key",
+    const.PROVIDER_OPENROUTER: "openrouter_api_key",
+    const.PROVIDER_QWEN: "qwen_api_key",
+    const.PROVIDER_ANTHROPIC: "anthropic_bot_api_key",
+    const.PROVIDER_OPENAI: "gpt_token",
+}
 
 
-def _format_provider_result(provider: str, text: str, error: str | None) -> str:
-    """Format result line(s) for a single transcription provider."""
+def _format_result(label: str, text: str, error: str | None) -> str:
+    """Format result line(s) for a single check."""
     if error:
-        return f"\u274c {provider} \u2014 {error}"
+        return f"\u274c {label} \u2014 {error}"
     if not text:
-        return f"\u274c {provider} \u2014 transcription returned empty text"
-    return f"\U0001f4dd \u00ab{text}\u00bb\n\u2705 {provider} \u2014 OK"
+        return f"\u274c {label} \u2014 returned empty"
+    return f"\u2705 {label} \u2014 {text}"
 
 
-def _build_message(version: str, language: str, results: list[tuple[str, str, str | None]]) -> str:
+def _build_message(version: str, sections: list[_Section]) -> str:
     header = f"\U0001f680 Evlampiy v{version} deployed"
-    lines = [header, "", f"\U0001f3a4 Self-test ({language}):"]
-    for provider, text, error in results:
-        lines.append(_format_provider_result(provider, text, error))
+    lines = [header]
+    for title, results in sections:
+        lines.append("")
+        lines.append(title)
+        for label, text, error in results:
+            lines.append(_format_result(label, text, error))
     return "\n".join(lines)
 
 
@@ -65,6 +87,47 @@ async def _test_provider(
         return text, None
     except Exception as exc:
         return "", f"error: {exc}"
+
+
+async def _test_cleanup() -> tuple[str, str | None]:
+    """Test LLM cleanup pipeline, return (cleaned_text, error_or_none)."""
+    try:
+        result = await cleanup_text(_CLEANUP_SAMPLE, max_tokens=200)
+        if not result or not result.strip():
+            return "", "LLM returned empty response"
+        return f"\u00ab{result.strip()}\u00bb", None
+    except Exception as exc:
+        return "", f"error: {exc}"
+
+
+def _test_localization() -> tuple[str, str | None]:
+    """Check all translation keys have all 4 languages."""
+    missing: list[str] = []
+    for key, langs in translates.items():
+        for lang in LANGUAGES:
+            if lang not in langs:
+                missing.append(f"{key}:{lang}")
+    if missing:
+        return "", f"missing: {', '.join(missing[:5])}"
+    return f"{len(translates)} keys OK", None
+
+
+def _test_config() -> tuple[str, str | None]:
+    """Check that selected providers have API keys configured."""
+    warnings: list[str] = []
+    for role, provider in [
+        ("gpt_provider", settings.gpt_provider),
+        ("categorization_provider", settings.categorization_provider),
+    ]:
+        key_attr = _PROVIDER_KEY_MAP.get(provider)
+        if key_attr and not getattr(settings, key_attr, ""):
+            warnings.append(f"{role}={provider} (no key)")
+    wit_attr = f"wit_{settings.default_language}_token"
+    if not getattr(settings, wit_attr, ""):
+        warnings.append(f"wit ({settings.default_language}) (no token)")
+    if warnings:
+        return "", f"misconfigured: {', '.join(warnings)}"
+    return "OK", None
 
 
 async def run_selftest(bot: telegram.Bot) -> None:
@@ -104,24 +167,42 @@ async def _selftest_for_admin(
     # todo =Y change it later
     # language = await get_chat_language(f"u_{admin_id}")
 
-    results: list[tuple[str, str, str | None]] = []
+    # --- Transcription providers ---
+    transcription_results: _ResultList = []
 
-    # Test Wit.ai
     wit_text, wit_error = await _test_provider(
         audio_bytes, "ogg", language, provider=const.PROVIDER_WIT
     )
-    results.append((_WIT_LABEL, wit_text, wit_error))
+    transcription_results.append((_WIT_LABEL, wit_text, wit_error))
 
-    # Test Groq
     if settings.groq_api_key:
         groq_text, groq_error = await _test_provider(
             audio_bytes, "ogg", language, provider=const.PROVIDER_GROQ
         )
-        results.append((_GROQ_LABEL, groq_text, groq_error))
+        transcription_results.append((_GROQ_LABEL, groq_text, groq_error))
     else:
-        results.append((_GROQ_LABEL, "", "skipped (not configured)"))
+        transcription_results.append((_GROQ_LABEL, "", "skipped (not configured)"))
 
-    message = _build_message(version, language, results)
+    # --- LLM cleanup ---
+    cleanup_results: _ResultList = []
+    cleanup_text_result, cleanup_error = await _test_cleanup()
+    cleanup_results.append((_CLEANUP_LABEL, cleanup_text_result, cleanup_error))
+
+    # --- System checks ---
+    system_results: _ResultList = []
+    l10n_text, l10n_error = _test_localization()
+    system_results.append((_L10N_LABEL, l10n_text, l10n_error))
+
+    config_text, config_error = _test_config()
+    system_results.append((_CONFIG_LABEL, config_text, config_error))
+
+    sections: list[_Section] = [
+        (f"\U0001f3a4 Self-test ({language}):", transcription_results),
+        ("\U0001f9f9 LLM cleanup:", cleanup_results),
+        ("\U0001f527 System checks:", system_results),
+    ]
+
+    message = _build_message(version, sections)
     chat_id = int(admin_id)
     await bot.send_voice(chat_id=chat_id, voice=audio_bytes, duration=duration)
     await bot.send_message(chat_id=chat_id, text=message)
