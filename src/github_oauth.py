@@ -9,7 +9,7 @@ from src.config import settings
 logger = logging.getLogger(__name__)
 
 GITHUB_DEVICE_CODE_URL = "https://github.com/login/device/code"
-GITHUB_OAUTH_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_OAUTH_ACCESS_URL = "https://github.com/login/oauth/access_token"
 GITHUB_OAUTH_SCOPE = "repo"
 GITHUB_OAUTH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
 
@@ -35,7 +35,7 @@ async def poll_github_for_token(device_code: str, interval: int, expires_in: int
             elapsed += poll_interval
 
             response = await client.post(
-                GITHUB_OAUTH_TOKEN_URL,
+                GITHUB_OAUTH_ACCESS_URL,
                 data={
                     "client_id": settings.github_client_id,
                     "device_code": device_code,

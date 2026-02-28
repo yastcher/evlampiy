@@ -135,9 +135,14 @@ translates = {
     },
     "service_unavailable": {
         ENGLISH: "Transcription service is temporarily unavailable. Please try again later.",
-        GERMAN: "Transkriptionsdienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.",
+        GERMAN: (
+            "Transkriptionsdienst ist vorübergehend nicht verfügbar."
+            " Bitte versuchen Sie es später erneut."
+        ),
         RUSSIAN: "Сервис транскрипции временно недоступен. Попробуйте позже.",
-        SPANISH: "El servicio de transcripción no está disponible temporalmente. Inténtalo más tarde.",
+        SPANISH: (
+            "El servicio de transcripción no está disponible temporalmente. Inténtalo más tarde."
+        ),
     },
     "categorize_enabled": {
         ENGLISH: "Auto-categorization enabled.",
@@ -356,10 +361,15 @@ translates = {
         SPANISH: "⚙️ Configurar Obsidian",
     },
     "obsidian_git_setup_done": {
-        ENGLISH: "Config created! Clone the repo, open as vault, enable obsidian-git — done.",
-        GERMAN: "Konfiguration erstellt! Repo klonen, als Vault öffnen, obsidian-git aktivieren — fertig.",
-        RUSSIAN: "Конфиг создан! Клонируй репо, открой как vault, включи obsidian-git — готово.",
-        SPANISH: "¡Configuración creada! Clona el repo, ábrelo como vault, activa obsidian-git — listo.",
+        ENGLISH: ("Config created! Clone the repo, open as vault, enable obsidian-git — done."),
+        GERMAN: (
+            "Konfiguration erstellt! Repo klonen, als Vault öffnen,"
+            " obsidian-git aktivieren — fertig."
+        ),
+        RUSSIAN: ("Конфиг создан! Клонируй репо, открой как vault, включи obsidian-git — готово."),
+        SPANISH: (
+            "¡Configuración creada! Clona el repo, ábrelo como vault, activa obsidian-git — listo."
+        ),
     },
     "obsidian_git_setup_failed": {
         ENGLISH: "Failed to create config. Check GitHub connection.",
@@ -487,10 +497,15 @@ translates = {
         ),
     },
     "github_auth_timeout": {
-        ENGLISH: "GitHub authorization failed or timed out. Try /connect_github again.",
-        GERMAN: "GitHub-Autorisierung fehlgeschlagen oder abgelaufen. Versuchen Sie /connect_github erneut.",
-        RUSSIAN: "Авторизация GitHub не удалась или истекло время. Попробуйте /connect_github снова.",
-        SPANISH: "Autorización de GitHub fallida o expirada. Intenta /connect_github de nuevo.",
+        ENGLISH: ("GitHub authorization failed or timed out. Try /connect_github again."),
+        GERMAN: (
+            "GitHub-Autorisierung fehlgeschlagen oder abgelaufen."
+            " Versuchen Sie /connect_github erneut."
+        ),
+        RUSSIAN: (
+            "Авторизация GitHub не удалась или истекло время. Попробуйте /connect_github снова."
+        ),
+        SPANISH: ("Autorización de GitHub fallida o expirada. Intenta /connect_github de nuevo."),
     },
     "github_repo_failed": {
         ENGLISH: "Failed to create/access GitHub repository.",
@@ -499,16 +514,34 @@ translates = {
         SPANISH: "Error al crear/acceder al repositorio de GitHub.",
     },
     "github_connected": {
-        ENGLISH: "GitHub connected! Repository: {owner}/{repo}\nObsidian sync is now enabled.",
-        GERMAN: "GitHub verbunden! Repository: {owner}/{repo}\nObsidian-Sync ist jetzt aktiviert.",
-        RUSSIAN: "GitHub подключён! Репозиторий: {owner}/{repo}\nСинхронизация с Obsidian включена.",
-        SPANISH: "¡GitHub conectado! Repositorio: {owner}/{repo}\nSincronización con Obsidian activada.",
+        ENGLISH: ("GitHub connected! Repository: {owner}/{repo}\nObsidian sync is now enabled."),
+        GERMAN: (
+            "GitHub verbunden! Repository: {owner}/{repo}\nObsidian-Sync ist jetzt aktiviert."
+        ),
+        RUSSIAN: (
+            "GitHub подключён! Репозиторий: {owner}/{repo}\nСинхронизация с Obsidian включена."
+        ),
+        SPANISH: (
+            "¡GitHub conectado! Repositorio: {owner}/{repo}\nSincronización con Obsidian activada."
+        ),
     },
     "whatsapp_link_prompt": {
-        ENGLISH: "Send this message to the bot on WhatsApp:\n\nlink {code}\n\nCode expires in 5 minutes.",
-        GERMAN: "Senden Sie diese Nachricht an den Bot auf WhatsApp:\n\nlink {code}\n\nCode läuft in 5 Minuten ab.",
-        RUSSIAN: "Отправьте это сообщение боту в WhatsApp:\n\nlink {code}\n\nКод действителен 5 минут.",
-        SPANISH: "Envía este mensaje al bot en WhatsApp:\n\nlink {code}\n\nEl código expira en 5 minutos.",
+        ENGLISH: (
+            "Send this message to the bot on WhatsApp:\n\nlink {code}\n\nCode expires in 5 minutes."
+        ),
+        GERMAN: (
+            "Senden Sie diese Nachricht an den Bot auf WhatsApp:\n\n"
+            "link {code}\n\n"
+            "Code läuft in 5 Minuten ab."
+        ),
+        RUSSIAN: (
+            "Отправьте это сообщение боту в WhatsApp:\n\nlink {code}\n\nКод действителен 5 минут."
+        ),
+        SPANISH: (
+            "Envía este mensaje al bot en WhatsApp:\n\n"
+            "link {code}\n\n"
+            "El código expira en 5 minutos."
+        ),
     },
     "whatsapp_unlinked": {
         ENGLISH: "WhatsApp account unlinked.",
@@ -602,22 +635,58 @@ translates = {
         SPANISH: "💰 Añadir créditos",
     },
     "admin_vip_list": {
-        ENGLISH: "<b>VIP users:</b>\n{users}\n\nUse /add_vip &lt;user_id&gt; or /remove_vip &lt;user_id&gt;",
-        GERMAN: "<b>VIP-Benutzer:</b>\n{users}\n\nVerwende /add_vip &lt;user_id&gt; oder /remove_vip &lt;user_id&gt;",
-        RUSSIAN: "<b>VIP пользователи:</b>\n{users}\n\nИспользуйте /add_vip &lt;user_id&gt; или /remove_vip &lt;user_id&gt;",
-        SPANISH: "<b>Usuarios VIP:</b>\n{users}\n\nUsa /add_vip &lt;user_id&gt; o /remove_vip &lt;user_id&gt;",
+        ENGLISH: (
+            "<b>VIP users:</b>\n{users}\n\n"
+            "Use /add_vip &lt;user_id&gt; or /remove_vip &lt;user_id&gt;"
+        ),
+        GERMAN: (
+            "<b>VIP-Benutzer:</b>\n{users}\n\n"
+            "Verwende /add_vip &lt;user_id&gt; oder /remove_vip &lt;user_id&gt;"
+        ),
+        RUSSIAN: (
+            "<b>VIP пользователи:</b>\n{users}\n\n"
+            "Используйте /add_vip &lt;user_id&gt; или /remove_vip &lt;user_id&gt;"
+        ),
+        SPANISH: (
+            "<b>Usuarios VIP:</b>\n{users}\n\n"
+            "Usa /add_vip &lt;user_id&gt; o /remove_vip &lt;user_id&gt;"
+        ),
     },
     "admin_tester_list": {
-        ENGLISH: "<b>Testers:</b>\n{users}\n\nUse /add_tester &lt;user_id&gt; or /remove_tester &lt;user_id&gt;",
-        GERMAN: "<b>Tester:</b>\n{users}\n\nVerwende /add_tester &lt;user_id&gt; oder /remove_tester &lt;user_id&gt;",
-        RUSSIAN: "<b>Тестеры:</b>\n{users}\n\nИспользуйте /add_tester &lt;user_id&gt; или /remove_tester &lt;user_id&gt;",
-        SPANISH: "<b>Testers:</b>\n{users}\n\nUsa /add_tester &lt;user_id&gt; o /remove_tester &lt;user_id&gt;",
+        ENGLISH: (
+            "<b>Testers:</b>\n{users}\n\n"
+            "Use /add_tester &lt;user_id&gt; or /remove_tester &lt;user_id&gt;"
+        ),
+        GERMAN: (
+            "<b>Tester:</b>\n{users}\n\n"
+            "Verwende /add_tester &lt;user_id&gt; oder /remove_tester &lt;user_id&gt;"
+        ),
+        RUSSIAN: (
+            "<b>Тестеры:</b>\n{users}\n\n"
+            "Используйте /add_tester &lt;user_id&gt; или /remove_tester &lt;user_id&gt;"
+        ),
+        SPANISH: (
+            "<b>Testers:</b>\n{users}\n\n"
+            "Usa /add_tester &lt;user_id&gt; o /remove_tester &lt;user_id&gt;"
+        ),
     },
     "admin_blocked_list": {
-        ENGLISH: "<b>Blocked users:</b>\n{users}\n\nUse /block &lt;user_id&gt; or /unblock &lt;user_id&gt;",
-        GERMAN: "<b>Gesperrte Benutzer:</b>\n{users}\n\nVerwende /block &lt;user_id&gt; oder /unblock &lt;user_id&gt;",
-        RUSSIAN: "<b>Заблокированные:</b>\n{users}\n\nИспользуйте /block &lt;user_id&gt; или /unblock &lt;user_id&gt;",
-        SPANISH: "<b>Usuarios bloqueados:</b>\n{users}\n\nUsa /block &lt;user_id&gt; o /unblock &lt;user_id&gt;",
+        ENGLISH: (
+            "<b>Blocked users:</b>\n{users}\n\n"
+            "Use /block &lt;user_id&gt; or /unblock &lt;user_id&gt;"
+        ),
+        GERMAN: (
+            "<b>Gesperrte Benutzer:</b>\n{users}\n\n"
+            "Verwende /block &lt;user_id&gt; oder /unblock &lt;user_id&gt;"
+        ),
+        RUSSIAN: (
+            "<b>Заблокированные:</b>\n{users}\n\n"
+            "Используйте /block &lt;user_id&gt; или /unblock &lt;user_id&gt;"
+        ),
+        SPANISH: (
+            "<b>Usuarios bloqueados:</b>\n{users}\n\n"
+            "Usa /block &lt;user_id&gt; o /unblock &lt;user_id&gt;"
+        ),
     },
     "admin_user_blocked": {
         ENGLISH: "User {user_id} has been blocked.",

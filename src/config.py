@@ -98,7 +98,7 @@ class Settings(BaseSettings):
     selftest_sample_path: str = "./data/e2e_deploy_ru.ogg"
 
     # FastAPI server
-    fastapi_host: str = "0.0.0.0"
+    fastapi_host: str = "127.0.0.1"
     fastapi_port: int = 8000
 
     @property

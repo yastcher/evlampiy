@@ -60,9 +60,7 @@ fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "PLR2004", "S105", "S106", "PLR0913"]
-"src/localization.py" = ["RUF001", "E501"]
-"src/github_oauth.py" = ["S105"]
-"src/config.py" = ["S104"]
+"src/localization.py" = ["RUF001"]
 
 [tool.ruff.lint.pylint]
 max-args = 6
