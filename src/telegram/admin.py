@@ -91,6 +91,53 @@ async def admin_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(_t("admin_hub_title"), reply_markup=_hub_keyboard())
 
 
+async def _handle_role_list(query: typing.Any, role: str, text_key: str) -> None:
+    """Show list of users with given role."""
+    users = await get_users_by_role(role)
+    user_list = "\n".join(f"• {uid}" for uid in users) if users else _t("admin_list_empty")
+    await query.edit_message_text(_t(text_key, users=user_list), parse_mode="HTML")
+
+
+async def _handle_stats(query: typing.Any) -> None:
+    text = await build_stats_text()
+    await query.edit_message_text(text, parse_mode="HTML")
+
+
+async def _handle_credits(query: typing.Any) -> None:
+    text = _t("admin_usage", command="/add_credits <user_id> <amount>")
+    await query.edit_message_text(text)
+
+
+async def _handle_providers(query: typing.Any) -> None:
+    text, markup = await _build_providers_panel()
+    await query.edit_message_text(text, reply_markup=markup, parse_mode="HTML")
+
+
+async def _handle_back(query: typing.Any) -> None:
+    await query.edit_message_text(_t("admin_hub_title"), reply_markup=_hub_keyboard())
+
+
+async def _handle_provider_change(query: typing.Any, action: str) -> None:
+    """Handle prov_c_* / prov_g_* callback actions."""
+    # action format: "prov_{c|g}_{provider}"
+    config_key = "categorization_provider" if action[5] == "c" else "gpt_provider"
+    provider = action[7:]
+    if provider in _LLM_PROVIDERS:
+        await set_bot_config(config_key, provider)
+    await _handle_providers(query)
+
+
+_ACTION_HANDLERS: dict[str, typing.Callable[..., typing.Awaitable[None]]] = {
+    "vip": lambda q: _handle_role_list(q, const.ROLE_VIP, "admin_vip_list"),
+    "testers": lambda q: _handle_role_list(q, const.ROLE_TESTER, "admin_tester_list"),
+    "blocked": lambda q: _handle_role_list(q, const.ROLE_BLOCKED, "admin_blocked_list"),
+    "stats": _handle_stats,
+    "credits": _handle_credits,
+    "providers": _handle_providers,
+    "back": _handle_back,
+}
+
+
 async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Route admin hub button presses."""
     if update.effective_user is None:
@@ -105,52 +152,14 @@ async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
 
     action = query.data.replace("adm_", "")
 
-    if action == "vip":
-        users = await get_users_by_role(const.ROLE_VIP)
-        user_list = "\n".join(f"• {uid}" for uid in users) if users else _t("admin_list_empty")
-        text = _t("admin_vip_list", users=user_list)
-        await query.edit_message_text(text, parse_mode="HTML")
+    _MIN_PROV_ACTION_LEN = 7  # "prov_c_" prefix
+    if action.startswith("prov_") and len(action) >= _MIN_PROV_ACTION_LEN:
+        await _handle_provider_change(query, action)
+        return
 
-    elif action == "testers":
-        users = await get_users_by_role(const.ROLE_TESTER)
-        user_list = "\n".join(f"• {uid}" for uid in users) if users else _t("admin_list_empty")
-        text = _t("admin_tester_list", users=user_list)
-        await query.edit_message_text(text, parse_mode="HTML")
-
-    elif action == "blocked":
-        users = await get_users_by_role(const.ROLE_BLOCKED)
-        user_list = "\n".join(f"• {uid}" for uid in users) if users else _t("admin_list_empty")
-        text = _t("admin_blocked_list", users=user_list)
-        await query.edit_message_text(text, parse_mode="HTML")
-
-    elif action == "stats":
-        text = await build_stats_text()
-        await query.edit_message_text(text, parse_mode="HTML")
-
-    elif action == "credits":
-        text = _t("admin_usage", command="/add_credits <user_id> <amount>")
-        await query.edit_message_text(text)
-
-    elif action == "providers":
-        text, markup = await _build_providers_panel()
-        await query.edit_message_text(text, reply_markup=markup, parse_mode="HTML")
-
-    elif action == "back":
-        await query.edit_message_text(_t("admin_hub_title"), reply_markup=_hub_keyboard())
-
-    elif action.startswith("prov_c_"):
-        provider = action.removeprefix("prov_c_")
-        if provider in _LLM_PROVIDERS:
-            await set_bot_config("categorization_provider", provider)
-        text, markup = await _build_providers_panel()
-        await query.edit_message_text(text, reply_markup=markup, parse_mode="HTML")
-
-    elif action.startswith("prov_g_"):
-        provider = action.removeprefix("prov_g_")
-        if provider in _LLM_PROVIDERS:
-            await set_bot_config("gpt_provider", provider)
-        text, markup = await _build_providers_panel()
-        await query.edit_message_text(text, reply_markup=markup, parse_mode="HTML")
+    handler = _ACTION_HANDLERS.get(action)
+    if handler:
+        await handler(query)
 
 
 async def add_vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

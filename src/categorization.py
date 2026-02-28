@@ -8,6 +8,7 @@ from src import const
 from src.ai_client import classify_text
 from src.github_api import (
     OBSIDIAN_NOTES_FOLDER,
+    GitHubRepo,
     delete_github_file,
     get_github_file,
     get_repo_contents,
@@ -21,9 +22,9 @@ _VOCABULARY_PATH = "vocabulary.json"
 _VOCABULARY_MAX_KEYWORDS_PER_CATEGORY = 50
 
 
-async def get_existing_categories(token: str, owner: str, repo: str) -> list[str]:
+async def get_existing_categories(repo_info: GitHubRepo) -> list[str]:
     """Get list of existing category folders, excluding system folders."""
-    contents = await get_repo_contents(token, owner, repo)
+    contents = await get_repo_contents(repo_info)
     categories = []
     for item in contents:
         if item.get("type") == "dir" and item["name"] not in const.EXCLUDED_CATEGORIES:
@@ -31,9 +32,9 @@ async def get_existing_categories(token: str, owner: str, repo: str) -> list[str
     return categories
 
 
-async def get_vocabulary_from_repo(token: str, owner: str, repo: str) -> dict[str, list[str]]:
+async def get_vocabulary_from_repo(repo_info: GitHubRepo) -> dict[str, list[str]]:
     """Read vocabulary.json from repo root. Returns {} if absent or invalid."""
-    file_data = await get_github_file(token, owner, repo, _VOCABULARY_PATH)
+    file_data = await get_github_file(repo_info, _VOCABULARY_PATH)
     if not file_data:
         return {}
     content, _ = file_data
@@ -46,19 +47,17 @@ async def get_vocabulary_from_repo(token: str, owner: str, repo: str) -> dict[st
 
 
 async def update_vocabulary_in_repo(
-    token: str, owner: str, repo: str, category: str, keywords: Sequence[str]
+    repo_info: GitHubRepo, category: str, keywords: Sequence[str]
 ) -> None:
     """Merge new keywords into vocabulary.json, deduplicating and capping at 50 per category."""
-    vocabulary = await get_vocabulary_from_repo(token, owner, repo)
+    vocabulary = await get_vocabulary_from_repo(repo_info)
     existing = vocabulary.get(category, [])
     # dict.fromkeys preserves insertion order and deduplicates
     merged = list(dict.fromkeys(existing + list(keywords)))
     vocabulary[category] = merged[:_VOCABULARY_MAX_KEYWORDS_PER_CATEGORY]
     content = json.dumps(vocabulary, ensure_ascii=False, indent=2)
     await put_github_file(
-        token=token,
-        owner=owner,
-        repo=repo,
+        repo_info=repo_info,
         path=_VOCABULARY_PATH,
         content=content,
         commit_message=f"Update vocabulary for {category}",
@@ -101,18 +100,16 @@ async def classify_note(
         return category or None, []
 
 
-async def move_github_file(token: str, owner: str, repo: str, old_path: str, new_path: str) -> bool:
+async def move_github_file(repo_info: GitHubRepo, old_path: str, new_path: str) -> bool:
     """Move a file in GitHub by copying content and deleting original."""
-    file_data = await get_github_file(token, owner, repo, old_path)
+    file_data = await get_github_file(repo_info, old_path)
     if not file_data:
         return False
 
     content, sha = file_data
 
     success = await put_github_file(
-        token=token,
-        owner=owner,
-        repo=repo,
+        repo_info=repo_info,
         path=new_path,
         content=content,
         commit_message=f"Move {old_path} to {new_path}",
@@ -121,9 +118,7 @@ async def move_github_file(token: str, owner: str, repo: str, old_path: str, new
         return False
 
     await delete_github_file(
-        token=token,
-        owner=owner,
-        repo=repo,
+        repo_info=repo_info,
         path=old_path,
         sha=sha,
         commit_message=f"Delete original {old_path}",
@@ -132,9 +127,7 @@ async def move_github_file(token: str, owner: str, repo: str, old_path: str, new
 
 
 async def categorize_note(
-    token: str,
-    owner: str,
-    repo: str,
+    repo_info: GitHubRepo,
     filename: str,
     content: str,
     existing_categories: Sequence[str] | None = None,
@@ -142,9 +135,9 @@ async def categorize_note(
 ) -> str | None:
     """Categorize a single note and move it to the appropriate folder."""
     if existing_categories is None:
-        existing_categories = await get_existing_categories(token, owner, repo)
+        existing_categories = await get_existing_categories(repo_info)
     if vocabulary is None:
-        vocabulary = await get_vocabulary_from_repo(token, owner, repo)
+        vocabulary = await get_vocabulary_from_repo(repo_info)
 
     category, keywords = await classify_note(content, existing_categories, vocabulary)
     if not category:
@@ -153,22 +146,22 @@ async def categorize_note(
     old_path = f"{OBSIDIAN_NOTES_FOLDER}/{filename}"
     new_path = f"{category}/{filename}"
 
-    success = await move_github_file(token, owner, repo, old_path, new_path)
+    success = await move_github_file(repo_info, old_path, new_path)
     if success:
         logger.info("Categorized %s to %s", filename, category)
         if keywords:
-            await update_vocabulary_in_repo(token, owner, repo, category, keywords)
+            await update_vocabulary_in_repo(repo_info, category, keywords)
         return category
 
     logger.error("Failed to move %s to %s", filename, category)
     return None
 
 
-async def categorize_all_income(token: str, owner: str, repo: str) -> int:
+async def categorize_all_income(repo_info: GitHubRepo) -> int:
     """Categorize all files in the income folder. Returns count of processed files."""
-    existing_categories = await get_existing_categories(token, owner, repo)
-    vocabulary = await get_vocabulary_from_repo(token, owner, repo)
-    contents = await get_repo_contents(token, owner, repo, OBSIDIAN_NOTES_FOLDER)
+    existing_categories = await get_existing_categories(repo_info)
+    vocabulary = await get_vocabulary_from_repo(repo_info)
+    contents = await get_repo_contents(repo_info, OBSIDIAN_NOTES_FOLDER)
     processed = 0
 
     for item in contents:
@@ -177,15 +170,13 @@ async def categorize_all_income(token: str, owner: str, repo: str) -> int:
         if item["name"] == ".gitkeep":
             continue
 
-        file_data = await get_github_file(
-            token, owner, repo, f"{OBSIDIAN_NOTES_FOLDER}/{item['name']}"
-        )
+        file_data = await get_github_file(repo_info, f"{OBSIDIAN_NOTES_FOLDER}/{item['name']}")
         if not file_data:
             continue
 
         content, _ = file_data
         result = await categorize_note(
-            token, owner, repo, item["name"], content, existing_categories, vocabulary
+            repo_info, item["name"], content, existing_categories, vocabulary
         )
         if result:
             processed += 1

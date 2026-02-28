@@ -568,7 +568,7 @@ class TestDisconnectGithub:
         await disconnect_github(mock_private_update, mock_context)
 
         # Verify settings cleared in real DB
-        assert await get_github_settings(chat_id) == {}
+        assert await get_github_settings(chat_id) is None
         assert await get_save_to_obsidian(chat_id) is False
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
         assert "disconnected" in reply_text.lower()

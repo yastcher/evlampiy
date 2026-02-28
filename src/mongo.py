@@ -19,6 +19,7 @@ from src.dto import (
     UserSettings,
     WitUsageStats,
 )
+from src.github_api import GitHubRepo
 from src.types import ChatId, Language, UserId
 
 ALL_DOCUMENT_MODELS = [
@@ -91,13 +92,17 @@ async def set_github_settings(chat_id: ChatId, owner: str, repo: str, token: str
     await user.save()
 
 
-async def get_github_settings(chat_id: ChatId) -> dict[str, str]:
+async def get_github_settings(chat_id: ChatId) -> GitHubRepo | None:
     user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
     if not user or not user.github_settings:
-        return {}
+        return None
     if all(user.github_settings.values()):
-        return user.github_settings
-    return {}
+        return GitHubRepo(
+            token=user.github_settings["token"],
+            owner=user.github_settings["owner"],
+            repo=user.github_settings["repo"],
+        )
+    return None
 
 
 async def clear_github_settings(chat_id: ChatId) -> None:

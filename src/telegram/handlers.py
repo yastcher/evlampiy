@@ -192,17 +192,15 @@ async def connect_github(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             )
             return
 
-        await set_github_settings(
-            chat_id, repo_info["owner"], repo_info["repo"], repo_info["token"]
-        )
+        await set_github_settings(chat_id, repo_info.owner, repo_info.repo, repo_info.token)
         await set_save_to_obsidian(chat_id, True)
 
         text = (
             translates["github_connected"]
             .get(language, translates["github_connected"]["en"])
             .format(
-                owner=repo_info["owner"],
-                repo=repo_info["repo"],
+                owner=repo_info.owner,
+                repo=repo_info.repo,
             )
         )
         await context.bot.send_message(
@@ -307,20 +305,16 @@ async def categorize_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
-    github_settings = await get_github_settings(chat_id)
+    repo_info = await get_github_settings(chat_id)
 
-    if not github_settings:
+    if not repo_info:
         text = translates["github_not_connected"].get(
             language, translates["github_not_connected"]["en"]
         )
         await reply_text(update, text)
         return
 
-    count = await categorize_all_income(
-        token=github_settings["token"],
-        owner=github_settings["owner"],
-        repo=github_settings["repo"],
-    )
+    count = await categorize_all_income(repo_info)
 
     if count > 0:
         text = translates["categorize_done"].get(language, translates["categorize_done"]["en"])
@@ -535,9 +529,9 @@ async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
-    github_settings = await get_github_settings(chat_id)
+    repo_info = await get_github_settings(chat_id)
 
-    if not github_settings:
+    if not repo_info:
         keyboard = [
             [
                 InlineKeyboardButton(
@@ -579,10 +573,10 @@ async def obsidian_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    if github_settings:
+    if repo_info:
         title = translates["obsidian_hub_connected"][language].format(
-            owner=github_settings["owner"],
-            repo=github_settings["repo"],
+            owner=repo_info.owner,
+            repo=repo_info.repo,
         )
     else:
         title = translates["obsidian_hub_title"][language]
@@ -699,15 +693,11 @@ async def setup_obsidian_git(update: Update, _context: ContextTypes.DEFAULT_TYPE
         return
     chat_id = get_chat_id(update)
     language = await get_chat_language(chat_id)
-    github_settings = await get_github_settings(chat_id)
-    if not github_settings:
+    repo_info = await get_github_settings(chat_id)
+    if not repo_info:
         await query.edit_message_text(translates["github_not_connected"][language])
         return
-    success = await create_obsidian_git_config(
-        token=github_settings["token"],
-        owner=github_settings["owner"],
-        repo=github_settings["repo"],
-    )
+    success = await create_obsidian_git_config(repo_info)
     key = "obsidian_git_setup_done" if success else "obsidian_git_setup_failed"
     await query.answer(translates[key][language], show_alert=True)
 

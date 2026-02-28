@@ -18,9 +18,9 @@ class TestAddShortNoteToObsidian:
         assert result is True
         mock_put.assert_called_once()
         call_kwargs = mock_put.call_args.kwargs
-        assert call_kwargs["token"] == "ghp_testtoken"
-        assert call_kwargs["owner"] == "testowner"
-        assert call_kwargs["repo"] == "testrepo"
+        assert call_kwargs["repo_info"].token == "ghp_testtoken"
+        assert call_kwargs["repo_info"].owner == "testowner"
+        assert call_kwargs["repo_info"].repo == "testrepo"
         assert call_kwargs["path"].startswith("income/")
         assert call_kwargs["content"] == "Test note content"
 
@@ -85,9 +85,9 @@ class TestSaveTranscriptionToObsidian:
         assert filename.endswith(".md")
         mock_put.assert_called_once()
         call_kwargs = mock_put.call_args.kwargs
-        assert call_kwargs["token"] == "ghp_abc"
-        assert call_kwargs["owner"] == "user"
-        assert call_kwargs["repo"] == "notes"
+        assert call_kwargs["repo_info"].token == "ghp_abc"
+        assert call_kwargs["repo_info"].owner == "user"
+        assert call_kwargs["repo_info"].repo == "notes"
         assert call_kwargs["path"].startswith("income/")
         assert call_kwargs["path"].endswith(".md")
 
@@ -130,7 +130,7 @@ class TestSaveTranscriptionToObsidian:
         assert success is True
         assert filename is not None
         call_kwargs = mock_put.call_args.kwargs
-        assert call_kwargs["token"] == "ghp_sender"
+        assert call_kwargs["repo_info"].token == "ghp_sender"
         content = call_kwargs["content"]
         assert f"chat_id: {group_chat_id}" in content
 

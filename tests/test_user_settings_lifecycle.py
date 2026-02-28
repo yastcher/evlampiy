@@ -2,6 +2,7 @@
 
 from src.config import settings
 from src.dto import UserSettings
+from src.github_api import GitHubRepo
 from src.mongo import (
     clear_github_settings,
     get_auto_categorize,
@@ -31,7 +32,7 @@ class TestUserSettingsLifecycle:
         # 1. New user gets defaults
         assert await get_chat_language(chat_id) == settings.default_language
         assert await get_gpt_command(chat_id) == settings.telegram_bot_command
-        assert await get_github_settings(chat_id) == {}
+        assert await get_github_settings(chat_id) is None
         assert await get_save_to_obsidian(chat_id) is False
 
         # 2. Set language
@@ -53,7 +54,7 @@ class TestUserSettingsLifecycle:
         # 6. Set GitHub settings
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_token123")
         github = await get_github_settings(chat_id)
-        assert github == {"owner": "testowner", "repo": "testrepo", "token": "ghp_token123"}
+        assert github == GitHubRepo(token="ghp_token123", owner="testowner", repo="testrepo")
 
         # 7. Enable Obsidian sync
         await set_save_to_obsidian(chat_id, True)
@@ -62,7 +63,7 @@ class TestUserSettingsLifecycle:
         # 8. Update GitHub settings
         await set_github_settings(chat_id, "newowner", "newrepo", "ghp_newtoken")
         github = await get_github_settings(chat_id)
-        assert github == {"owner": "newowner", "repo": "newrepo", "token": "ghp_newtoken"}
+        assert github == GitHubRepo(token="ghp_newtoken", owner="newowner", repo="newrepo")
 
         # 9. Toggle Obsidian off
         await set_save_to_obsidian(chat_id, False)
@@ -71,7 +72,7 @@ class TestUserSettingsLifecycle:
         # 10. Clear GitHub settings (also disables Obsidian)
         await set_save_to_obsidian(chat_id, True)
         await clear_github_settings(chat_id)
-        assert await get_github_settings(chat_id) == {}
+        assert await get_github_settings(chat_id) is None
         assert await get_save_to_obsidian(chat_id) is False
 
         # 11. Other settings remain intact after GitHub clear
@@ -86,7 +87,7 @@ class TestUserSettingsLifecycle:
 
         assert await get_chat_language(chat_id) == settings.default_language
         assert await get_gpt_command(chat_id) == settings.telegram_bot_command
-        assert await get_github_settings(chat_id) == {}
+        assert await get_github_settings(chat_id) is None
         assert await get_save_to_obsidian(chat_id) is False
 
     async def test_incomplete_github_settings_return_empty(self):
@@ -98,7 +99,7 @@ class TestUserSettingsLifecycle:
         )
         await user.insert()
 
-        assert await get_github_settings(chat_id) == {}
+        assert await get_github_settings(chat_id) is None
 
     async def test_clear_nonexistent_user_no_error(self):
         """Clearing settings for nonexistent user does nothing."""

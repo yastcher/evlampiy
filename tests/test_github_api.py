@@ -5,12 +5,15 @@ import httpx
 
 from src.github_api import (
     MAX_RETRIES,
+    GitHubRepo,
     delete_github_file,
     get_github_file,
     get_or_create_obsidian_repo,
     get_repo_contents,
     put_github_file,
 )
+
+_TEST_REPO = GitHubRepo(token="ghp_token", owner="testuser", repo="testrepo")
 
 
 class TestGetOrCreateObsidianRepo:
@@ -29,7 +32,7 @@ class TestGetOrCreateObsidianRepo:
 
             result = await get_or_create_obsidian_repo("ghp_token")
 
-        assert result == {"owner": "testuser", "repo": "obsidian-notes", "token": "ghp_token"}
+        assert result == GitHubRepo(token="ghp_token", owner="testuser", repo="obsidian-notes")
 
     async def test_creates_new_repo(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Creates repo when it doesn't exist."""
@@ -46,7 +49,7 @@ class TestGetOrCreateObsidianRepo:
 
             result = await get_or_create_obsidian_repo("ghp_token")
 
-        assert result == {"owner": "testuser", "repo": "obsidian-notes", "token": "ghp_token"}
+        assert result == GitHubRepo(token="ghp_token", owner="testuser", repo="obsidian-notes")
         mock_client.post.assert_called_once()
         mock_client.put.assert_called_once()
 
@@ -109,12 +112,7 @@ class TestPutGithubFile:
             mock_client.put.return_value = mock_httpx_response_factory(status_code=201)
 
             result = await put_github_file(
-                token="ghp_token",
-                owner="testuser",
-                repo="testrepo",
-                path="income/test.md",
-                content="Hello",
-                commit_message="test commit",
+                _TEST_REPO, path="income/test.md", content="Hello", commit_message="test commit"
             )
 
         assert result is True
@@ -123,17 +121,13 @@ class TestPutGithubFile:
         self, mock_httpx_response_factory, mock_httpx_client_factory
     ):
         """Returns False on 401 without retry."""
+        bad_repo = GitHubRepo(token="bad_token", owner="testuser", repo="testrepo")
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.put.return_value = mock_httpx_response_factory(status_code=401)
 
             result = await put_github_file(
-                token="bad_token",
-                owner="testuser",
-                repo="testrepo",
-                path="income/test.md",
-                content="Hello",
-                commit_message="test commit",
+                bad_repo, path="income/test.md", content="Hello", commit_message="test commit"
             )
 
         assert result is False
@@ -157,9 +151,7 @@ class TestPutGithubFile:
             mock_client.get.return_value = file_response
 
             result = await put_github_file(
-                token="ghp_token",
-                owner="testuser",
-                repo="testrepo",
+                _TEST_REPO,
                 path="income/test.md",
                 content="New content",
                 commit_message="test commit",
@@ -167,7 +159,6 @@ class TestPutGithubFile:
 
         assert result is True
         assert mock_client.put.call_count == 2
-        # Second call should include the fetched SHA in payload
         second_call_json = mock_client.put.call_args_list[1][1]["json"]
         assert second_call_json["sha"] == "existing-sha123"
 
@@ -181,12 +172,7 @@ class TestPutGithubFile:
             mock_client.get.return_value = mock_httpx_response_factory(status_code=404)
 
             result = await put_github_file(
-                token="ghp_token",
-                owner="testuser",
-                repo="testrepo",
-                path="income/test.md",
-                content="Hello",
-                commit_message="test commit",
+                _TEST_REPO, path="income/test.md", content="Hello", commit_message="test commit"
             )
 
         assert result is False
@@ -203,12 +189,7 @@ class TestPutGithubFile:
             mock_client.put.side_effect = httpx.HTTPError("connection refused")
 
             result = await put_github_file(
-                token="ghp_token",
-                owner="testuser",
-                repo="testrepo",
-                path="income/test.md",
-                content="Hello",
-                commit_message="test commit",
+                _TEST_REPO, path="income/test.md", content="Hello", commit_message="test commit"
             )
 
         assert result is False
@@ -231,7 +212,7 @@ class TestGetRepoContents:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(contents, 200)
 
-            result = await get_repo_contents("ghp_token", "owner", "repo")
+            result = await get_repo_contents(_TEST_REPO)
 
         assert len(result) == 2
         assert result[0]["name"] == "income"
@@ -246,7 +227,7 @@ class TestGetRepoContents:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(single_file, 200)
 
-            result = await get_repo_contents("ghp_token", "owner", "repo", "README.md")
+            result = await get_repo_contents(_TEST_REPO, "README.md")
 
         assert len(result) == 1
 
@@ -258,7 +239,7 @@ class TestGetRepoContents:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(status_code=404)
 
-            result = await get_repo_contents("ghp_token", "owner", "repo")
+            result = await get_repo_contents(_TEST_REPO)
 
         assert result == []
 
@@ -278,7 +259,7 @@ class TestGetGithubFile:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(response_data, 200)
 
-            result = await get_github_file("ghp_token", "owner", "repo", "path/file.md")
+            result = await get_github_file(_TEST_REPO, "path/file.md")
 
         assert result is not None
         assert result[0] == "Hello World"
@@ -292,7 +273,7 @@ class TestGetGithubFile:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(status_code=404)
 
-            result = await get_github_file("ghp_token", "owner", "repo", "nonexistent.md")
+            result = await get_github_file(_TEST_REPO, "nonexistent.md")
 
         assert result is None
 
@@ -308,9 +289,7 @@ class TestDeleteGithubFile:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.request.return_value = mock_httpx_response_factory(status_code=200)
 
-            result = await delete_github_file(
-                "ghp_token", "owner", "repo", "path/file.md", "sha123", "Delete file"
-            )
+            result = await delete_github_file(_TEST_REPO, "path/file.md", "sha123", "Delete file")
 
         assert result is True
 
@@ -322,8 +301,6 @@ class TestDeleteGithubFile:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.request.return_value = mock_httpx_response_factory(status_code=404)
 
-            result = await delete_github_file(
-                "ghp_token", "owner", "repo", "nonexistent.md", "sha123", "Delete"
-            )
+            result = await delete_github_file(_TEST_REPO, "nonexistent.md", "sha123", "Delete")
 
         assert result is False

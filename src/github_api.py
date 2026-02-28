@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import dataclasses
 import http
 import logging
 import typing
@@ -13,6 +14,15 @@ logger = logging.getLogger(__name__)
 OBSIDIAN_DEFAULT_REPO_NAME = "obsidian-notes"
 OBSIDIAN_NOTES_FOLDER = "income"
 MAX_RETRIES = 3
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class GitHubRepo:
+    """GitHub repository credentials."""
+
+    token: str
+    owner: str
+    repo: str
 
 
 def _github_headers(token: str) -> dict[str, str]:
@@ -33,7 +43,7 @@ async def get_github_username(token: str) -> str | None:
 
 async def get_or_create_obsidian_repo(
     token: str, repo_name: str = OBSIDIAN_DEFAULT_REPO_NAME
-) -> dict[str, str] | None:
+) -> GitHubRepo | None:
     username = await get_github_username(token)
     if not username:
         return None
@@ -48,7 +58,7 @@ async def get_or_create_obsidian_repo(
         )
         if response.status_code == http.HTTPStatus.OK:
             logger.info("Repo %s/%s already exists", username, repo_name)
-            return {"owner": username, "repo": repo_name, "token": token}
+            return GitHubRepo(token=token, owner=username, repo=repo_name)
 
         if response.status_code != http.HTTPStatus.NOT_FOUND:
             logger.error("Failed to check repo, status: %s", response.status_code)
@@ -77,28 +87,29 @@ async def get_or_create_obsidian_repo(
             json={"message": "Init income folder", "content": gitkeep_content},
         )
 
-    return {"owner": username, "repo": repo_name, "token": token}
+    return GitHubRepo(token=token, owner=username, repo=repo_name)
 
 
 async def put_github_file(
-    token: str, owner: str, repo: str, path: str, content: str, commit_message: str
+    repo_info: GitHubRepo, path: str, content: str, commit_message: str
 ) -> bool:
     content_base64 = base64.b64encode(content.encode("utf-8")).decode("utf-8")
-    url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    url = f"{const.GITHUB_API_BASE}/repos/{repo_info.owner}/{repo_info.repo}/contents/{path}"
     payload: dict[str, typing.Any] = {"message": commit_message, "content": content_base64}
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.put(url, headers=_github_headers(token), json=payload)
+                response = await client.put(
+                    url, headers=_github_headers(repo_info.token), json=payload
+                )
             if response.status_code in (http.HTTPStatus.OK, http.HTTPStatus.CREATED):
                 return True
             if response.status_code == http.HTTPStatus.UNAUTHORIZED:
                 logger.error("GitHub token is invalid or expired")
                 return False
             if response.status_code == http.HTTPStatus.UNPROCESSABLE_ENTITY:
-                # File already exists — fetch its SHA and retry with it
-                existing = await get_github_file(token, owner, repo, path)
+                existing = await get_github_file(repo_info, path)
                 if not existing:
                     logger.error("GitHub API: file exists at %s but SHA fetch failed", path)
                     return False
@@ -115,13 +126,11 @@ async def put_github_file(
     return False
 
 
-async def get_repo_contents(
-    token: str, owner: str, repo: str, path: str = ""
-) -> list[dict[str, typing.Any]]:
+async def get_repo_contents(repo_info: GitHubRepo, path: str = "") -> list[dict[str, typing.Any]]:
     """Get list of files/folders in a repository path."""
-    url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    url = f"{const.GITHUB_API_BASE}/repos/{repo_info.owner}/{repo_info.repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=_github_headers(token))
+        response = await client.get(url, headers=_github_headers(repo_info.token))
         if response.status_code == http.HTTPStatus.OK:
             data: list[dict[str, typing.Any]] | dict[str, typing.Any] = response.json()
             if isinstance(data, list):
@@ -131,11 +140,11 @@ async def get_repo_contents(
         return []
 
 
-async def get_github_file(token: str, owner: str, repo: str, path: str) -> tuple[str, str] | None:
+async def get_github_file(repo_info: GitHubRepo, path: str) -> tuple[str, str] | None:
     """Get file content and SHA. Returns (content, sha) or None."""
-    url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    url = f"{const.GITHUB_API_BASE}/repos/{repo_info.owner}/{repo_info.repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=_github_headers(token))
+        response = await client.get(url, headers=_github_headers(repo_info.token))
         if response.status_code == http.HTTPStatus.OK:
             data: dict[str, typing.Any] = response.json()
             content = base64.b64decode(data["content"]).decode("utf-8")
@@ -158,12 +167,10 @@ _OBSIDIAN_GIT_CONFIG = """{
 """
 
 
-async def create_obsidian_git_config(token: str, owner: str, repo: str) -> bool:
+async def create_obsidian_git_config(repo_info: GitHubRepo) -> bool:
     """Create or update obsidian-git plugin config in the repo."""
     return await put_github_file(
-        token=token,
-        owner=owner,
-        repo=repo,
+        repo_info=repo_info,
         path=_OBSIDIAN_GIT_CONFIG_PATH,
         content=_OBSIDIAN_GIT_CONFIG,
         commit_message="Add obsidian-git config",
@@ -171,15 +178,15 @@ async def create_obsidian_git_config(token: str, owner: str, repo: str) -> bool:
 
 
 async def delete_github_file(
-    token: str, owner: str, repo: str, path: str, sha: str, commit_message: str
+    repo_info: GitHubRepo, path: str, sha: str, commit_message: str
 ) -> bool:
     """Delete a file from GitHub repository."""
-    url = f"{const.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    url = f"{const.GITHUB_API_BASE}/repos/{repo_info.owner}/{repo_info.repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
         response = await client.request(
             "DELETE",
             url,
-            headers=_github_headers(token),
+            headers=_github_headers(repo_info.token),
             json={"message": commit_message, "sha": sha},
         )
         if response.status_code == http.HTTPStatus.OK:

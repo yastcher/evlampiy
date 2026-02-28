@@ -126,12 +126,10 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         original_text=original_for_obsidian,
     )
     if saved and filename and await get_auto_categorize(chat_id):
-        github_settings = await get_github_settings(chat_id)
-        if github_settings:
+        repo_info = await get_github_settings(chat_id)
+        if repo_info:
             await categorize_note(
-                token=github_settings["token"],
-                owner=github_settings["owner"],
-                repo=github_settings["repo"],
+                repo_info=repo_info,
                 filename=filename,
                 content=obsidian_text,
             )

@@ -15,8 +15,8 @@ async def add_short_note_to_obsidian(chat_id: ChatId, text: str) -> bool:
     if not text:
         return False
 
-    github_settings = await get_github_settings(chat_id)
-    if not github_settings:
+    repo_info = await get_github_settings(chat_id)
+    if not repo_info:
         logger.warning("GitHub settings not found for chat %s", chat_id)
         return False
 
@@ -25,9 +25,7 @@ async def add_short_note_to_obsidian(chat_id: ChatId, text: str) -> bool:
     commit_message = f"Add short note {now_str}"
 
     result = await put_github_file(
-        token=github_settings["token"],
-        owner=github_settings["owner"],
-        repo=github_settings["repo"],
+        repo_info=repo_info,
         path=filename,
         content=text,
         commit_message=commit_message,
@@ -62,8 +60,8 @@ async def save_transcription_to_obsidian(
     if not await get_save_to_obsidian(lookup_id):
         return False, None
 
-    github_settings = await get_github_settings(lookup_id)
-    if not github_settings:
+    repo_info = await get_github_settings(lookup_id)
+    if not repo_info:
         return False, None
 
     now = datetime.datetime.now(datetime.UTC)
@@ -84,9 +82,7 @@ async def save_transcription_to_obsidian(
         content += f"\n\n<!-- original\n{original_text}\n-->"
 
     result = await put_github_file(
-        token=github_settings["token"],
-        owner=github_settings["owner"],
-        repo=github_settings["repo"],
+        repo_info=repo_info,
         path=filepath,
         content=content,
         commit_message=f"Add transcription {now_str}",
