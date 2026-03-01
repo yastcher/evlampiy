@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
-[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.14](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
 [English](../README.md) | [Русский](README.ru.md) | [Español](README.es.md) | Deutsch
@@ -32,7 +32,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 ### Obsidian-Integration
 - **GitHub-Synchronisierung** — Automatisches Speichern von Transkriptionen in Ihrem Vault über GitHub API
 - **OAuth Device Flow** — Sichere Authentifizierung ohne Token-Offenlegung
-- **Auto-Kategorisierung** — KI-gestützte Notizklassifizierung (Google Gemini, Anthropic Claude, OpenAI)
+- **Auto-Kategorisierung** — KI-gestützte Notizklassifizierung (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Duales Speichern** — Notizen enthalten bereinigten Text; die rohe Transkription wird in einem HTML-Kommentar aufbewahrt
 - **vocabulary.json** — Automatisch aufgebaute Stichwortliste je Kategorie; verbessert die Korrektur von Transkriptionsfehlern
 - **Bereinigungskontext** — Neueste Transkriptionen aus demselben Chat werden dem LLM zur präziseren Bereinigung übergeben
@@ -49,7 +49,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 
 ## Voraussetzungen
 
-- Python 3.13+
+- Python 3.14+
 - MongoDB
 - FFmpeg (für Audioverarbeitung)
 - [Wit.ai](https://wit.ai/) API-Tokens
@@ -57,7 +57,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - (Optional) WhatsApp Business API-Zugangsdaten
 - (Optional) GitHub OAuth App Client-ID (für Obsidian-Integration)
 - (Optional) [Groq](https://groq.com/) API-Schlüssel (für Whisper-Fallback-Transkription)
-- (Optional) API-Schlüssel eines KI-Anbieters — [Google Gemini](https://ai.google.dev/), [Anthropic](https://anthropic.com/) oder [OpenAI](https://openai.com/) (für Auto-Kategorisierung und GPT-Befehle)
+- (Optional) API-Schlüssel eines KI-Anbieters — [DeepSeek](https://deepseek.com/), [Groq](https://groq.com/), [Google Gemini](https://ai.google.dev/), [OpenRouter](https://openrouter.ai/) oder [Anthropic](https://anthropic.com/) (für Auto-Kategorisierung und GPT-Befehle)
 
 ## Schnellstart
 
@@ -111,6 +111,13 @@ VIP_USER_IDS=123456,789012   # Env-Fallback; Verwaltung über /admin in Telegram
 ADMIN_USER_IDS=123456789
 FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
+
+# Optional: KI-Anbieter für Kategorisierung und GPT (deepseek / groq / gemini / openrouter / anthropic)
+# Empfohlen: deepseek — schnell, keine Rate-Limit-Probleme
+# Fallback-Kette (auto): primary → groq → openrouter → gemini
+CATEGORIZATION_PROVIDER=deepseek
+GPT_PROVIDER=deepseek
+GEMINI_API_KEY=dein_gemini_api_schluessel  # optionaler Fallback
 ```
 
 Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).

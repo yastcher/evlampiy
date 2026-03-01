@@ -48,11 +48,14 @@ GITHUB_CLIENT_ID=your_github_oauth_app_client_id
 GROQ_API_KEY=your_groq_api_key
 VIP_USER_IDS=123456,789012
 ADMIN_USER_IDS=123456789
-INITIAL_CREDITS=3
+FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
 
-# Optional: Auto-categorization
-ANTHROPIC_BOT_API_KEY=your_anthropic_api_key
+# Optional: AI provider for categorization and GPT (deepseek / groq / gemini / openrouter / anthropic)
+CATEGORIZATION_PROVIDER=deepseek
+GPT_PROVIDER=deepseek
+DEEPSEEK_API_KEY=your_deepseek_api_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### Local Run
@@ -185,11 +188,14 @@ GITHUB_CLIENT_ID=ваш_github_oauth_app_client_id
 GROQ_API_KEY=ваш_groq_api_ключ
 VIP_USER_IDS=123456,789012
 ADMIN_USER_IDS=123456789
-INITIAL_CREDITS=3
+FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
 
-# Опционально: Автокатегоризация
-ANTHROPIC_BOT_API_KEY=ваш_anthropic_api_ключ
+# Опционально: AI-провайдер для категоризации и GPT (deepseek / groq / gemini / openrouter / anthropic)
+CATEGORIZATION_PROVIDER=deepseek
+GPT_PROVIDER=deepseek
+DEEPSEEK_API_KEY=ваш_deepseek_api_ключ
+GEMINI_API_KEY=ваш_gemini_api_ключ
 ```
 
 ### Локальный запуск

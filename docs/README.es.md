@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
-[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.14](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
 [English](../README.md) | [Русский](README.ru.md) | Español | [Deutsch](README.de.md)
@@ -32,7 +32,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 ### Integración con Obsidian
 - **Sincronización GitHub** — Guardado automático de transcripciones en tu vault vía GitHub API
 - **OAuth Device Flow** — Autenticación segura sin exponer tokens
-- **Auto-categorización** — Clasificación de notas con IA (Google Gemini, Anthropic Claude, OpenAI)
+- **Auto-categorización** — Clasificación de notas con IA (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Guardado dual** — Las notas contienen texto limpio; la transcripción original se preserva en un comentario HTML
 - **vocabulary.json** — Lista de palabras clave por categoría, construida automáticamente para mejorar la corrección de errores
 - **Contexto de limpieza** — Las transcripciones recientes del mismo chat se pasan al LLM para mayor precisión
@@ -49,7 +49,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 
 ## Requisitos
 
-- Python 3.13+
+- Python 3.14+
 - MongoDB
 - FFmpeg (para procesamiento de audio)
 - Tokens API de [Wit.ai](https://wit.ai/)
@@ -57,7 +57,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - (Opcional) Credenciales de WhatsApp Business API
 - (Opcional) GitHub OAuth App client ID (para integración con Obsidian)
 - (Opcional) [Groq](https://groq.com/) API key (para transcripción de respaldo Whisper)
-- (Opcional) API key de proveedor IA — [Google Gemini](https://ai.google.dev/), [Anthropic](https://anthropic.com/) o [OpenAI](https://openai.com/) (para auto-categorización y comandos GPT)
+- (Opcional) API key de proveedor IA — [DeepSeek](https://deepseek.com/), [Groq](https://groq.com/), [Google Gemini](https://ai.google.dev/), [OpenRouter](https://openrouter.ai/) o [Anthropic](https://anthropic.com/) (para auto-categorización y comandos GPT)
 
 ## Inicio Rápido
 
@@ -111,6 +111,13 @@ VIP_USER_IDS=123456,789012   # env fallback; gestionar vía /admin en Telegram
 ADMIN_USER_IDS=123456789
 FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
+
+# Opcional: Proveedor IA para categorización y GPT (deepseek / groq / gemini / openrouter / anthropic)
+# Se recomienda deepseek — rápido, sin problemas de rate-limit
+# Cadena de respaldo (auto): primary → groq → openrouter → gemini
+CATEGORIZATION_PROVIDER=deepseek
+GPT_PROVIDER=deepseek
+GEMINI_API_KEY=tu_gemini_api_key  # respaldo opcional
 ```
 
 Para instrucciones de configuración de WhatsApp, consulta [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).

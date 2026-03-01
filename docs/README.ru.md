@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
-[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.14](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
 [English](../README.md) | Русский | [Español](README.es.md) | [Deutsch](README.de.md)
@@ -32,7 +32,7 @@ Telegram и WhatsApp бот для транскрипции голосовых �
 ### Интеграция с Obsidian
 - **Синхронизация через GitHub** — Автосохранение транскрипций в ваш vault через GitHub API
 - **OAuth Device Flow** — Безопасная аутентификация без раскрытия токенов
-- **Автокатегоризация** — ИИ-классификация заметок (Google Gemini, Anthropic Claude, OpenAI)
+- **Автокатегоризация** — ИИ-классификация заметок (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Двойное сохранение** — Заметки содержат очищенный текст; исходная транскрипция сохраняется в HTML-комментарии
 - **vocabulary.json** — Автоматически пополняемый список ключевых слов по категориям; улучшает исправление ошибок транскрипции
 - **Контекст очистки** — Последние транскрипции из этого же чата передаются LLM для более точной очистки
@@ -49,7 +49,7 @@ Telegram и WhatsApp бот для транскрипции голосовых �
 
 ## Требования
 
-- Python 3.13+
+- Python 3.14+
 - MongoDB
 - FFmpeg (для обработки аудио)
 - API токены [Wit.ai](https://wit.ai/)
@@ -57,7 +57,7 @@ Telegram и WhatsApp бот для транскрипции голосовых �
 - (Опционально) Данные WhatsApp Business API
 - (Опционально) GitHub OAuth App client ID (для интеграции с Obsidian)
 - (Опционально) [Groq](https://groq.com/) API ключ (для резервной транскрипции Whisper)
-- (Опционально) API ключ ИИ-провайдера — [Google Gemini](https://ai.google.dev/), [Anthropic](https://anthropic.com/) или [OpenAI](https://openai.com/) (для автокатегоризации и GPT-команд)
+- (Опционально) API ключ ИИ-провайдера — [DeepSeek](https://deepseek.com/), [Groq](https://groq.com/), [Google Gemini](https://ai.google.dev/), [OpenRouter](https://openrouter.ai/) или [Anthropic](https://anthropic.com/) (для автокатегоризации и GPT-команд)
 
 ## Быстрый старт
 
@@ -111,6 +111,13 @@ VIP_USER_IDS=123456,789012   # env fallback; управление через /ad
 ADMIN_USER_IDS=123456789
 FREE_MONTHLY_TOKENS=10
 WIT_FREE_MONTHLY_LIMIT=500
+
+# Опционально: AI-провайдер для категоризации и GPT (deepseek / groq / gemini / openrouter / anthropic)
+# Рекомендуется deepseek — быстрый, доступный из России
+# Цепочка фоллбэков (авто): primary → groq → openrouter → gemini
+CATEGORIZATION_PROVIDER=deepseek
+GPT_PROVIDER=deepseek
+GEMINI_API_KEY=ваш_gemini_api_ключ  # опциональный фоллбэк
 ```
 
 Инструкции по настройке WhatsApp: [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).

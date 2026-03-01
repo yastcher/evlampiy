@@ -32,7 +32,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 ### Obsidian Integration
 - **GitHub sync** — Auto-save transcriptions to your vault via GitHub API
 - **OAuth Device Flow** — Secure authentication without exposing tokens
-- **Auto-categorization** — AI-powered note classification (Google Gemini, Anthropic Claude, OpenAI)
+- **Auto-categorization** — AI-powered note classification (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Dual-save** — Notes contain cleaned text; raw transcription preserved in an HTML comment for reference
 - **vocabulary.json** — Auto-built per-category keyword list; improves transcription error correction over time
 - **Cleanup context** — Recent transcriptions from the same chat are passed to the cleanup LLM for better accuracy
@@ -49,7 +49,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 
 ## Requirements
 
-- Python 3.13+
+- Python 3.14+
 - MongoDB
 - FFmpeg (for audio processing)
 - [Wit.ai](https://wit.ai/) API tokens
@@ -57,7 +57,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - (Optional) WhatsApp Business API credentials
 - (Optional) GitHub OAuth App client ID (for Obsidian integration)
 - (Optional) [Groq](https://groq.com/) API key (for Whisper fallback)
-- (Optional) AI provider API key — [Google Gemini](https://ai.google.dev/), [Anthropic](https://anthropic.com/), or [OpenAI](https://openai.com/) (for auto-categorization and GPT commands)
+- (Optional) AI provider API key — [DeepSeek](https://deepseek.com/), [Groq](https://groq.com/), [Google Gemini](https://ai.google.dev/), [OpenRouter](https://openrouter.ai/), or [Anthropic](https://anthropic.com/) (for auto-categorization and GPT commands)
 
 ## Quick Start
 
