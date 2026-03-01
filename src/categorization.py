@@ -41,7 +41,7 @@ async def get_vocabulary_from_repo(repo_info: GitHubRepo) -> dict[str, list[str]
     try:
         data: dict[str, list[str]] = json.loads(content)
         return data
-    except (json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError, ValueError:
         logger.warning("vocabulary.json is invalid JSON, ignoring")
         return {}
 
@@ -94,7 +94,7 @@ async def classify_note(
         raw_category = data.get("category", "").strip().lower().replace(" ", "_")
         keywords = [str(k) for k in data.get("keywords", [])[:5]]
         return raw_category or None, keywords
-    except (json.JSONDecodeError, TypeError, AttributeError):
+    except json.JSONDecodeError, TypeError, AttributeError:
         # Fallback: treat as plain category name (old-style LLM response)
         category = result.strip().lower().replace(" ", "_")
         return category or None, []

@@ -1,6 +1,6 @@
 import datetime
+import enum
 import typing
-from enum import Enum
 
 from beanie import Document
 from pydantic import Field
@@ -27,7 +27,7 @@ class UserSettings(Document):
         name = "users"
 
 
-class UserTier(str, Enum):
+class UserTier(enum.StrEnum):
     FREE = "free"
     PAID = "paid"
     VIP = "vip"

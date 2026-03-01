@@ -17,7 +17,7 @@ class TestSendResponse:
         call_kwargs = mock_context.bot.send_message.call_args.kwargs
         assert call_kwargs["text"] == "Hello world"
         assert call_kwargs["parse_mode"] == ParseMode.HTML
-        assert call_kwargs["disable_web_page_preview"] is True
+        assert call_kwargs["link_preview_options"].is_disabled is True
 
     async def test_long_message_split_into_chunks(self, mock_private_update, mock_context):
         """Long message should be split into multiple chunks."""

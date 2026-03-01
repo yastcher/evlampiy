@@ -1,10 +1,12 @@
 import typing
 
-from telegram import InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardMarkup, LinkPreviewOptions, Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 MAX_TELEGRAM_MESSAGE_LENGTH = 4096
+
+_LINK_PREVIEW_DISABLED = LinkPreviewOptions(is_disabled=True)
 
 
 async def send_response(
@@ -26,7 +28,7 @@ async def send_response(
             chat_id=update.effective_chat.id,
             text=chunk,
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
+            link_preview_options=_LINK_PREVIEW_DISABLED,
             reply_markup=keyboard if i == 0 else None,
             **kwargs,
         )
