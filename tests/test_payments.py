@@ -4,7 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from src import const
 from src.alerts import check_and_send_alerts
-from src.credits import add_credits, get_total_credits, increment_payment_stats
+from src.credits import add_credits, get_total_credits, get_user_tier, increment_payment_stats
+from src.dto import UserTier
+from src.mongo import set_chat_language
+from src.telegram.handlers import settings_hub
 from src.telegram.payments import (
     balance_command,
     buy_command,
@@ -17,7 +20,9 @@ from src.telegram.payments import (
 class TestPaymentFlow:
     """Integration test for complete payment flow with real DB."""
 
-    async def test_complete_payment_flow(self, mock_private_update, mock_context):
+    async def test_complete_payment_flow(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
         """Complete flow: buy → select package → pre_checkout → payment → balance."""
         user_id = "222"
         mock_private_update.effective_user.id = 222
@@ -32,10 +37,8 @@ class TestPaymentFlow:
         assert len(keyboard) == 4
 
         # 2. User selects Medium package (index 1)
-        query = MagicMock()
-        query.answer = AsyncMock()
-        query.data = "buy_pkg_1"
-        mock_private_update.callback_query = query
+        mock_callback_query.data = "buy_pkg_1"
+        mock_private_update.callback_query = mock_callback_query
 
         await buy_package_callback(mock_private_update, mock_context)
         mock_context.bot.send_invoice.assert_called_once()
@@ -91,12 +94,12 @@ class TestBuyCommand:
 class TestBuyPackageCallback:
     """Test package selection callback."""
 
-    async def test_sends_invoice_for_selected_package(self, mock_private_update, mock_context):
+    async def test_sends_invoice_for_selected_package(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
         """Selecting a package sends the correct invoice."""
-        query = MagicMock()
-        query.answer = AsyncMock()
-        query.data = "buy_pkg_2"  # Large package
-        mock_private_update.callback_query = query
+        mock_callback_query.data = "buy_pkg_2"  # Large package
+        mock_private_update.callback_query = mock_callback_query
         mock_context.bot.send_invoice = AsyncMock()
 
         await buy_package_callback(mock_private_update, mock_context)
@@ -111,14 +114,14 @@ class TestBuyPackageCallback:
 class TestPreCheckout:
     """Test pre-checkout handler."""
 
-    async def test_pre_checkout_approved(self, mock_private_update, mock_context):
+    async def test_pre_checkout_approved(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
         """Pre-checkout query is approved."""
-        query = MagicMock()
-        query.answer = AsyncMock()
-        mock_private_update.pre_checkout_query = query
+        mock_private_update.pre_checkout_query = mock_callback_query
 
         await handle_pre_checkout(mock_private_update, mock_context)
-        query.answer.assert_called_once_with(ok=True)
+        mock_callback_query.answer.assert_called_once_with(ok=True)
 
 
 class TestSuccessfulPayment:
@@ -195,3 +198,54 @@ class TestMilestoneAlerts:
 
         milestone_alerts = [a for a in alerts_sent if "$10" in a]
         assert len(milestone_alerts) == 1
+
+
+class TestPaymentTierTransition:
+    """Test that payment changes user tier and unlocks UI features."""
+
+    async def test_payment_upgrades_tier_and_unlocks_settings(
+        self, mock_private_update, mock_context
+    ):
+        """Full flow: FREE → payment → PAID → settings hub shows extra buttons."""
+
+        mock_private_update.effective_user.id = 55500
+        mock_private_update.effective_chat.id = 55500
+        user_id = "55500"
+        chat_id = f"u_{user_id}"
+        await set_chat_language(chat_id, "en")
+
+        # 1. Verify user starts as FREE
+        assert await get_user_tier(user_id) == UserTier.FREE
+
+        # 2. Settings hub: only 2 base buttons
+        with patch("src.telegram.handlers.settings.groq_api_key", "test-key"):
+            await settings_hub(mock_private_update, mock_context)
+
+        keyboard = mock_private_update.message.reply_text.call_args.kwargs[
+            "reply_markup"
+        ].inline_keyboard
+        assert len(keyboard) == 2
+
+        # 3. Simulate payment
+        mock_private_update.message.reply_text.reset_mock()
+        mock_private_update.message.successful_payment = MagicMock()
+        mock_private_update.message.successful_payment.total_amount = 25
+        mock_private_update.message.successful_payment.invoice_payload = "buy_tokens_0"
+
+        await handle_successful_payment(mock_private_update, mock_context)
+
+        # 4. Verify tier changed to PAID
+        assert await get_user_tier(user_id) == UserTier.PAID
+
+        # 5. Settings hub now shows 4 buttons (language, gpt, provider, cleanup)
+        mock_private_update.message.reply_text.reset_mock()
+        with patch("src.telegram.handlers.settings.groq_api_key", "test-key"):
+            await settings_hub(mock_private_update, mock_context)
+
+        keyboard = mock_private_update.message.reply_text.call_args.kwargs[
+            "reply_markup"
+        ].inline_keyboard
+        callback_datas = [row[0].callback_data for row in keyboard]
+        assert "hub_provider" in callback_datas
+        assert "hub_toggle_cleanup" in callback_datas
+        assert len(keyboard) == 4

@@ -50,7 +50,11 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 
 - Trophy testing: fast integration tests, real DB (mongomock), minimal mocks
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
-- Fixtures in tests/fixtures.py as @pytest.fixture, accessed via test parameters (NOT via import)
+- **All fixtures in tests/fixtures.py** — every @pytest.fixture must be declared there,
+  not in test files. Test files should have zero fixture definitions and minimal inline mocks.
+  If a test needs a mock, check if a fixture already exists; if not, add one to fixtures.py.
+- **Prefer integration tests over unit tests with heavy mocking** — don't create tests
+  that mock half the system. Trophy style: real DB, real logic, mock only external I/O.
 - pytest_plugins already configured in conftest.py
 - asyncio_mode = "auto" in pyproject.toml — pytestmark not needed
 - Architectural tests in tests/test_architecture.py — enforced by pytestarch + AST

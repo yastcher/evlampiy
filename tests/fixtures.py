@@ -306,3 +306,24 @@ def _patch_settings(tmp_path):
         mock_settings.deepseek_api_key = "test-key"
         mock_settings.wit_ru_token = "test-token"
         yield mock_settings
+
+
+@pytest.fixture
+def admin_auth():
+    """Patch settings to treat user 999 as admin for the test duration."""
+    with patch("src.config.settings.admin_user_ids_raw", "999"):
+        yield
+
+
+@pytest.fixture
+def mock_audio_segment_factory():
+    """Factory for creating AudioSegment mocks with configurable duration."""
+
+    def _create(length_ms: int = 5000) -> MagicMock:
+        seg = MagicMock()
+        seg.__len__ = MagicMock(return_value=length_ms)
+        seg.__getitem__ = MagicMock(return_value=seg)
+        seg.export = MagicMock()
+        return seg
+
+    return _create

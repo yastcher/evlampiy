@@ -1,7 +1,5 @@
 """Tests for bot sender rejection guard."""
 
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 from telegram.ext import ApplicationHandlerStop
 
@@ -21,26 +19,20 @@ class TestIsBotSender:
 
 
 class TestRejectBotSenders:
-    async def test_raises_stop_for_bot(self, make_update_factory):
+    async def test_raises_stop_for_bot(self, make_update_factory, mock_context):
         update = make_update_factory(is_bot=True)
-        context = MagicMock()
-        context.bot = AsyncMock()
 
         with pytest.raises(ApplicationHandlerStop):
-            await _reject_bot_senders(update, context)
+            await _reject_bot_senders(update, mock_context)
 
-    async def test_passes_for_human(self, make_update_factory):
+    async def test_passes_for_human(self, make_update_factory, mock_context):
         update = make_update_factory(is_bot=False)
-        context = MagicMock()
-        context.bot = AsyncMock()
 
         # Must not raise
-        await _reject_bot_senders(update, context)
+        await _reject_bot_senders(update, mock_context)
 
-    async def test_passes_when_no_user(self, make_update_factory):
+    async def test_passes_when_no_user(self, make_update_factory, mock_context):
         update = make_update_factory(is_bot=None)
-        context = MagicMock()
-        context.bot = AsyncMock()
 
         # Must not raise (e.g., channel post with no user)
-        await _reject_bot_senders(update, context)
+        await _reject_bot_senders(update, mock_context)

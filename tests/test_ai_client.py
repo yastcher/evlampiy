@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import httpx
+
 from src.ai_client import (
     _strip_backticks,
     classify_text,
@@ -240,3 +242,75 @@ class TestProviderDispatch:
             result = await classify_text("Test")
 
         assert result == "work"
+
+
+class TestFallbackOnNetworkError:
+    """Test fallback chain when provider hits network errors."""
+
+    async def test_http_error_falls_back_to_next_provider(
+        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter, mock_ai_sleep
+    ):
+        """httpx.HTTPError on primary → falls back to secondary provider."""
+
+        groq_ok = mock_httpx_response_factory(
+            {"choices": [{"message": {"content": "groq_result"}}]}, 200
+        )
+
+        call_count = 0
+
+        async def fake_post(url: str, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if "generativelanguage" in url:
+                raise httpx.ConnectError("Connection refused")
+            if "groq" in url:
+                return groq_ok
+            return mock_httpx_response_factory(status_code=404)
+
+        mock_ai_http.post.side_effect = fake_post
+
+        with (
+            patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
+            patch("src.ai_client.settings.groq_api_key", "groq-key"),
+            patch("src.ai_client.settings.openrouter_api_key", ""),
+            patch("src.ai_client.settings.deepseek_api_key", ""),
+            patch("src.ai_client.settings.qwen_api_key", ""),
+            patch("src.ai_client.settings.categorization_provider", "gemini"),
+        ):
+            result = await classify_text("Test")
+
+        assert result == "groq_result"
+        # Gemini fails on first call (no retries for HTTPError), then Groq succeeds
+        assert call_count == 2
+
+    async def test_empty_response_falls_back_to_next_provider(
+        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter, mock_ai_sleep
+    ):
+        """Provider returns empty text → falls back to next provider."""
+        empty_gemini = mock_httpx_response_factory(
+            {"candidates": [{"content": {"parts": [{"text": ""}]}}]}, 200
+        )
+        groq_ok = mock_httpx_response_factory(
+            {"choices": [{"message": {"content": "groq_result"}}]}, 200
+        )
+
+        async def fake_post(url: str, **kwargs):
+            if "generativelanguage" in url:
+                return empty_gemini
+            if "groq" in url:
+                return groq_ok
+            return mock_httpx_response_factory(status_code=404)
+
+        mock_ai_http.post.side_effect = fake_post
+
+        with (
+            patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
+            patch("src.ai_client.settings.groq_api_key", "groq-key"),
+            patch("src.ai_client.settings.openrouter_api_key", ""),
+            patch("src.ai_client.settings.deepseek_api_key", ""),
+            patch("src.ai_client.settings.qwen_api_key", ""),
+            patch("src.ai_client.settings.categorization_provider", "gemini"),
+        ):
+            result = await classify_text("Test")
+
+        assert result == "groq_result"

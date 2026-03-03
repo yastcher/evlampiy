@@ -7,20 +7,15 @@ from src.transcription.service import CHUNK_LENGTH_MS, transcribe_audio
 class TestTranscribeAudio:
     """Test transcription service."""
 
-    async def test_transcribes_short_audio(self):
+    async def test_transcribes_short_audio(self, mock_audio_segment_factory):
         """Audio shorter than chunk length is transcribed in one call."""
-        mock_audio_segment = MagicMock()
-        mock_audio_segment.__len__ = MagicMock(return_value=5000)  # 5 seconds
-        mock_audio_segment.__getitem__ = MagicMock(return_value=mock_audio_segment)
-        mock_audio_segment.export = MagicMock()
+        seg = mock_audio_segment_factory(5000)
 
         mock_wit = MagicMock()
         mock_wit.speech = MagicMock(return_value={"text": "Hello world"})
 
         with (
-            patch(
-                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
-            ),
+            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             text, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
@@ -29,15 +24,11 @@ class TestTranscribeAudio:
             assert duration == 5
             mock_wit.speech.assert_called_once()
 
-    async def test_transcribes_long_audio_in_chunks(self):
+    async def test_transcribes_long_audio_in_chunks(self, mock_audio_segment_factory):
         """Audio longer than chunk length is split and transcribed."""
         # Audio of 40 seconds = 2 chunks
         audio_length = CHUNK_LENGTH_MS * 2 + 1000
-
-        mock_audio_segment = MagicMock()
-        mock_audio_segment.__len__ = MagicMock(return_value=audio_length)
-        mock_audio_segment.__getitem__ = MagicMock(return_value=mock_audio_segment)
-        mock_audio_segment.export = MagicMock()
+        seg = mock_audio_segment_factory(audio_length)
 
         mock_wit = MagicMock()
         mock_wit.speech = MagicMock(
@@ -49,9 +40,7 @@ class TestTranscribeAudio:
         )
 
         with (
-            patch(
-                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
-            ),
+            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             text, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
@@ -60,32 +49,24 @@ class TestTranscribeAudio:
             assert duration == 40
             assert mock_wit.speech.call_count == 3
 
-    async def test_handles_missing_text_in_response(self):
+    async def test_handles_missing_text_in_response(self, mock_audio_segment_factory):
         """Response without 'text' key returns empty string."""
-        mock_audio_segment = MagicMock()
-        mock_audio_segment.__len__ = MagicMock(return_value=5000)
-        mock_audio_segment.__getitem__ = MagicMock(return_value=mock_audio_segment)
-        mock_audio_segment.export = MagicMock()
+        seg = mock_audio_segment_factory(5000)
 
         mock_wit = MagicMock()
         mock_wit.speech = MagicMock(return_value={})  # No 'text' key
 
         with (
-            patch(
-                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
-            ),
+            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             text, _duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
             assert text == ""
 
-    async def test_uses_correct_language_translator(self):
+    async def test_uses_correct_language_translator(self, mock_audio_segment_factory):
         """Correct language translator is used."""
-        mock_audio_segment = MagicMock()
-        mock_audio_segment.__len__ = MagicMock(return_value=5000)
-        mock_audio_segment.__getitem__ = MagicMock(return_value=mock_audio_segment)
-        mock_audio_segment.export = MagicMock()
+        seg = mock_audio_segment_factory(5000)
 
         mock_wit_ru = MagicMock()
         mock_wit_ru.speech = MagicMock(return_value={"text": "Привет мир"})
@@ -94,9 +75,7 @@ class TestTranscribeAudio:
         mock_wit_en.speech = MagicMock(return_value={"text": "Hello world"})
 
         with (
-            patch(
-                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
-            ),
+            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
             patch(
                 "src.transcription.service.voice_translators",
                 {"ru": mock_wit_ru, "en": mock_wit_en},
@@ -108,40 +87,31 @@ class TestTranscribeAudio:
             mock_wit_ru.speech.assert_called_once()
             mock_wit_en.speech.assert_not_called()
 
-    async def test_exports_to_mp3_format(self):
+    async def test_exports_to_mp3_format(self, mock_audio_segment_factory):
         """Audio chunks are exported as MP3."""
-        mock_audio_segment = MagicMock()
-        mock_audio_segment.__len__ = MagicMock(return_value=5000)
-        mock_audio_segment.__getitem__ = MagicMock(return_value=mock_audio_segment)
-        mock_export = MagicMock()
-        mock_audio_segment.export = mock_export
+        seg = mock_audio_segment_factory(5000)
 
         mock_wit = MagicMock()
         mock_wit.speech = MagicMock(return_value={"text": "Test"})
 
         with (
-            patch(
-                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
-            ),
+            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             await transcribe_audio(b"audio_data", "ogg", "en")
 
-            mock_export.assert_called_once()
-            call_kwargs = mock_export.call_args
+            seg.export.assert_called_once()
+            call_kwargs = seg.export.call_args
             assert call_kwargs[1]["format"] == "mp3"
 
-    async def test_groq_transcription(self):
+    async def test_groq_transcription(self, mock_audio_segment_factory):
         """Groq path: raw audio bytes sent to Groq API with format hint."""
-        mock_audio_segment = MagicMock()
-        mock_audio_segment.__len__ = MagicMock(return_value=10000)
+        seg = mock_audio_segment_factory(10000)
 
         mock_groq = AsyncMock(return_value="Groq result")
 
         with (
-            patch(
-                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
-            ),
+            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
             patch("src.transcription.service.transcribe_with_groq", mock_groq),
         ):
             text, duration, _ = await transcribe_audio(
@@ -152,20 +122,15 @@ class TestTranscribeAudio:
             assert duration == 10
             mock_groq.assert_called_once_with(b"audio_data", "en", "ogg")
 
-    async def test_returns_duration_in_seconds(self):
+    async def test_returns_duration_in_seconds(self, mock_audio_segment_factory):
         """Duration is returned in seconds."""
-        mock_audio_segment = MagicMock()
-        mock_audio_segment.__len__ = MagicMock(return_value=15500)  # 15.5s -> 15s
-        mock_audio_segment.__getitem__ = MagicMock(return_value=mock_audio_segment)
-        mock_audio_segment.export = MagicMock()
+        seg = mock_audio_segment_factory(15500)  # 15.5s -> 15s
 
         mock_wit = MagicMock()
         mock_wit.speech = MagicMock(return_value={"text": "Test"})
 
         with (
-            patch(
-                "src.transcription.service.AudioSegment.from_file", return_value=mock_audio_segment
-            ),
+            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
             patch("src.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             _, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")

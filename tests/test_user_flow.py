@@ -416,6 +416,90 @@ class TestVoiceMessageWithCleanup:
 
         voice_external_mocks["cleanup"].assert_called_once()
 
+    async def test_free_user_skips_cleanup_entirely(
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
+    ):
+        """Free user: cleanup is never called, raw text sent as-is."""
+        chat_id = "u_12370"
+        mock_private_update.effective_user.id = 12370
+        mock_private_update.effective_chat.id = 12370
+
+        await set_chat_language(chat_id, "en")
+        await set_gpt_command(chat_id, "евлампий")
+        await set_auto_cleanup(chat_id, True)  # enabled, but should be ignored for FREE
+        # No add_credits → FREE tier
+
+        mock_private_update.message.voice = mock_telegram_voice
+        raw_text = "ну короче значит всё хорошо"
+        voice_external_mocks["transcribe"].return_value = (raw_text, 5, 1)
+
+        await from_voice_to_text(mock_private_update, mock_context)
+
+        # Cleanup never called for free users
+        voice_external_mocks["cleanup"].assert_not_called()
+        # Raw text sent back unchanged
+        call_kwargs = voice_external_mocks["send"].call_args.kwargs
+        assert call_kwargs["response"] == raw_text
+
+    async def test_paid_cleanup_off_cleans_obsidian_but_sends_raw(
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
+    ):
+        """Paid user with cleanup OFF: Obsidian gets cleaned text, reply gets raw text."""
+        user_id = "12371"
+        chat_id = "u_12371"
+        mock_private_update.effective_user.id = 12371
+        mock_private_update.effective_chat.id = 12371
+
+        await set_chat_language(chat_id, "en")
+        await set_gpt_command(chat_id, "евлампий")
+        await add_credits(user_id, 100)
+        await set_auto_cleanup(chat_id, False)  # cleanup OFF
+
+        mock_private_update.message.voice = mock_telegram_voice
+        raw_text = "ну вот значит проект классный"
+        cleaned_text = "Проект классный."
+        voice_external_mocks["transcribe"].return_value = (raw_text, 5, 1)
+        voice_external_mocks["cleanup"].side_effect = None
+        voice_external_mocks["cleanup"].return_value = cleaned_text
+
+        await from_voice_to_text(mock_private_update, mock_context)
+
+        # Cleanup called (for Obsidian) but reply gets raw text
+        voice_external_mocks["cleanup"].assert_called_once()
+        call_kwargs = voice_external_mocks["send"].call_args.kwargs
+        assert call_kwargs["response"] == raw_text
+
+        # Obsidian receives cleaned text
+        obsidian_call = voice_external_mocks["obsidian"].call_args
+        assert obsidian_call.args[1] == cleaned_text  # text argument
+
+    async def test_overdraft_sends_warning(
+        self, mock_private_update, mock_context, mock_telegram_voice, voice_external_mocks
+    ):
+        """User with barely enough credits: transcription succeeds + overdraft warning."""
+        user_id = "12372"
+        chat_id = "u_12372"
+        mock_private_update.effective_user.id = 12372
+        mock_private_update.effective_chat.id = 12372
+
+        await set_chat_language(chat_id, "en")
+        await set_gpt_command(chat_id, "евлампий")
+        # Free credits = 10, no purchased. 60s voice = 3 tokens (ceil(60/20)).
+        # Deduct 3 from 10 → no overdraft. Need to exhaust first.
+        await deduct_credits(user_id, 9)  # leaves 1 free token
+
+        mock_private_update.message.voice = mock_telegram_voice
+        voice_external_mocks["transcribe"].return_value = ("Hello world", 60, 1)
+        # Cost = ceil(60/20) = 3 tokens, but only 1 available → overdraft
+
+        await from_voice_to_text(mock_private_update, mock_context)
+
+        # Transcription still sent
+        send_calls = voice_external_mocks["send"].call_args_list
+        responses = [c.kwargs.get("response", "") for c in send_calls]
+        # Should have the overdraft warning (credits_exhausted_warning)
+        assert any("credits" in r.lower() or "exhausted" in r.lower() for r in responses)
+
 
 class TestToggleCleanup:
     """Test /toggle_cleanup command with real DB."""
