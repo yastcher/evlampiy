@@ -23,8 +23,9 @@ from src.credits import (
     record_groq_usage,
 )
 from src.dto import AlertState, MonthlyStats, UserCredits, UserTier, WitUsageStats
-from src.mongo import add_user_role, get_users_by_role, remove_user_role
+from src.mongo import add_user_role, get_bot_config, get_users_by_role, remove_user_role
 from src.telegram.admin import (
+    _build_providers_panel,
     add_credits_command,
     add_tester_command,
     add_vip_command,
@@ -625,3 +626,87 @@ class TestUserStatsTracking:
         # 6. Purchased credits reduced by deduction (30 was from free, depends on initial state)
         total = await get_total_credits(user_id)
         assert total > 0
+
+
+class TestAdminProviderPanel:
+    """Test admin LLM provider panel: view, change, persistence."""
+
+    async def test_providers_panel_shows_current_config(self):
+        """Panel displays current categorization and GPT providers from settings."""
+
+        text, markup = await _build_providers_panel()
+
+        assert "Categ:" in text
+        assert "GPT:" in text
+        # Keyboard has 3 rows: categ providers, gpt providers, back button
+        keyboard = markup.inline_keyboard
+        assert len(keyboard) == 3
+        assert keyboard[2][0].callback_data == "adm_back"
+
+    async def test_change_categorization_provider_persists(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """Changing categorization provider via admin panel persists to DB."""
+
+        mock_private_update.effective_user.id = 999
+        mock_callback_query.data = "adm_prov_c_groq"
+        mock_private_update.callback_query = mock_callback_query
+
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await admin_callback_router(mock_private_update, mock_context)
+
+        # Verify persisted in DB
+        saved = await get_bot_config("categorization_provider", "")
+        assert saved == const.PROVIDER_GROQ
+
+        # Verify panel refreshed (edit_message_text called with HTML)
+        mock_callback_query.edit_message_text.assert_called_once()
+        call_kwargs = mock_callback_query.edit_message_text.call_args[1]
+        assert call_kwargs.get("parse_mode") == "HTML"
+
+    async def test_change_gpt_provider_persists(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """Changing GPT provider via admin panel persists to DB."""
+
+        mock_private_update.effective_user.id = 999
+        mock_callback_query.data = "adm_prov_g_openrouter"
+        mock_private_update.callback_query = mock_callback_query
+
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await admin_callback_router(mock_private_update, mock_context)
+
+        saved = await get_bot_config("gpt_provider", "")
+        assert saved == const.PROVIDER_OPENROUTER
+
+    async def test_invalid_provider_ignored(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """Unknown provider name is ignored (not persisted)."""
+
+        mock_private_update.effective_user.id = 999
+        mock_callback_query.data = "adm_prov_c_unknown_provider"
+        mock_private_update.callback_query = mock_callback_query
+
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await admin_callback_router(mock_private_update, mock_context)
+
+        # Should NOT have persisted the invalid provider
+        saved = await get_bot_config("categorization_provider", "")
+        assert saved != "unknown_provider"
+
+    async def test_back_button_returns_to_hub(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """Back button returns to admin hub."""
+        mock_private_update.effective_user.id = 999
+        mock_callback_query.data = "adm_back"
+        mock_private_update.callback_query = mock_callback_query
+
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await admin_callback_router(mock_private_update, mock_context)
+
+        mock_callback_query.edit_message_text.assert_called_once()
+        call_args = mock_callback_query.edit_message_text.call_args
+        # Back button should show hub keyboard (with inline buttons)
+        assert "reply_markup" in call_args[1]

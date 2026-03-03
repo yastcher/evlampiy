@@ -4,6 +4,7 @@ import pytest
 from telegram.constants import ChatMemberStatus
 from telegram.ext import ConversationHandler
 
+from src import const
 from src.account_linking import confirm_link, generate_link_code
 from src.config import ENGLISH, GERMAN, RUSSIAN, SPANISH
 from src.credits import add_credits, current_month_key, deduct_credits
@@ -15,12 +16,14 @@ from src.mongo import (
     get_chat_language,
     get_github_settings,
     get_gpt_command,
+    get_preferred_provider,
     get_save_to_obsidian,
     set_auto_categorize,
     set_auto_cleanup,
     set_chat_language,
     set_github_settings,
     set_gpt_command,
+    set_preferred_provider,
     set_save_to_obsidian,
 )
 from src.telegram.handlers import (
@@ -35,6 +38,7 @@ from src.telegram.handlers import (
     hub_callback_router,
     lang_buttons,
     obsidian_hub,
+    provider_buttons,
     settings_hub,
     start,
     toggle_categorize,
@@ -884,3 +888,133 @@ class TestHubCallbackRouting:
 
         mock_callback_query.answer.assert_called_once()
         mock_callback_query.message.reply_text.assert_called_once()
+
+
+class TestSettingsHubTierDependentUI:
+    """Test settings hub shows different buttons based on user tier."""
+
+    async def test_paid_user_sees_provider_and_cleanup_buttons(
+        self, mock_private_update, mock_context
+    ):
+        """Paid user sees provider + cleanup buttons in addition to base buttons."""
+        user_id = "12345"
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+
+        # Make user PAID by purchasing credits
+        await add_credits(user_id, 5)
+
+        with patch("src.telegram.handlers.settings.groq_api_key", "test-key"):
+            await settings_hub(mock_private_update, mock_context)
+
+        call_args = mock_private_update.message.reply_text.call_args
+        keyboard = call_args.kwargs["reply_markup"].inline_keyboard
+        callback_datas = [row[0].callback_data for row in keyboard]
+
+        # Base buttons always present
+        assert "hub_language" in callback_datas
+        assert "hub_gpt_command" in callback_datas
+        # Tier-dependent buttons for paid users
+        assert "hub_provider" in callback_datas
+        assert "hub_toggle_cleanup" in callback_datas
+        # Total: 4 buttons
+        assert len(keyboard) == 4
+
+    async def test_free_user_does_not_see_provider_or_cleanup(
+        self, mock_private_update, mock_context
+    ):
+        """Free user only sees base 2 buttons, no provider or cleanup."""
+        chat_id = "u_55555"
+        mock_private_update.effective_user.id = 55555
+        mock_private_update.effective_chat.id = 55555
+        await set_chat_language(chat_id, "en")
+        # User has no credits added → FREE tier
+
+        with patch("src.telegram.handlers.settings.groq_api_key", "test-key"):
+            await settings_hub(mock_private_update, mock_context)
+
+        call_args = mock_private_update.message.reply_text.call_args
+        keyboard = call_args.kwargs["reply_markup"].inline_keyboard
+        callback_datas = [row[0].callback_data for row in keyboard]
+
+        assert "hub_language" in callback_datas
+        assert "hub_gpt_command" in callback_datas
+        assert "hub_provider" not in callback_datas
+        assert "hub_toggle_cleanup" not in callback_datas
+        assert len(keyboard) == 2
+
+
+class TestProviderSelectionFlow:
+    """Test full provider selection: menu → select → persist → verify."""
+
+    async def test_select_groq_provider_persists_to_db(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """User selects Groq provider → choice persisted in DB."""
+
+        user_id = 12345
+        chat_id = f"{const.CHAT_PREFIX_USER}{user_id}"
+        await set_chat_language(chat_id, "en")
+        await add_credits(str(user_id), 5)  # PAID tier needed
+
+        # Simulate clicking "Groq" button in provider menu
+        mock_callback_query.data = "set_prov_groq"
+        mock_callback_query.from_user.id = user_id
+        mock_callback_query.message.chat.id = user_id
+        mock_private_update.callback_query = mock_callback_query
+
+        await provider_buttons(mock_private_update, mock_context)
+
+        # Verify provider persisted in DB
+        saved = await get_preferred_provider(chat_id)
+        assert saved == const.PROVIDER_GROQ
+
+        # Verify confirmation message shown
+        mock_callback_query.edit_message_text.assert_called_once()
+
+    async def test_select_auto_provider_sets_none(
+        self, mock_private_update, mock_context, mock_callback_query
+    ):
+        """Selecting 'Auto' sets provider to None in DB."""
+
+        user_id = 12345
+        chat_id = f"{const.CHAT_PREFIX_USER}{user_id}"
+        await set_chat_language(chat_id, "en")
+        await add_credits(str(user_id), 5)
+
+        # Pre-set to groq so we can verify it changes
+        await set_preferred_provider(chat_id, const.PROVIDER_GROQ)
+        assert await get_preferred_provider(chat_id) == const.PROVIDER_GROQ
+
+        # Select Auto
+        mock_callback_query.data = "set_prov_auto"
+        mock_callback_query.from_user.id = user_id
+        mock_callback_query.message.chat.id = user_id
+        mock_private_update.callback_query = mock_callback_query
+
+        await provider_buttons(mock_private_update, mock_context)
+
+        # Verify provider reset to None (auto)
+        saved = await get_preferred_provider(chat_id)
+        assert saved is None
+
+    async def test_provider_selection_in_group_chat(
+        self, mock_group_update, mock_context, mock_callback_query
+    ):
+        """Provider selection in group uses group chat_id prefix."""
+
+        group_chat_id = -100123456
+        chat_id = f"{const.CHAT_PREFIX_GROUP}{group_chat_id}"
+        await set_chat_language(chat_id, "en")
+
+        mock_callback_query.data = "set_prov_wit"
+        mock_callback_query.from_user.id = 12345
+        mock_callback_query.message.chat.id = group_chat_id
+        mock_group_update.callback_query = mock_callback_query
+
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.OWNER)
+
+        await provider_buttons(mock_group_update, mock_context)
+
+        saved = await get_preferred_provider(chat_id)
+        assert saved == const.PROVIDER_WIT
