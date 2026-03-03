@@ -111,6 +111,25 @@ class TestTesterRole:
         record = await UserCredits.find_one(UserCredits.user_id == user_id)
         assert record.tier == UserTier.FREE
 
+    async def test_admin_add_credits_to_existing_user(self):
+        """Admin top-up accumulates for existing user."""
+        user_id = "558"
+        await admin_add_credits(user_id, 20)
+        balance = await admin_add_credits(user_id, 30)
+        assert balance == 50
+        record = await UserCredits.find_one(UserCredits.user_id == user_id)
+        assert record.purchased_credits == 50
+
+    async def test_vip_has_unlimited_voice_access(self):
+        """VIP from DB has unlimited voice access."""
+        vip_id = "889"
+        await add_user_role(vip_id, const.ROLE_VIP, "admin")
+        with (
+            patch.object(settings, "admin_user_ids_raw", ""),
+            patch.object(settings, "vip_user_ids_raw", ""),
+        ):
+            assert await has_unlimited_voice_access(vip_id) is True
+
 
 class TestUserRoleCrud:
     async def test_add_and_list_roles(self):
@@ -471,6 +490,42 @@ class TestAlerts:
         call_text = mock_context.bot.send_message.call_args.kwargs["text"]
         assert "CRITICAL" in call_text
 
+    async def test_revenue_milestone_alert(self, mock_context):
+        """Revenue milestone $10 triggers alert when crossed."""
+        month = current_month_key()
+        # $10 / 0.014 ≈ 714.3 stars needed for $10 milestone
+        credits_sold = 715
+        credits_just_sold = 10
+        await MonthlyStats(
+            month_key=month, total_payments=1, total_credits_sold=credits_sold
+        ).insert()
+
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await check_and_send_alerts(mock_context.bot, credits_just_sold=credits_just_sold)
+
+        calls = mock_context.bot.send_message.call_args_list
+        texts = [c.kwargs["text"] for c in calls]
+        milestone_texts = [t for t in texts if "$10" in t]
+        assert len(milestone_texts) == 1, f"Expected $10 milestone alert, got: {texts}"
+
+    async def test_revenue_milestone_not_sent_if_already_above(self, mock_context):
+        """Milestone not sent if previous revenue was already above threshold."""
+        month = current_month_key()
+        # Both prev and current above $10 → no milestone crossing
+        credits_sold = 800
+        credits_just_sold = 5  # prev = 795 stars ≈ $11.13, current ≈ $11.20
+        await MonthlyStats(
+            month_key=month, total_payments=1, total_credits_sold=credits_sold
+        ).insert()
+
+        with patch.object(settings, "admin_user_ids_raw", "999"):
+            await check_and_send_alerts(mock_context.bot, credits_just_sold=credits_just_sold)
+
+        calls = mock_context.bot.send_message.call_args_list
+        texts = [c.kwargs["text"] for c in calls]
+        milestone_texts = [t for t in texts if "milestone" in t.lower()]
+        assert len(milestone_texts) == 0, f"Should not send milestone alert: {texts}"
+
     async def test_alert_not_duplicated(self, mock_context):
         """Same alert not sent twice in same month."""
         month = current_month_key()
@@ -502,6 +557,26 @@ class TestUserStatsTracking:
         assert record is not None
         assert record.total_transcriptions == 1
         assert record.total_audio_seconds == 30
+
+    async def test_increment_user_stats_default_zero_audio(self):
+        """Default audio_seconds=0 does not inflate stats."""
+        user_id = "default_audio_user"
+        await increment_user_stats(user_id)
+
+        record = await UserCredits.find_one(UserCredits.user_id == user_id)
+        assert record.total_audio_seconds == 0
+        assert record.total_transcriptions == 1
+
+    async def test_increment_transcription_stats_exact_count(self):
+        """Each call increments total_transcriptions by exactly 1."""
+        await increment_transcription_stats()
+        month_key = current_month_key()
+        stats = await MonthlyStats.find_one(MonthlyStats.month_key == month_key)
+        assert stats.total_transcriptions == 1
+
+        await increment_transcription_stats()
+        stats = await MonthlyStats.find_one(MonthlyStats.month_key == month_key)
+        assert stats.total_transcriptions == 2  # exactly +1 each time, not +2 or +0
 
     async def test_record_groq_usage(self):
         """Groq audio usage is recorded in monthly stats."""

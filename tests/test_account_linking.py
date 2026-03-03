@@ -22,6 +22,12 @@ from src.whatsapp.handlers import handle_link_command
 class TestAccountLinking:
     """Full account linking lifecycle."""
 
+    async def test_link_code_is_exactly_six_digits(self):
+        """Link code must be exactly 6 digits (hardcoded, not from constant)."""
+        code = await generate_link_code("const_check_user")
+        assert len(code) == 6
+        assert code.isdigit()
+
     async def test_complete_linking_flow(self):
         """Generate code → confirm → check link → unlink."""
         telegram_user_id = "111222"

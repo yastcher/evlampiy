@@ -53,6 +53,17 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 - Fixtures in tests/fixtures.py as @pytest.fixture, accessed via test parameters (NOT via import)
 - pytest_plugins already configured in conftest.py
 - asyncio_mode = "auto" in pyproject.toml — pytestmark not needed
+- Architectural tests in tests/test_architecture.py — enforced by pytestarch + AST
+- Mutation testing: `uv run cosmic-ray init cosmic-ray.toml session.sqlite && uv run cosmic-ray exec cosmic-ray.toml session.sqlite`
+
+### Writing effective tests
+
+- **Boundary values**: always test exact boundary (==), one below, one above. `>=` must have a test where left == right
+- **Assert exact values, not ranges**: `assert count == 2`, not `assert count >= 1`. Weak assertions hide bugs
+- **Hardcode expected values**: don't reuse the same constant in test and production code. If `LINK_CODE_LENGTH = 6`, test `assert len(code) == 6`, not `== LINK_CODE_LENGTH`
+- **One assertion per behavior**: a test that checks too many things at once may pass even when one check is meaningless
+- **Test both branches of conditionals**: if code has `if x: return A else: return B`, test both paths
+- **Mongomock caveat**: `find_one(Field == val)` with a single record won't distinguish `==` from `>=`/`<=`. Use multiple records or verify the returned record's field matches exactly
 
 ## Git
 

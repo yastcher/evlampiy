@@ -86,6 +86,13 @@ class TestCreditFlow:
         assert ok is True
         assert msg == ""
 
+    async def test_can_perform_exact_balance(self):
+        """Can perform when total credits exactly equal cost (boundary)."""
+        user_id = "exact_balance_user"
+        ok, msg = await can_perform_operation(user_id, 10)  # exactly 10 free tokens
+        assert ok is True
+        assert msg == ""
+
     async def test_cannot_perform_when_exhausted(self):
         """Cannot perform when total credits are insufficient."""
         user_id = "exhausted_user"
@@ -159,6 +166,24 @@ class TestDeductCredits:
         free, purchased = await get_credits(user_id)
         assert free == 0
         assert purchased == 0
+
+    async def test_deduct_exact_balance_no_overdraft(self):
+        """Deducting exactly available amount is NOT overdraft."""
+        user_id = "exact_deduct_user"
+        # Has exactly 10 free tokens
+        result = await deduct_credits(user_id, 10)
+        assert result.free_used == 10
+        assert result.purchased_used == 0
+        assert result.overdraft is False
+
+    async def test_deduct_one_over_balance_is_overdraft(self):
+        """Deducting one more than available IS overdraft."""
+        user_id = "one_over_user"
+        # Has exactly 10 free tokens
+        result = await deduct_credits(user_id, 11)
+        assert result.free_used == 10
+        assert result.purchased_used == 0
+        assert result.overdraft is True
 
     async def test_deduct_zero_available(self):
         """Deducting from user with 0 balance returns overdraft with 0 used."""
