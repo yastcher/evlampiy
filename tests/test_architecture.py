@@ -7,9 +7,14 @@ from pytestarch import Rule, get_evaluable_architecture
 
 _ROOT = str(pathlib.Path(__file__).resolve().parents[1])
 _SRC = str(pathlib.Path(__file__).resolve().parents[1] / "src")
-_PREFIX = "evlampiy_notes_tgbot.src"
 
 _arch = get_evaluable_architecture(_ROOT, _SRC)
+
+# Prefix depends on the project directory name (differs locally vs CI).
+# Detect it from the graph nodes: find node ending with ".src.const" and strip ".const".
+_PREFIX = next(
+    n.removesuffix(".const") for n in _arch._graph._graph.nodes() if n.endswith(".src.const")
+)
 
 
 # --- Rule 1: telegram <-> whatsapp domain isolation ---
