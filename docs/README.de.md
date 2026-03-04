@@ -131,8 +131,6 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 | `/obsidian` | Notizen-Synchronisierung mit GitHub      |
 | `/account`  | Guthaben, Tokens und WhatsApp-Verknüpfung |
 
-Für Admin-Befehle siehe [ADMIN.md](ADMIN.md).
-
 ## Entwicklung
 
 ### Ansatz
@@ -160,9 +158,16 @@ uv run mypy src
 uv run pytest --cov=src --cov-fail-under=85
 ```
 
-## Deployment
+## Dokumentation
 
-Siehe [DEPLOY.md](../DEPLOY.md) für Docker-Deployment-Anweisungen.
+| Dokument | Beschreibung |
+|----------|-------------|
+| [Architektur](ARCHITECTURE.md) | Verzeichnisstruktur, Datenfluss, technische Entscheidungen, Limits (English) |
+| [Deployment](DEPLOY.md) | Docker, nginx, Health Checks, Logs |
+| [Administration](ADMIN.md) | Admin-Befehle, Rollen, Alarme, Monitoring |
+| [WhatsApp-Einrichtung](WHATSAPP_SETUP.md) | WhatsApp Business API Konfiguration |
+| [Kontoverknüpfung](WHATSAPP_LINKING.md) | Telegram ↔ WhatsApp Verknüpfung |
+| [GitHub Token](GITHUB_TOKEN_SETUP.md) | Manuelle GitHub-Token-Einrichtung für Obsidian |
 
 ## Lizenz
 

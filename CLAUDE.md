@@ -112,9 +112,10 @@ Always update documentation as part of the same task (not as a separate step):
 - CHANGELOG.md — steps:
   1. Read `pyproject.toml` to get the current `version`.
   2. Read CHANGELOG.md and check the top section heading (e.g. `## [0.8.9]`).
-  3. **If versions match** → append the new bullet to the existing matching subsection (Added / Changed / Fixed / Removed). Do NOT create a duplicate subsection. If the subsection doesn't exist yet, add it in order: Added → Changed → Fixed → Removed.
+  3. **If versions match** → append the new bullet to the existing matching subsection (Added / Changed / Fixed / Removed / Docs). Do NOT create a duplicate subsection. If the subsection doesn't exist yet, add it in order: Added → Changed → Fixed → Removed → Docs.
   4. **If versions differ** (pyproject.toml has a newer version) → create a new section at the top: `## [X.Y.Z] — YYYY-MM-DD` with the appropriate subsection and bullet.
   5. Use concise bullet points. Version bumping in pyproject.toml is done by the user — do not change it.
+  6. **Documentation-only changes** (README, ARCHITECTURE, ADMIN, etc.) go under `### Docs`, not `### Added`.
 - Do not create separate doc files without necessity — keep README.md up to date
 - Documentation must be updated before running the "Before finishing" checklist, not after
 

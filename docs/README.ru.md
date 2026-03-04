@@ -131,8 +131,6 @@ GEMINI_API_KEY=ваш_gemini_api_ключ  # опциональный фоллб
 | `/obsidian` | Синхронизация заметок с GitHub           |
 | `/account`  | Баланс, токены и привязка WhatsApp        |
 
-Команды администратора см. в [ADMIN.md](ADMIN.md).
-
 ## Разработка
 
 ### Подход
@@ -160,9 +158,16 @@ uv run mypy src
 uv run pytest --cov=src --cov-fail-under=85
 ```
 
-## Деплой
+## Документация
 
-См. [DEPLOY.md](../DEPLOY.md) для инструкций по развёртыванию в Docker.
+| Документ | Описание |
+|----------|----------|
+| [Архитектура](ARCHITECTURE.md) | Структура каталогов, поток данных, инженерные решения, лимиты (English) |
+| [Деплой](DEPLOY.md) | Docker, nginx, health checks, логи |
+| [Администрирование](ADMIN.md) | Команды администратора, роли, алерты, мониторинг |
+| [Настройка WhatsApp](WHATSAPP_SETUP.md) | Конфигурация WhatsApp Business API |
+| [Привязка аккаунтов](WHATSAPP_LINKING.md) | Привязка Telegram ↔ WhatsApp |
+| [GitHub Token](GITHUB_TOKEN_SETUP.md) | Ручная настройка GitHub токена для Obsidian |
 
 ## Лицензия
 
