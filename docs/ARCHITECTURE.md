@@ -50,7 +50,10 @@ src/
 tests/
 ├── fixtures.py             - All shared test fixtures (no fixtures in test files)
 ├── conftest.py             - Pytest configuration and plugin imports
-└── test_*.py               - Integration and unit tests (20 files)
+├── test_architecture.py    - Domain isolation and import style rules (pytestarch)
+├── test_api_contracts.py   - Handler registration, signatures, menu consistency
+├── test_docs.py            - Link validation, ARCHITECTURE.md freshness, CHANGELOG format
+└── test_*.py               - Integration and unit tests
 ```
 
 ## Data Flow
@@ -223,6 +226,12 @@ The codebase is organized by domain (`telegram/`, `whatsapp/`, `transcription/`)
 ### Trophy Testing
 
 Tests use real MongoDB (via mongomock-motor) and real application logic. Mocks are applied only at external I/O boundaries: HTTP APIs (Wit.ai, Groq, GitHub, LLM providers), Telegram Bot API, and WhatsApp Cloud API. This catches integration bugs that unit-test-heavy approaches miss. All fixtures live in `tests/fixtures.py` — test files have zero fixture definitions.
+
+In addition to integration tests, three contract test suites guard structural invariants:
+
+- **`test_architecture.py`** — pytestarch rules enforce domain isolation (telegram ↔ whatsapp never import each other, transcription is channel-independent) and stdlib import style (`import datetime`, not `from datetime import ...`).
+- **`test_api_contracts.py`** — every command in `COMMAND_HANDLERS` is async with `(update, context)` signature; all `BOT_COMMANDS` / `ADMIN_COMMANDS` menu entries map to registered handlers; all callback query handlers exist; `/health` endpoint returns expected schema.
+- **`test_docs.py`** — all internal markdown links resolve to existing files; every `.py` file in `src/` is listed in `ARCHITECTURE.md` (and vice versa); all READMEs have a Documentation table; CHANGELOG subsection names are from the allowed set.
 
 ### Token Bucket Rate Limiting
 
