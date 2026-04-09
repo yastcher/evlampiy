@@ -91,26 +91,30 @@ class RateLimiter:
 # Module-level singleton — one rate limiter per process
 rate_limiter = RateLimiter(_PROVIDER_LIMITS)
 
-# Shared HTTP client — one connection pool per process
-_http_client: httpx.AsyncClient | None = None
+
+class _HttpClientHolder:
+    """Holder for the shared HTTP client — avoids ``global`` keyword."""
+
+    client: httpx.AsyncClient | None = None
 
 
-async def _get_client() -> httpx.AsyncClient:
-    global _http_client
-    if _http_client is None or _http_client.is_closed:
+_http_holder = _HttpClientHolder()
+
+
+async def get_http_client() -> httpx.AsyncClient:
+    if _http_holder.client is None or _http_holder.client.is_closed:
         # read=45 to allow reasoning models to think, but not stall the chain forever
-        _http_client = httpx.AsyncClient(
+        _http_holder.client = httpx.AsyncClient(
             timeout=httpx.Timeout(connect=10.0, read=45.0, write=10.0, pool=5.0)
         )
-    return _http_client
+    return _http_holder.client
 
 
 async def close_client() -> None:
     """Close the shared HTTP client. Call on application shutdown."""
-    global _http_client
-    if _http_client is not None and not _http_client.is_closed:
-        await _http_client.aclose()
-        _http_client = None
+    if _http_holder.client is not None and not _http_holder.client.is_closed:
+        await _http_holder.client.aclose()
+        _http_holder.client = None
 
 
 def _strip_backticks(text: str) -> str:
@@ -143,7 +147,7 @@ async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> 
     }
     url = f"{const.GEMINI_API_BASE}/v1beta/models/{settings.gemini_model}:generateContent"
 
-    client = await _get_client()
+    client = await get_http_client()
     response = await client.post(url, headers=headers, json=payload)
 
     if response.status_code == http.HTTPStatus.OK:
@@ -182,7 +186,7 @@ async def _anthropic_complete(prompt: str, max_tokens: int, temperature: float) 
         "temperature": temperature,
     }
 
-    client = await _get_client()
+    client = await get_http_client()
     response = await client.post(
         f"{const.ANTHROPIC_API_BASE}/v1/messages",
         headers=headers,
@@ -204,7 +208,7 @@ async def _anthropic_complete(prompt: str, max_tokens: int, temperature: float) 
 
 
 async def _openai_format_complete(
-    endpoint: _OpenAIEndpoint, prompt: str, max_tokens: int, temperature: float
+    endpoint: OpenAIEndpoint, prompt: str, max_tokens: int, temperature: float
 ) -> str | None:
     """Call an OpenAI-compatible Chat Completions API."""
     headers = {
@@ -218,7 +222,7 @@ async def _openai_format_complete(
         "temperature": temperature,
     }
 
-    client = await _get_client()
+    client = await get_http_client()
     response = await client.post(endpoint.url, headers=headers, json=payload)
 
     if response.status_code == http.HTTPStatus.OK:
@@ -246,7 +250,7 @@ async def _openai_complete(prompt: str, max_tokens: int, temperature: float) -> 
         logger.warning("OpenAI API key not configured")
         return None
 
-    endpoint = _OpenAIEndpoint(
+    endpoint = OpenAIEndpoint(
         provider=const.PROVIDER_OPENAI,
         url=f"{const.OPENAI_API_BASE}/v1/chat/completions",
         api_key=settings.gpt_token,
@@ -261,7 +265,7 @@ async def _groq_complete(prompt: str, max_tokens: int, temperature: float) -> st
         logger.warning("Groq API key not configured")
         return None
 
-    endpoint = _OpenAIEndpoint(
+    endpoint = OpenAIEndpoint(
         provider=const.PROVIDER_GROQ,
         url=f"{const.GROQ_API_BASE}/openai/v1/chat/completions",
         api_key=settings.groq_api_key,
@@ -276,7 +280,7 @@ async def _deepseek_complete(prompt: str, max_tokens: int, temperature: float) -
         logger.warning("DeepSeek API key not configured")
         return None
 
-    endpoint = _OpenAIEndpoint(
+    endpoint = OpenAIEndpoint(
         provider=const.PROVIDER_DEEPSEEK,
         url=f"{const.DEEPSEEK_API_BASE}/chat/completions",
         api_key=settings.deepseek_api_key,
@@ -291,7 +295,7 @@ async def _qwen_complete(prompt: str, max_tokens: int, temperature: float) -> st
         logger.warning("Qwen API key not configured")
         return None
 
-    endpoint = _OpenAIEndpoint(
+    endpoint = OpenAIEndpoint(
         provider=const.PROVIDER_QWEN,
         url=f"{const.QWEN_API_BASE}/chat/completions",
         api_key=settings.qwen_api_key,
@@ -306,7 +310,7 @@ async def _openrouter_complete(prompt: str, max_tokens: int, temperature: float)
         logger.warning("OpenRouter API key not configured")
         return None
 
-    endpoint = _OpenAIEndpoint(
+    endpoint = OpenAIEndpoint(
         provider=const.PROVIDER_OPENROUTER,
         url=f"{const.OPENROUTER_API_BASE}/api/v1/chat/completions",
         api_key=settings.openrouter_api_key,
@@ -322,13 +326,75 @@ _ProviderFn = typing.Callable[
 ]
 
 
-class _OpenAIEndpoint(typing.NamedTuple):
+class OpenAIEndpoint(typing.NamedTuple):
     """Groups the fixed params for an OpenAI-compatible API endpoint."""
 
     provider: str
     url: str
     api_key: str
     model: str
+
+
+_OPENAI_ENDPOINTS: dict[str, typing.Callable[[], OpenAIEndpoint | None]] = {
+    const.PROVIDER_OPENAI: lambda: (
+        OpenAIEndpoint(
+            const.PROVIDER_OPENAI,
+            f"{const.OPENAI_API_BASE}/v1/chat/completions",
+            settings.gpt_token,
+            settings.gpt_model,
+        )
+        if settings.gpt_token
+        else None
+    ),
+    const.PROVIDER_GROQ: lambda: (
+        OpenAIEndpoint(
+            const.PROVIDER_GROQ,
+            f"{const.GROQ_API_BASE}/openai/v1/chat/completions",
+            settings.groq_api_key,
+            settings.groq_llm_model,
+        )
+        if settings.groq_api_key
+        else None
+    ),
+    const.PROVIDER_DEEPSEEK: lambda: (
+        OpenAIEndpoint(
+            const.PROVIDER_DEEPSEEK,
+            f"{const.DEEPSEEK_API_BASE}/chat/completions",
+            settings.deepseek_api_key,
+            settings.deepseek_model,
+        )
+        if settings.deepseek_api_key
+        else None
+    ),
+    const.PROVIDER_QWEN: lambda: (
+        OpenAIEndpoint(
+            const.PROVIDER_QWEN,
+            f"{const.QWEN_API_BASE}/chat/completions",
+            settings.qwen_api_key,
+            settings.qwen_model,
+        )
+        if settings.qwen_api_key
+        else None
+    ),
+    const.PROVIDER_OPENROUTER: lambda: (
+        OpenAIEndpoint(
+            const.PROVIDER_OPENROUTER,
+            f"{const.OPENROUTER_API_BASE}/api/v1/chat/completions",
+            settings.openrouter_api_key,
+            settings.openrouter_model,
+        )
+        if settings.openrouter_api_key
+        else None
+    ),
+}
+
+
+def get_openai_endpoint(provider: str) -> OpenAIEndpoint | None:
+    """Build an OpenAIEndpoint for the named provider, or None if API key is missing."""
+    factory = _OPENAI_ENDPOINTS.get(provider)
+    if factory is None:
+        return None
+    return factory()
 
 
 _PROVIDERS: dict[str, _ProviderFn] = {

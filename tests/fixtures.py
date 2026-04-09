@@ -120,9 +120,9 @@ def mock_httpx_client_factory():
 
 @pytest.fixture
 def mock_ai_http():
-    """Provide a mock httpx client for ai_client calls via _get_client."""
+    """Provide a mock httpx client for ai_client calls via get_http_client."""
     mock_client = AsyncMock()
-    with patch("src.ai_client._get_client", return_value=mock_client):
+    with patch("src.ai_client.get_http_client", return_value=mock_client):
         yield mock_client
 
 
@@ -150,8 +150,11 @@ def no_fallback_keys():
 
 @pytest.fixture
 def mock_ai_sleep():
-    """Mock asyncio.sleep in ai_client (no-op, suppress actual sleeping)."""
-    with patch("src.ai_client.asyncio.sleep", new_callable=AsyncMock):
+    """Mock asyncio.sleep in ai_client and ai_chat (no-op, suppress actual sleeping)."""
+    with (
+        patch("src.ai_client.asyncio.sleep", new_callable=AsyncMock),
+        patch("src.ai_chat.asyncio.sleep", new_callable=AsyncMock),
+    ):
         yield
 
 

@@ -25,6 +25,9 @@ src/
 │   ├── wit_client.py       - Wit.ai integration (chunked audio)
 │   └── groq_client.py      - Groq Whisper integration
 ├── ai_client.py            - Multi-provider LLM client with token bucket rate limiter
+├── ai_chat.py              - Messages-based chat completion with tool calling support
+├── tools.py                - Tool definitions and implementations for GPT tool calling
+├── tool_calling.py         - Tool-calling conversation loop (execute → re-send)
 ├── account_linking.py      - Telegram ↔ WhatsApp linking with brute-force protection
 ├── categorization.py       - AI-powered note categorization into Obsidian folders
 ├── credits.py              - Token system, user tiers, credit deduction
@@ -41,7 +44,7 @@ src/
 ├── github_api.py           - GitHub API client for Obsidian vault operations
 ├── github_oauth.py         - GitHub OAuth Device Flow authentication
 ├── obsidian.py             - Save transcriptions as markdown to GitHub repo
-├── gpt_commands.py         - Custom GPT command processing
+├── gpt_commands.py         - GPT chat command handler with tool calling
 ├── main.py                 - Application entry point (Telegram + FastAPI startup)
 └── selftest.py             - Health check and self-test endpoints
 ```

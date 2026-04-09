@@ -67,6 +67,10 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
   that module. Configurable values go into `settings`.
 - No local imports inside functions. All imports at the top of the file.
   Local imports are only acceptable when explicitly required (e.g. circular dependency workarounds).
+- No `global` keyword. Module-level mutable singletons (HTTP clients, caches) must use a holder class or
+  module-attribute access pattern instead of `global`.
+- In `if/elif/else` chains over a discriminator (role, type, status), use `if/elif/else` — not `if ... continue`.
+  Early returns via `continue` are for guard clauses, not for branching logic.
 
 ## Testing
 
