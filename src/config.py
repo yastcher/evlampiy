@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     mongo_uri: str = "mongodb://mongodb:27017/"
 
     gpt_token: str = ""
-    gpt_model: str = "gpt-3.5-turbo"
+    gpt_model: str = "gpt-4o"
 
     wit_ru_token: str = ""
     wit_en_token: str = ""

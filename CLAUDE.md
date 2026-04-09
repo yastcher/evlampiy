@@ -16,6 +16,13 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Understand the purpose of each config file before modifying it (e.g., docker-compose.yml is for running the stack, not
   for development).
 - Любой файл с API-ключами, токенами или учётными данными считай только для чтения
+- Всегда сначала надо решить причину проблемы, а не следствие.
+- Не подавлять warnings/errors/логи, не разобравшись в причине. Сначала спросить: это наш баг, баг зависимости, или
+  информационное сообщение? Подавлять можно только осознанно и с объяснением почему.
+- Перед планированием надо продумать оптимальную систему типов.
+- When renaming or refactoring across the project, grep for ALL old names (module, package, repo, env prefix, URLs)
+  across the entire tree before considering the task done. Don't skip files that seem unimportant (.env.example,
+  docker-compose.yml, docs/, etc.).
 
 ## Architecture
 
@@ -52,6 +59,15 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config.
 Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 
+## Code quality
+
+- No magic numbers in logic. Thresholds, limits, sizes, ratios — all go into `settings` as named settings with env vars,
+  or into `const.py` as module-level constants. Function parameter defaults are not a substitute for proper settings.
+- Values used in multiple modules go into `const.py`. Values used only in one module stay as module-level constants in
+  that module. Configurable values go into `settings`.
+- No local imports inside functions. All imports at the top of the file.
+  Local imports are only acceptable when explicitly required (e.g. circular dependency workarounds).
+
 ## Testing
 
 - Trophy testing: fast integration tests, real DB (mongomock), minimal mocks
@@ -77,6 +93,9 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 - **Test both branches of conditionals**: if code has `if x: return A else: return B`, test both paths
 - **Mongomock caveat**: `find_one(Field == val)` with a single record won't distinguish `==` from `>=`/`<=`. Use
   multiple records or verify the returned record's field matches exactly
+- **Bug fix workflow**: every fix MUST start with a failing test that reproduces the bug.
+  Write the test first, verify it fails, then apply the fix and verify the test passes.
+  This prevents regressions and documents the exact failure scenario.
 
 ## Git
 
@@ -132,7 +151,8 @@ Always update documentation as part of the same task (not as a separate step):
     4. **If versions differ** (pyproject.toml has a newer version) → create a new section at the top:
        `## [X.Y.Z] — YYYY-MM-DD` with the appropriate subsection and bullet.
     5. Use concise bullet points. Version bumping in pyproject.toml is done by the user — do not change it.
-    6. **Documentation-only changes** (README, ARCHITECTURE, ADMIN, etc.) go under `### Docs`, not `### Added`.
+    6. Order CHANGELOG entries by user impact: user-facing changes first, infrastructure/internal changes last.
+    7. **Documentation-only changes** (README, ARCHITECTURE, ADMIN, etc.) go under `### Docs`, not `### Added`.
 - Do not create separate doc files without necessity — keep README.md up to date
 - Documentation must be updated before running the "Before finishing" checklist, not after
 
@@ -151,4 +171,3 @@ Do not finish until lint, tests, and security review pass.
 ## Gotchas
 
 - Comments and logs in English
-- Frontend: Solid.js
