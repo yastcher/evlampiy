@@ -20,7 +20,7 @@ from telegram.ext import (
 from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.selftest import run_selftest
-from src.telegram import admin, handlers
+from src.telegram import account_handlers, admin, handlers, obsidian_handlers, settings_handlers
 from src.telegram.chat_params import is_bot_sender
 from src.telegram.payments import (
     balance_command,
@@ -35,18 +35,18 @@ logger = logging.getLogger(__name__)
 
 COMMAND_HANDLERS = {
     "start": handlers.start,
-    "settings": handlers.settings_hub,
-    "obsidian": handlers.obsidian_hub,
-    "account": handlers.account_hub,
-    "choose_your_language": handlers.choose_language,
+    "settings": settings_handlers.settings_hub,
+    "obsidian": obsidian_handlers.obsidian_hub,
+    "account": account_handlers.account_hub,
+    "choose_your_language": settings_handlers.choose_language,
     "enter_your_command": handlers.enter_your_command,
     "evlampiy": evlampiy_command,
-    "connect_github": handlers.connect_github,
-    "toggle_obsidian": handlers.toggle_obsidian,
-    "disconnect_github": handlers.disconnect_github,
+    "connect_github": obsidian_handlers.connect_github,
+    "toggle_obsidian": obsidian_handlers.toggle_obsidian,
+    "disconnect_github": obsidian_handlers.disconnect_github,
     "buy": buy_command,
     "balance": balance_command,
-    "mystats": handlers.mystats_command,
+    "mystats": account_handlers.mystats_command,
     "stats": handlers.stats_command,
     "admin": admin.admin_hub,
     "add_vip": admin.add_vip_command,
@@ -56,10 +56,10 @@ COMMAND_HANDLERS = {
     "add_credits": admin.add_credits_command,
     "block": admin.block_command,
     "unblock": admin.unblock_command,
-    "toggle_categorize": handlers.toggle_categorize,
-    "categorize": handlers.categorize_all,
-    "link_whatsapp": handlers.link_whatsapp,
-    "unlink_whatsapp": handlers.unlink_whatsapp,
+    "toggle_categorize": obsidian_handlers.toggle_categorize,
+    "categorize": obsidian_handlers.categorize_all,
+    "link_whatsapp": account_handlers.link_whatsapp,
+    "unlink_whatsapp": account_handlers.unlink_whatsapp,
 }
 
 BOT_COMMANDS = {
@@ -143,8 +143,12 @@ def build_application() -> Application:  # type: ignore[type-arg]
     for command_name, command_handler in COMMAND_HANDLERS.items():
         application.add_handler(CommandHandler(command_name, command_handler))
 
-    application.add_handler(CallbackQueryHandler(handlers.lang_buttons, pattern="^set_lang_"))
-    application.add_handler(CallbackQueryHandler(handlers.provider_buttons, pattern="^set_prov_"))
+    application.add_handler(
+        CallbackQueryHandler(settings_handlers.lang_buttons, pattern="^set_lang_")
+    )
+    application.add_handler(
+        CallbackQueryHandler(settings_handlers.provider_buttons, pattern="^set_prov_")
+    )
     application.add_handler(CallbackQueryHandler(handlers.hub_callback_router, pattern="^hub_"))
     application.add_handler(CallbackQueryHandler(admin.admin_callback_router, pattern="^adm_"))
     application.add_handler(CallbackQueryHandler(buy_package_callback, pattern="^buy_pkg_"))

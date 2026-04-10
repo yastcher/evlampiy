@@ -11,10 +11,9 @@ from src.telegram.handlers import (
     enter_your_command_from_hub,
     handle_command_input,
     hub_callback_router,
-    lang_buttons,
-    provider_buttons,
 )
 from src.telegram.payments import buy_package_callback
+from src.telegram.settings_handlers import lang_buttons, provider_buttons
 from src.telegram.setup import ADMIN_COMMANDS, BOT_COMMANDS, COMMAND_HANDLERS
 from src.whatsapp.app import create_fastapi_app
 

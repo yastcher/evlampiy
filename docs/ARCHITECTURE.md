@@ -9,13 +9,16 @@ Evlampiy Notes Bot is an async Python application that transcribes voice message
 ```
 src/
 ├── telegram/               # Telegram bot (python-telegram-bot)
-│   ├── handlers.py         - Command handlers (/start, /settings, /obsidian, /account)
-│   ├── admin.py            - Admin panel and user management (/admin)
-│   ├── voice.py            - Voice message transcription handler
-│   ├── payments.py         - Telegram Stars payment integration
-│   ├── bot.py              - Message sending utilities
-│   ├── chat_params.py      - Chat ID extraction and admin checks
-│   └── setup.py            - PTB application builder and handler registration
+│   ├── handlers.py             - Core handlers (/start, stats, hub router, GPT command conversation)
+│   ├── settings_handlers.py   - Settings hub (/settings, language, provider, cleanup toggle)
+│   ├── obsidian_handlers.py   - Obsidian hub (/obsidian, GitHub OAuth, categorization)
+│   ├── account_handlers.py    - Account hub (/account, mystats, WhatsApp linking)
+│   ├── admin.py                - Admin panel and user management (/admin)
+│   ├── voice.py                - Voice message transcription handler
+│   ├── payments.py             - Telegram Stars payment integration
+│   ├── bot.py                  - Message sending utilities
+│   ├── chat_params.py          - Chat ID extraction and admin checks
+│   └── setup.py                - PTB application builder and handler registration
 ├── whatsapp/               # WhatsApp Cloud API (pywa)
 │   ├── handlers.py         - Voice message and account link handler
 │   ├── client.py           - WhatsApp API client wrapper

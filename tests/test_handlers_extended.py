@@ -24,13 +24,11 @@ from src.mongo import (
 from src.telegram.handlers import (
     WAITING_FOR_COMMAND,
     build_stats_text,
-    connect_github,
     enter_your_command_from_hub,
     hub_callback_router,
-    lang_buttons,
-    setup_obsidian_git,
-    toggle_cleanup,
 )
+from src.telegram.obsidian_handlers import connect_github, setup_obsidian_git
+from src.telegram.settings_handlers import lang_buttons, toggle_cleanup
 
 
 class TestToggleCleanup:
@@ -78,15 +76,15 @@ class TestConnectGithubOAuthFlow:
 
         with (
             patch(
-                "src.telegram.handlers.get_github_device_code",
+                "src.telegram.obsidian_handlers.get_github_device_code",
                 AsyncMock(return_value=device_info),
             ),
             patch(
-                "src.telegram.handlers.poll_github_for_token",
+                "src.telegram.obsidian_handlers.poll_github_for_token",
                 AsyncMock(return_value="ghp_test"),
             ),
             patch(
-                "src.telegram.handlers.get_or_create_obsidian_repo",
+                "src.telegram.obsidian_handlers.get_or_create_obsidian_repo",
                 AsyncMock(return_value=repo),
             ),
         ):
@@ -121,11 +119,11 @@ class TestConnectGithubOAuthFlow:
 
         with (
             patch(
-                "src.telegram.handlers.get_github_device_code",
+                "src.telegram.obsidian_handlers.get_github_device_code",
                 AsyncMock(return_value=device_info),
             ),
             patch(
-                "src.telegram.handlers.poll_github_for_token",
+                "src.telegram.obsidian_handlers.poll_github_for_token",
                 AsyncMock(return_value=None),
             ),
         ):
@@ -153,15 +151,15 @@ class TestConnectGithubOAuthFlow:
 
         with (
             patch(
-                "src.telegram.handlers.get_github_device_code",
+                "src.telegram.obsidian_handlers.get_github_device_code",
                 AsyncMock(return_value=device_info),
             ),
             patch(
-                "src.telegram.handlers.poll_github_for_token",
+                "src.telegram.obsidian_handlers.poll_github_for_token",
                 AsyncMock(return_value="ghp_test"),
             ),
             patch(
-                "src.telegram.handlers.get_or_create_obsidian_repo",
+                "src.telegram.obsidian_handlers.get_or_create_obsidian_repo",
                 AsyncMock(return_value=None),
             ),
         ):
@@ -190,7 +188,7 @@ class TestSetupObsidianGit:
         mock_private_update.callback_query = mock_callback_query
 
         with patch(
-            "src.telegram.handlers.create_obsidian_git_config",
+            "src.telegram.obsidian_handlers.create_obsidian_git_config",
             AsyncMock(return_value=True),
         ):
             await setup_obsidian_git(mock_private_update, mock_context)
@@ -211,7 +209,7 @@ class TestSetupObsidianGit:
         mock_private_update.callback_query = mock_callback_query
 
         with patch(
-            "src.telegram.handlers.create_obsidian_git_config",
+            "src.telegram.obsidian_handlers.create_obsidian_git_config",
             AsyncMock(return_value=False),
         ):
             await setup_obsidian_git(mock_private_update, mock_context)
@@ -253,7 +251,7 @@ class TestProviderMenuViaHub:
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
 
-        with patch("src.telegram.handlers.settings.groq_api_key", "test-key"):
+        with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await hub_callback_router(mock_private_update, mock_context)
 
         mock_callback_query.answer.assert_called_once()
@@ -278,7 +276,7 @@ class TestProviderMenuViaHub:
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
 
-        with patch("src.telegram.handlers.settings.groq_api_key", ""):
+        with patch("src.telegram.settings_handlers.settings.groq_api_key", ""):
             await hub_callback_router(mock_private_update, mock_context)
 
         call_args = mock_callback_query.edit_message_text.call_args
@@ -302,7 +300,7 @@ class TestProviderMenuViaHub:
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
 
-        with patch("src.telegram.handlers.settings.groq_api_key", "test-key"):
+        with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await hub_callback_router(mock_private_update, mock_context)
 
         call_args = mock_callback_query.edit_message_text.call_args

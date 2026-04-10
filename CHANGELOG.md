@@ -10,6 +10,8 @@
 
 ### Changed
 
+- `src/telegram/handlers.py` (774→217 lines): split into `settings_handlers.py`, `obsidian_handlers.py`,
+  `account_handlers.py` by domain hub boundaries. Core routing stays in `handlers.py`
 - Dockerfile: layer-cached dependency install via `uv.lock` (`--frozen --no-dev`), uv from official image
 - `ai_client.py`: `global _http_client` replaced with `_HttpClientHolder` class
 - `uv run mypy src` added as a required step in GitHub Actions CI pipeline

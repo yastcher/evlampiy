@@ -26,24 +26,28 @@ from src.mongo import (
     set_preferred_provider,
     set_save_to_obsidian,
 )
+from src.telegram.account_handlers import account_hub
 from src.telegram.handlers import (
     WAITING_FOR_COMMAND,
-    account_hub,
-    categorize_all,
-    choose_language,
-    connect_github,
-    disconnect_github,
     enter_your_command,
     handle_command_input,
     hub_callback_router,
-    lang_buttons,
+    start,
+)
+from src.telegram.obsidian_handlers import (
+    categorize_all,
+    connect_github,
+    disconnect_github,
     obsidian_hub,
+    toggle_categorize,
+    toggle_obsidian,
+)
+from src.telegram.settings_handlers import (
+    choose_language,
+    lang_buttons,
     provider_buttons,
     settings_hub,
-    start,
-    toggle_categorize,
     toggle_cleanup,
-    toggle_obsidian,
 )
 from src.telegram.voice import from_voice_to_text
 
@@ -584,10 +588,10 @@ class TestConnectGithub:
 
         with (
             patch(
-                "src.telegram.handlers.get_github_device_code",
+                "src.telegram.obsidian_handlers.get_github_device_code",
                 AsyncMock(return_value=device_info),
             ),
-            patch("src.telegram.handlers.asyncio.create_task"),
+            patch("src.telegram.obsidian_handlers.asyncio.create_task"),
         ):
             await connect_github(mock_private_update, mock_context)
 
@@ -601,7 +605,7 @@ class TestConnectGithub:
         await set_chat_language("u_12345", "en")
 
         with patch(
-            "src.telegram.handlers.get_github_device_code",
+            "src.telegram.obsidian_handlers.get_github_device_code",
             AsyncMock(return_value={"error": "unauthorized_client"}),
         ):
             await connect_github(mock_private_update, mock_context)
@@ -701,7 +705,9 @@ class TestCategorizeAll:
         await set_chat_language(chat_id, "en")
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
-        with patch("src.telegram.handlers.categorize_all_income", AsyncMock(return_value=5)):
+        with patch(
+            "src.telegram.obsidian_handlers.categorize_all_income", AsyncMock(return_value=5)
+        ):
             await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
@@ -713,7 +719,9 @@ class TestCategorizeAll:
         await set_chat_language(chat_id, "en")
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
-        with patch("src.telegram.handlers.categorize_all_income", AsyncMock(return_value=0)):
+        with patch(
+            "src.telegram.obsidian_handlers.categorize_all_income", AsyncMock(return_value=0)
+        ):
             await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.message.reply_text.call_args[0][0]
@@ -988,7 +996,7 @@ class TestSettingsHubTierDependentUI:
         # Make user PAID by purchasing credits
         await add_credits(user_id, 5)
 
-        with patch("src.telegram.handlers.settings.groq_api_key", "test-key"):
+        with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         call_args = mock_private_update.message.reply_text.call_args
@@ -1014,7 +1022,7 @@ class TestSettingsHubTierDependentUI:
         await set_chat_language(chat_id, "en")
         # User has no credits added → FREE tier
 
-        with patch("src.telegram.handlers.settings.groq_api_key", "test-key"):
+        with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         call_args = mock_private_update.message.reply_text.call_args
