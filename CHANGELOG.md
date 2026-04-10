@@ -2,12 +2,16 @@
 
 ### Added
 
+- GPT tool calling for `/evlampiy` command: LLM can call `get_recent_notes`, `get_user_settings`, `get_categories`
+  to answer based on real user data. Supports all 7 providers (OpenAI-compatible, Gemini, Anthropic)
 - Strict mypy type checking (`strict = true`) with per-module overrides for untyped third-party libraries
 - Bot-sender guard: `TypeHandler` at group=-1 rejects all updates from Telegram bot accounts via `effective_user.is_bot`
 - PTB handler guards
 
 ### Changed
 
+- Dockerfile: layer-cached dependency install via `uv.lock` (`--frozen --no-dev`), uv from official image
+- `ai_client.py`: `global _http_client` replaced with `_HttpClientHolder` class
 - `uv run mypy src` added as a required step in GitHub Actions CI pipeline
 - `src/prompts.py`: LLM prompt strings centralized into a single module
 - `src/types.py`: domain TypeAlias (`UserId`, `ChatId`, `MonthKey`, `Language`)

@@ -61,6 +61,10 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 
 ## Code quality
 
+- Prefer the simplest solution that works. Don't add layers (multi-stage builds, extra abstractions, design patterns)
+  unless they solve a real, present problem. If a flat approach does the job — use it.
+- Existing codebase is not a reference to copy from blindly. Question patterns — if existing code has an antipattern,
+  write better code, don't propagate it.
 - No magic numbers in logic. Thresholds, limits, sizes, ratios — all go into `settings` as named settings with env vars,
   or into `const.py` as module-level constants. Function parameter defaults are not a substitute for proper settings.
 - Values used in multiple modules go into `const.py`. Values used only in one module stay as module-level constants in
@@ -169,8 +173,11 @@ Always update documentation as part of the same task (not as a separate step):
 4. Verify coverage >= 85%
 5. Security review (see above)
 6. Update documentation (see "Documentation" section above)
+7. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг,
+   скопированные антипаттерны из существующего кода, лишнюю сложность, нарушение принципа простоты.
+   Если нашёл — исправь до завершения.
 
-Do not finish until lint, tests, and security review pass.
+Do not finish until lint, tests, security review, and tech lead review pass.
 
 ## Gotchas
 
