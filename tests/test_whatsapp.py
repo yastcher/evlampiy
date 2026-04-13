@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 import src.whatsapp.client
 from src.dto import UserTier
 from src.mongo import set_auto_categorize, set_chat_language, set_github_settings
-from src.whatsapp.app import create_fastapi_app
 from src.whatsapp.client import WHATSAPP_CHAT_PREFIX, get_whatsapp_client
 from src.whatsapp.handlers import handle_link_command, handle_voice_message, register_handlers
 
@@ -46,16 +45,13 @@ class TestWhatsAppClient:
 class TestWhatsAppWebhook:
     """Test WhatsApp webhook endpoints."""
 
-    def test_health_check(self):
+    def test_health_check(self, fastapi_app_no_whatsapp):
         """Health endpoint returns ok."""
-        with patch("src.whatsapp.client.get_whatsapp_client", return_value=None):
-            app = create_fastapi_app()
-            client = TestClient(app)
+        client = TestClient(fastapi_app_no_whatsapp)
+        response = client.get("/health")
 
-            response = client.get("/health")
-
-            assert response.status_code == 200
-            assert response.json() == {"status": "ok"}
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
 
 
 class TestHandleVoiceMessage:

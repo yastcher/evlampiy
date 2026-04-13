@@ -47,7 +47,7 @@ async def reply_text(update: Update, text: str, **kwargs: typing.Any) -> None:
         msg = update.callback_query.message
         if msg is None:  # pragma: no cover
             return
-        await msg.reply_text(text, **kwargs)  # type: ignore[attr-defined]
+        await msg.reply_text(text, **kwargs)  # ty: ignore[unresolved-attribute]
     else:
         if update.message is None:
             return

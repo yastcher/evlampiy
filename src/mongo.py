@@ -44,7 +44,7 @@ async def init_beanie_models() -> None:
     to call only once
     """
     mongo_client: typing.Any = motor_asyncio.AsyncIOMotorClient(settings.mongo_uri)
-    await init_beanie(database=mongo_client["user_settings"], document_models=ALL_DOCUMENT_MODELS)
+    await init_beanie(database=mongo_client["user_settings"], document_models=ALL_DOCUMENT_MODELS)  # ty: ignore[invalid-argument-type]
 
 
 async def get_or_create_user(chat_id: ChatId) -> UserSettings:

@@ -9,7 +9,7 @@
       "Write",
       "Bash(uv run pytest*)",
       "Bash(uv run ruff*)",
-      "Bash(uv run mypy*)",
+      "Bash(uv run ty*)",
       "Bash(ls *)",
       "Bash(git * diff *)",
       "Bash(git * status *)",

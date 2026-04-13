@@ -152,7 +152,7 @@ uv run pytest
 uv run ruff check
 
 # Проверка типов
-uv run mypy src
+uv run ty check src
 
 # Запуск с покрытием
 uv run pytest --cov=src --cov-fail-under=85

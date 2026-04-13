@@ -19,7 +19,7 @@ def create_fastapi_app() -> FastAPI:
     wa = get_whatsapp_client()
     if wa:
         register_handlers(wa)
-        wa.setup_fastapi(app)
+        wa.setup_fastapi(app)  # ty: ignore[unresolved-attribute]
         logger.info("WhatsApp webhook configured")
 
     @app.get("/health")

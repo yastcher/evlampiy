@@ -1,4 +1,20 @@
-## [0.8.13] — 2026-02-23
+## [0.9.0] — 2026-04-13
+
+### Added
+
+- script for bump
+
+### Changed
+
+- Replaced mypy with ty (Astral) as the type checker. Config moved to `[tool.ty]` in pyproject.toml;
+  `uv run ty check src` is the new command (CI, docs, CLAUDE.md updated).
+  Tech debt: 10 type errors silenced with `# ty: ignore[...]` (PTB `MaybeInaccessibleMessage`,
+  pywa decorator/attr stubs, PTB `ConversationHandler` generic variance, Beanie/Motor db type).
+  Find via `rg "# ty: ignore" src/`
+- FastAPI `/health` tests reworked as integration (real `create_fastapi_app`, WhatsApp disabled via
+  `fastapi_app_no_whatsapp` fixture) — no longer depend on local `.env` WhatsApp credentials
+
+## [0.8.13] — 2026-04-13
 
 ### Added
 

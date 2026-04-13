@@ -3,6 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 import src.ai_client
+import src.whatsapp.client
+from src.whatsapp.app import create_fastapi_app
 
 
 @pytest.fixture
@@ -316,6 +318,20 @@ def admin_auth():
     """Patch settings to treat user 999 as admin for the test duration."""
     with patch("src.config.settings.admin_user_ids_raw", "999"):
         yield
+
+
+@pytest.fixture
+def fastapi_app_no_whatsapp():
+    """Real FastAPI app with WhatsApp disabled — does not depend on local .env.
+
+    Patches `settings` seen by `src.whatsapp.client` to have empty credentials so
+    `get_whatsapp_client()` returns None and WhatsApp wiring is skipped.
+    """
+    with patch("src.whatsapp.client.settings") as mock_settings:
+        mock_settings.whatsapp_token = ""
+        mock_settings.whatsapp_phone_id = ""
+        src.whatsapp.client._wa_client = None
+        yield create_fastapi_app()
 
 
 @pytest.fixture

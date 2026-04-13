@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 def register_handlers(wa: WhatsApp) -> None:
     """Register WhatsApp message handlers."""
 
-    @wa.on_message()  # type: ignore[untyped-decorator]
+    @wa.on_message()  # ty: ignore[invalid-argument-type, missing-argument]
     async def handle_message(client: WhatsApp, message: Message) -> None:
         """Handle incoming WhatsApp messages."""
         if message.text and message.text.strip().lower().startswith("link "):
@@ -44,7 +44,7 @@ def register_handlers(wa: WhatsApp) -> None:
 async def handle_link_command(wa: WhatsApp, message: Message) -> None:
     """Handle account linking command from WhatsApp."""
     phone = message.from_user.wa_id
-    parts = message.text.strip().split(maxsplit=1)
+    parts = message.text.strip().split(maxsplit=1)  # ty: ignore[unresolved-attribute]
     code = parts[1] if len(parts) > 1 else ""
 
     if not code:
@@ -85,7 +85,7 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         media_url = wa.get_media_url(audio.id)
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                media_url,
+                media_url,  # ty: ignore[invalid-argument-type]
                 headers={"Authorization": f"Bearer {settings.whatsapp_token}"},
             )
             response.raise_for_status()

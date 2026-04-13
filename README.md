@@ -152,7 +152,7 @@ uv run pytest
 uv run ruff check
 
 # Run type checker
-uv run mypy src
+uv run ty check src
 
 # Run with coverage
 uv run pytest --cov=src --cov-fail-under=85

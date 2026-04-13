@@ -82,7 +82,7 @@ async def enter_your_command_from_hub(update: Update, context: ContextTypes.DEFA
     if query is None or query.message is None:
         return ConversationHandler.END
     await query.answer()
-    await query.message.reply_text("Please enter your command for GPT:")  # type: ignore[attr-defined]
+    await query.message.reply_text("Please enter your command for GPT:")  # ty: ignore[unresolved-attribute]
     return WAITING_FOR_COMMAND
 
 

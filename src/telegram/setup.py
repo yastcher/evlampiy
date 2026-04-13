@@ -107,7 +107,7 @@ async def _reject_bot_senders(update: Update, context: ContextTypes.DEFAULT_TYPE
     if is_bot_sender(update):
         logger.debug(
             "Rejected update from bot sender: user_id=%s",
-            update.effective_user.id,  # type: ignore[union-attr]
+            update.effective_user.id,  # ty: ignore[unresolved-attribute]
         )
         raise ApplicationHandlerStop
 
@@ -159,11 +159,11 @@ def build_application() -> Application:  # type: ignore[type-arg]
     application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, handle_successful_payment))
 
     enter_command_handler = ConversationHandler(
-        entry_points=[
+        entry_points=[  # ty: ignore[invalid-argument-type]
             CommandHandler("enter_your_command", handlers.enter_your_command),
             CallbackQueryHandler(handlers.enter_your_command_from_hub, pattern="^hub_gpt_command$"),
         ],
-        states={
+        states={  # ty: ignore[invalid-argument-type]
             handlers.WAITING_FOR_COMMAND: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.handle_command_input)
             ]

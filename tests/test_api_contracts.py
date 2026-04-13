@@ -1,7 +1,6 @@
 """API contract tests: handler registration, signatures, endpoint consistency."""
 
 import inspect
-from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -15,7 +14,6 @@ from src.telegram.handlers import (
 from src.telegram.payments import buy_package_callback
 from src.telegram.settings_handlers import lang_buttons, provider_buttons
 from src.telegram.setup import ADMIN_COMMANDS, BOT_COMMANDS, COMMAND_HANDLERS
-from src.whatsapp.app import create_fastapi_app
 
 
 class TestCommandHandlerContracts:
@@ -98,22 +96,20 @@ class TestCallbackQueryContracts:
 
 
 class TestFastAPIContracts:
-    """FastAPI app exposes expected endpoints."""
+    """FastAPI app exposes expected endpoints (integration, WhatsApp disabled)."""
 
-    def test_health_endpoint_exists(self):
+    def test_health_endpoint_exists(self, fastapi_app_no_whatsapp):
         """The /health GET endpoint is registered."""
-        with patch("src.whatsapp.client.get_whatsapp_client", return_value=None):
-            app = create_fastapi_app()
-
-        routes = {(r.path, tuple(r.methods)) for r in app.routes if hasattr(r, "methods")}
+        routes = {
+            (r.path, tuple(r.methods))
+            for r in fastapi_app_no_whatsapp.routes
+            if hasattr(r, "methods")
+        }
         assert ("/health", ("GET",)) in routes, f"Missing /health GET. Routes: {routes}"
 
-    def test_health_returns_ok(self):
+    def test_health_returns_ok(self, fastapi_app_no_whatsapp):
         """Health endpoint returns 200 with expected schema."""
-        with patch("src.whatsapp.client.get_whatsapp_client", return_value=None):
-            app = create_fastapi_app()
-            client = TestClient(app)
-
+        client = TestClient(fastapi_app_no_whatsapp)
         response = client.get("/health")
         assert response.status_code == 200
         body = response.json()
