@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from src.config import settings
-from src.whatsapp.client import get_whatsapp_client
+from src.whatsapp.client import init_whatsapp_client
 from src.whatsapp.handlers import register_handlers
 
 logger = logging.getLogger(__name__)
@@ -16,10 +16,9 @@ def create_fastapi_app() -> FastAPI:
     """Create FastAPI application with WhatsApp webhook."""
     app = FastAPI(title="Evlampiy Bot API")
 
-    wa = get_whatsapp_client()
+    wa = init_whatsapp_client(app)
     if wa:
         register_handlers(wa)
-        wa.setup_fastapi(app)  # ty: ignore[unresolved-attribute]
         logger.info("WhatsApp webhook configured")
 
     @app.get("/health")

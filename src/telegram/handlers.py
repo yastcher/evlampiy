@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Sequence
 
-from telegram import Update
+from telegram import Message, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from src import const
@@ -79,10 +79,10 @@ async def handle_command_input(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def enter_your_command_from_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
-    if query is None or query.message is None:
+    if query is None or not isinstance(query.message, Message):
         return ConversationHandler.END
     await query.answer()
-    await query.message.reply_text("Please enter your command for GPT:")  # ty: ignore[unresolved-attribute]
+    await query.message.reply_text("Please enter your command for GPT:")
     return WAITING_FOR_COMMAND
 
 

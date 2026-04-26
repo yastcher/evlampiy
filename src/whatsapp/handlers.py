@@ -44,7 +44,8 @@ def register_handlers(wa: WhatsApp) -> None:
 async def handle_link_command(wa: WhatsApp, message: Message) -> None:
     """Handle account linking command from WhatsApp."""
     phone = message.from_user.wa_id
-    parts = message.text.strip().split(maxsplit=1)  # ty: ignore[unresolved-attribute]
+    text = message.text or ""
+    parts = text.strip().split(maxsplit=1)
     code = parts[1] if len(parts) > 1 else ""
 
     if not code:

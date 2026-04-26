@@ -104,10 +104,10 @@ ADMIN_COMMANDS = [
 
 async def _reject_bot_senders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Block any update originating from another Telegram bot."""
-    if is_bot_sender(update):
+    if is_bot_sender(update) and update.effective_user is not None:
         logger.debug(
             "Rejected update from bot sender: user_id=%s",
-            update.effective_user.id,  # ty: ignore[unresolved-attribute]
+            update.effective_user.id,
         )
         raise ApplicationHandlerStop
 
@@ -170,6 +170,6 @@ def build_application() -> Application:  # type: ignore[type-arg]
         },
         fallbacks=[],
     )
-    application.add_handler(enter_command_handler)
+    application.add_handler(enter_command_handler)  # ty: ignore[invalid-argument-type]
 
     return application

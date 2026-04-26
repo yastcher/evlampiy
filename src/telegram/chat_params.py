@@ -1,6 +1,6 @@
 import typing
 
-from telegram import Update
+from telegram import Message, Update
 from telegram.constants import ChatMemberStatus
 from telegram.ext import ContextTypes
 
@@ -45,9 +45,9 @@ async def reply_text(update: Update, text: str, **kwargs: typing.Any) -> None:
     """Reply via callback query message or regular message."""
     if update.callback_query:
         msg = update.callback_query.message
-        if msg is None:  # pragma: no cover
+        if not isinstance(msg, Message):  # pragma: no cover
             return
-        await msg.reply_text(text, **kwargs)  # ty: ignore[unresolved-attribute]
+        await msg.reply_text(text, **kwargs)
     else:
         if update.message is None:
             return

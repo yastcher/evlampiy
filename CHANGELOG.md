@@ -4,13 +4,25 @@
 
 - script for bump
 
+### Fixed
+
+- WhatsApp webhook wiring: `whatsapp/app.py` called `wa.setup_fastapi(app)` which does not exist in
+  pywa and would raise `AttributeError` at runtime if WhatsApp credentials were configured. Reworked
+  initialization: `init_whatsapp_client(server)` now creates the `WhatsApp` client with `server=app`
+  in the constructor (the documented pywa pattern), so webhook routes are registered correctly.
+  Replaced `global _wa_client` with a `_WhatsAppClientHolder` class per project convention
+
 ### Changed
 
 - Replaced mypy with ty (Astral) as the type checker. Config moved to `[tool.ty]` in pyproject.toml;
   `uv run ty check src` is the new command (CI, docs, CLAUDE.md updated).
-  Tech debt: 10 type errors silenced with `# ty: ignore[...]` (PTB `MaybeInaccessibleMessage`,
-  pywa decorator/attr stubs, PTB `ConversationHandler` generic variance, Beanie/Motor db type).
+  Tech debt: 6 type errors silenced with `# ty: ignore[invalid-argument-type, missing-argument]`
+  (pywa decorator stubs, PTB `ConversationHandler` generic variance, Beanie/Motor db type).
   Find via `rg "# ty: ignore" src/`
+- Resolved all `unresolved-attribute` ignores by tightening narrowing:
+  `query.message`/`callback_query.message` now use `isinstance(..., Message)`; `effective_user`
+  re-checked after `is_bot_sender`; `message.text` defaulted via `or ""` in WhatsApp link command.
+  Added `mock_callback_query.message = MagicMock(spec=Message)` in fixtures so handler tests still pass
 - FastAPI `/health` tests reworked as integration (real `create_fastapi_app`, WhatsApp disabled via
   `fastapi_app_no_whatsapp` fixture) — no longer depend on local `.env` WhatsApp credentials
 

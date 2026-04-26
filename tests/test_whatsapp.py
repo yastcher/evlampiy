@@ -1,11 +1,12 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import src.whatsapp.client
 from src.dto import UserTier
 from src.mongo import set_auto_categorize, set_chat_language, set_github_settings
-from src.whatsapp.client import WHATSAPP_CHAT_PREFIX, get_whatsapp_client
+from src.whatsapp.client import WHATSAPP_CHAT_PREFIX, init_whatsapp_client
 from src.whatsapp.handlers import handle_link_command, handle_voice_message, register_handlers
 
 
@@ -17,11 +18,9 @@ class TestWhatsAppClient:
         with patch("src.whatsapp.client.settings") as mock_settings:
             mock_settings.whatsapp_token = ""
             mock_settings.whatsapp_phone_id = ""
-            # Reset cached client
+            src.whatsapp.client._WhatsAppClientHolder.instance = None
 
-            src.whatsapp.client._wa_client = None
-
-            result = get_whatsapp_client()
+            result = init_whatsapp_client(FastAPI())
             assert result is None
 
     def test_creates_client_with_config(self):
@@ -32,13 +31,14 @@ class TestWhatsAppClient:
             mock_settings.whatsapp_app_id = ""
             mock_settings.whatsapp_app_secret = ""
             mock_settings.whatsapp_verify_token = "verify_token"
-            # Reset cached client
+            src.whatsapp.client._WhatsAppClientHolder.instance = None
 
-            src.whatsapp.client._wa_client = None
-
+            app = FastAPI()
             with patch("src.whatsapp.client.WhatsApp") as mock_wa_class:
-                result = get_whatsapp_client()
+                result = init_whatsapp_client(app)
                 mock_wa_class.assert_called_once()
+                # server must be wired to the FastAPI app for pywa to register routes
+                assert mock_wa_class.call_args.kwargs["server"] is app
                 assert result is not None
 
 

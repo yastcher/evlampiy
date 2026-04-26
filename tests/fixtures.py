@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from telegram import Message
 
 import src.ai_client
 import src.whatsapp.client
@@ -62,6 +63,8 @@ def mock_callback_query():
     query = MagicMock()
     query.answer = AsyncMock()
     query.edit_message_text = AsyncMock()
+    # Use spec=Message so isinstance(query.message, Message) checks pass in handlers
+    query.message = MagicMock(spec=Message)
     return query
 
 
@@ -325,12 +328,12 @@ def fastapi_app_no_whatsapp():
     """Real FastAPI app with WhatsApp disabled — does not depend on local .env.
 
     Patches `settings` seen by `src.whatsapp.client` to have empty credentials so
-    `get_whatsapp_client()` returns None and WhatsApp wiring is skipped.
+    `init_whatsapp_client()` returns None and WhatsApp wiring is skipped.
     """
     with patch("src.whatsapp.client.settings") as mock_settings:
         mock_settings.whatsapp_token = ""
         mock_settings.whatsapp_phone_id = ""
-        src.whatsapp.client._wa_client = None
+        src.whatsapp.client._WhatsAppClientHolder.instance = None
         yield create_fastapi_app()
 
 
