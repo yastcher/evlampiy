@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
-from telegram import InlineKeyboardMarkup
-from telegram.constants import ParseMode
+from aiogram.enums import ParseMode
+from aiogram.types import InlineKeyboardMarkup
 
 from src.telegram.bot import MAX_TELEGRAM_MESSAGE_LENGTH, send_response
 

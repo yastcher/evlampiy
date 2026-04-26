@@ -2,13 +2,13 @@
 
 ## Overview
 
-Evlampiy Notes Bot is an async Python application that transcribes voice messages from Telegram and WhatsApp into text. It uses FastAPI for WhatsApp webhooks, python-telegram-bot for Telegram polling, MongoDB (via Beanie ODM) for persistence, and multiple AI providers with automatic fallback chains. The codebase follows domain-driven design with modular boundaries.
+Evlampiy Notes Bot is an async Python application that transcribes voice messages from Telegram and WhatsApp into text. It uses FastAPI for WhatsApp webhooks, aiogram for Telegram polling, MongoDB (via Beanie ODM) for persistence, and multiple AI providers with automatic fallback chains. The codebase follows domain-driven design with modular boundaries.
 
 ## Directory Structure
 
 ```
 src/
-├── telegram/               # Telegram bot (python-telegram-bot)
+├── telegram/               # Telegram bot (aiogram)
 │   ├── handlers.py             - Core handlers (/start, stats, hub router, GPT command conversation)
 │   ├── settings_handlers.py   - Settings hub (/settings, language, provider, cleanup toggle)
 │   ├── obsidian_handlers.py   - Obsidian hub (/obsidian, GitHub OAuth, categorization)
@@ -257,7 +257,7 @@ Free users get Wit.ai only (no Groq fallback, no provider choice). This keeps co
 
 ### Async Throughout
 
-The entire stack is async: FastAPI for WhatsApp webhooks, python-telegram-bot for Telegram polling, httpx for outbound HTTP, and Beanie (async Motor) for MongoDB. The entry point (`main.py`) runs Telegram polling in the main thread and FastAPI in a daemon thread.
+The entire stack is async: FastAPI for WhatsApp webhooks, aiogram for Telegram polling, httpx for outbound HTTP, and Beanie (async Motor) for MongoDB. The entry point (`main.py`) runs Telegram polling in the main thread and FastAPI in a daemon thread.
 
 ### Context-Aware Cleanup
 

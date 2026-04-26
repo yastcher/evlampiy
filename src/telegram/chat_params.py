@@ -1,54 +1,66 @@
 import typing
 
-from telegram import Message, Update
-from telegram.constants import ChatMemberStatus
-from telegram.ext import ContextTypes
+from aiogram import Bot
+from aiogram.enums import ChatMemberStatus
+from aiogram.types import CallbackQuery, Chat, Message, User
 
 from src import const
 
+EventLike = Message | CallbackQuery
 
-def is_bot_sender(update: Update) -> bool:
-    """Return True if the update was sent by a Telegram bot account."""
-    user = update.effective_user
+
+def _event_user(event: EventLike) -> User | None:
+    return event.from_user
+
+
+def _event_chat(event: EventLike) -> Chat | None:
+    if isinstance(event, Message):
+        return event.chat
+    if event.message is not None:
+        return event.message.chat
+    return None
+
+
+def is_bot_sender(event: EventLike) -> bool:
+    """Return True if the event was sent by a Telegram bot account."""
+    user = _event_user(event)
     return user is not None and user.is_bot
 
 
-def is_private_chat(update: Update) -> bool:
-    if update.effective_chat is None:
+def is_private_chat(event: EventLike) -> bool:
+    chat = _event_chat(event)
+    if chat is None:
         return False
-    return update.effective_chat.type == const.PRIVATE_CHAT_TYPE
+    return chat.type == const.PRIVATE_CHAT_TYPE
 
 
-def get_chat_id(update: Update) -> str:
-    if update.effective_chat is None or update.effective_user is None:
-        raise ValueError("get_chat_id requires effective_chat and effective_user")
-    if is_private_chat(update):
-        return f"{const.CHAT_PREFIX_USER}{update.effective_user.id}"
-    else:
-        return f"{const.CHAT_PREFIX_GROUP}{update.effective_chat.id}"
+def get_chat_id(event: EventLike) -> str:
+    chat = _event_chat(event)
+    user = _event_user(event)
+    if chat is None or user is None:
+        raise ValueError("get_chat_id requires chat and user on the event")
+    if is_private_chat(event):
+        return f"{const.CHAT_PREFIX_USER}{user.id}"
+    return f"{const.CHAT_PREFIX_GROUP}{chat.id}"
 
 
-async def is_user_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    if update.effective_chat is None or update.effective_user is None:
+async def is_user_admin(event: EventLike, bot: Bot) -> bool:
+    chat = _event_chat(event)
+    user = _event_user(event)
+    if chat is None or user is None:
         return False
-    if is_private_chat(update):
+    if is_private_chat(event):
         return True
-    else:
-        chat_member = await context.bot.get_chat_member(
-            chat_id=update.effective_chat.id,
-            user_id=update.effective_user.id,
-        )
-        return chat_member.status in (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
+    chat_member = await bot.get_chat_member(chat_id=chat.id, user_id=user.id)
+    return chat_member.status in (ChatMemberStatus.CREATOR, ChatMemberStatus.ADMINISTRATOR)
 
 
-async def reply_text(update: Update, text: str, **kwargs: typing.Any) -> None:
+async def reply_text(event: EventLike, text: str, **kwargs: typing.Any) -> None:
     """Reply via callback query message or regular message."""
-    if update.callback_query:
-        msg = update.callback_query.message
+    if isinstance(event, CallbackQuery):
+        msg = event.message
         if not isinstance(msg, Message):  # pragma: no cover
             return
-        await msg.reply_text(text, **kwargs)
+        await msg.answer(text, **kwargs)
     else:
-        if update.message is None:
-            return
-        await update.message.reply_text(text, **kwargs)
+        await event.answer(text, **kwargs)

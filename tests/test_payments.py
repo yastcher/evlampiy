@@ -31,8 +31,8 @@ class TestPaymentFlow:
 
         # 1. User starts purchase with /buy — sees package keyboard
         await buy_command(mock_private_update, mock_context)
-        mock_private_update.message.reply_text.assert_called_once()
-        call_kwargs = mock_private_update.message.reply_text.call_args
+        mock_private_update.answer.assert_called_once()
+        call_kwargs = mock_private_update.answer.call_args
         keyboard = call_kwargs.kwargs["reply_markup"].inline_keyboard
         assert len(keyboard) == 4
 
@@ -40,7 +40,7 @@ class TestPaymentFlow:
         mock_callback_query.data = "buy_pkg_1"
         mock_private_update.callback_query = mock_callback_query
 
-        await buy_package_callback(mock_private_update, mock_context)
+        await buy_package_callback(mock_callback_query, mock_context)
         mock_context.bot.send_invoice.assert_called_once()
         invoice_kwargs = mock_context.bot.send_invoice.call_args[1]
         assert invoice_kwargs["currency"] == const.TELEGRAM_STARS_CURRENCY
@@ -49,14 +49,13 @@ class TestPaymentFlow:
         # 3. Pre-checkout query is approved
         checkout_query = MagicMock()
         checkout_query.answer = AsyncMock()
-        mock_private_update.pre_checkout_query = checkout_query
-        await handle_pre_checkout(mock_private_update, mock_context)
+        await handle_pre_checkout(checkout_query)
         checkout_query.answer.assert_called_once_with(ok=True)
 
         # 4. Payment succeeds - tokens added to real DB
-        mock_private_update.message.successful_payment = MagicMock()
-        mock_private_update.message.successful_payment.total_amount = 25
-        mock_private_update.message.successful_payment.invoice_payload = "buy_tokens_1"
+        mock_private_update.successful_payment = MagicMock()
+        mock_private_update.successful_payment.total_amount = 25
+        mock_private_update.successful_payment.invoice_payload = "buy_tokens_1"
 
         initial_balance = await get_total_credits(user_id)
         await handle_successful_payment(mock_private_update, mock_context)
@@ -81,8 +80,8 @@ class TestBuyCommand:
         mock_private_update.effective_user.id = 111
         await buy_command(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        call_args = mock_private_update.message.reply_text.call_args
+        mock_private_update.answer.assert_called_once()
+        call_args = mock_private_update.answer.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
         assert len(keyboard) == 4
 
@@ -102,7 +101,7 @@ class TestBuyPackageCallback:
         mock_private_update.callback_query = mock_callback_query
         mock_context.bot.send_invoice = AsyncMock()
 
-        await buy_package_callback(mock_private_update, mock_context)
+        await buy_package_callback(mock_callback_query, mock_context)
 
         mock_context.bot.send_invoice.assert_called_once()
         kwargs = mock_context.bot.send_invoice.call_args[1]
@@ -114,13 +113,9 @@ class TestBuyPackageCallback:
 class TestPreCheckout:
     """Test pre-checkout handler."""
 
-    async def test_pre_checkout_approved(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_pre_checkout_approved(self, mock_callback_query):
         """Pre-checkout query is approved."""
-        mock_private_update.pre_checkout_query = mock_callback_query
-
-        await handle_pre_checkout(mock_private_update, mock_context)
+        await handle_pre_checkout(mock_callback_query)
         mock_callback_query.answer.assert_called_once_with(ok=True)
 
 
@@ -221,13 +216,11 @@ class TestPaymentTierTransition:
         with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
-        keyboard = mock_private_update.message.reply_text.call_args.kwargs[
-            "reply_markup"
-        ].inline_keyboard
+        keyboard = mock_private_update.answer.call_args.kwargs["reply_markup"].inline_keyboard
         assert len(keyboard) == 2
 
         # 3. Simulate payment
-        mock_private_update.message.reply_text.reset_mock()
+        mock_private_update.answer.reset_mock()
         mock_private_update.message.successful_payment = MagicMock()
         mock_private_update.message.successful_payment.total_amount = 25
         mock_private_update.message.successful_payment.invoice_payload = "buy_tokens_0"
@@ -238,13 +231,11 @@ class TestPaymentTierTransition:
         assert await get_user_tier(user_id) == UserTier.PAID
 
         # 5. Settings hub now shows 4 buttons (language, gpt, provider, cleanup)
-        mock_private_update.message.reply_text.reset_mock()
+        mock_private_update.answer.reset_mock()
         with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
-        keyboard = mock_private_update.message.reply_text.call_args.kwargs[
-            "reply_markup"
-        ].inline_keyboard
+        keyboard = mock_private_update.answer.call_args.kwargs["reply_markup"].inline_keyboard
         callback_datas = [row[0].callback_data for row in keyboard]
         assert "hub_provider" in callback_datas
         assert "hub_toggle_cleanup" in callback_datas

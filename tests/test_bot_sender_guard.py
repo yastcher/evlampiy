@@ -1,10 +1,11 @@
-"""Tests for bot sender rejection guard."""
+"""Tests for bot sender rejection middleware."""
 
-import pytest
-from telegram.ext import ApplicationHandlerStop
+from unittest.mock import AsyncMock, MagicMock
+
+from aiogram.types import Message, Update
 
 from src.telegram.chat_params import is_bot_sender
-from src.telegram.setup import _reject_bot_senders
+from src.telegram.setup import BotSenderRejectMiddleware
 
 
 class TestIsBotSender:
@@ -18,21 +19,37 @@ class TestIsBotSender:
         assert is_bot_sender(make_update_factory(is_bot=None)) is False
 
 
-class TestRejectBotSenders:
-    async def test_raises_stop_for_bot(self, make_update_factory, mock_context):
-        update = make_update_factory(is_bot=True)
+def _build_update(*, is_bot: bool | None) -> MagicMock:
+    inner = MagicMock(spec=Message)
+    if is_bot is None:
+        inner.from_user = None
+    else:
+        inner.from_user = MagicMock()
+        inner.from_user.is_bot = is_bot
+        inner.from_user.id = 999
+    update = MagicMock(spec=Update)
+    update.event = inner
+    return update
 
-        with pytest.raises(ApplicationHandlerStop):
-            await _reject_bot_senders(update, mock_context)
 
-    async def test_passes_for_human(self, make_update_factory, mock_context):
-        update = make_update_factory(is_bot=False)
+class TestBotSenderRejectMiddleware:
+    async def test_drops_bot_update(self):
+        middleware = BotSenderRejectMiddleware()
+        downstream = AsyncMock(return_value="handled")
+        result = await middleware(downstream, _build_update(is_bot=True), {})
+        assert result is None
+        downstream.assert_not_called()
 
-        # Must not raise
-        await _reject_bot_senders(update, mock_context)
+    async def test_passes_human_update(self):
+        middleware = BotSenderRejectMiddleware()
+        downstream = AsyncMock(return_value="handled")
+        result = await middleware(downstream, _build_update(is_bot=False), {})
+        assert result == "handled"
+        downstream.assert_called_once()
 
-    async def test_passes_when_no_user(self, make_update_factory, mock_context):
-        update = make_update_factory(is_bot=None)
-
-        # Must not raise (e.g., channel post with no user)
-        await _reject_bot_senders(update, mock_context)
+    async def test_passes_when_no_user(self):
+        middleware = BotSenderRejectMiddleware()
+        downstream = AsyncMock(return_value="handled")
+        result = await middleware(downstream, _build_update(is_bot=None), {})
+        assert result == "handled"
+        downstream.assert_called_once()

@@ -139,15 +139,15 @@ class TestLinkWhatsAppCommand:
 
         await link_whatsapp(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        mock_private_update.answer.assert_called_once()
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "link" in reply_text.lower()
         assert "WhatsApp" in reply_text
 
     async def test_ignored_in_group_chat(self, mock_group_update, mock_context):
         await link_whatsapp(mock_group_update, mock_context)
 
-        mock_group_update.message.reply_text.assert_not_called()
+        mock_group_update.answer.assert_not_called()
 
 
 class TestUnlinkWhatsAppCommand:
@@ -164,8 +164,8 @@ class TestUnlinkWhatsAppCommand:
 
         await unlink_whatsapp(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        mock_private_update.answer.assert_called_once()
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "unlinked" in reply_text.lower()
 
     async def test_handles_no_link(self, mock_private_update, mock_context):
@@ -174,7 +174,7 @@ class TestUnlinkWhatsAppCommand:
 
         await unlink_whatsapp(mock_private_update, mock_context)
 
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "no" in reply_text.lower()
 
 

@@ -1,8 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from telegram.constants import ChatMemberStatus
-from telegram.ext import ConversationHandler
+from aiogram.enums import ChatMemberStatus
 
 from src import const
 from src.account_linking import confirm_link, generate_link_code
@@ -63,8 +62,8 @@ class TestStartCommand:
 
         await start(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        mock_private_update.answer.assert_called_once()
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "voice" in reply_text.lower()
         assert "en" in reply_text
 
@@ -80,7 +79,7 @@ class TestStartCommand:
 
         await start(mock_group_update, mock_context)
 
-        mock_group_update.message.reply_text.assert_called_once()
+        mock_group_update.answer.assert_called_once()
 
     async def test_group_chat_owner_allowed(self, mock_group_update, mock_context):
         """Owner sends /start in group chat."""
@@ -88,11 +87,11 @@ class TestStartCommand:
         await set_chat_language(chat_id, "ru")
         await set_gpt_command(chat_id, "евлампий")
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.OWNER)
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
 
         await start(mock_group_update, mock_context)
 
-        mock_group_update.message.reply_text.assert_called_once()
+        mock_group_update.answer.assert_called_once()
 
     async def test_group_chat_member_blocked(self, mock_group_update, mock_context):
         """Regular member sends /start in group chat - ignored."""
@@ -100,7 +99,7 @@ class TestStartCommand:
 
         await start(mock_group_update, mock_context)
 
-        mock_group_update.message.reply_text.assert_not_called()
+        mock_group_update.answer.assert_not_called()
 
 
 class TestChooseLanguage:
@@ -110,8 +109,8 @@ class TestChooseLanguage:
         """User requests language selection - shows inline keyboard."""
         await choose_language(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        call_args = mock_private_update.message.reply_text.call_args
+        mock_private_update.answer.assert_called_once()
+        call_args = mock_private_update.answer.call_args
         assert "reply_markup" in call_args.kwargs
 
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
@@ -123,7 +122,7 @@ class TestChooseLanguage:
 
         await choose_language(mock_group_update, mock_context)
 
-        mock_group_update.message.reply_text.assert_not_called()
+        mock_group_update.answer.assert_not_called()
 
 
 class TestLanguageButtons:
@@ -153,7 +152,7 @@ class TestLanguageButtons:
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
 
-        await lang_buttons(mock_private_update, mock_context)
+        await lang_buttons(mock_callback_query, mock_context)
 
         # Verify language was saved to real DB
         saved_language = await get_chat_language(chat_id)
@@ -169,12 +168,13 @@ class TestLanguageButtons:
         mock_callback_query.data = "set_lang_en"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = -100123456
+        mock_callback_query.message.chat.type = "group"
         mock_group_update.callback_query = mock_callback_query
         mock_context.bot.get_chat_member.return_value = MagicMock(
             status=ChatMemberStatus.ADMINISTRATOR
         )
 
-        await lang_buttons(mock_group_update, mock_context)
+        await lang_buttons(mock_callback_query, mock_context)
 
         # Verify language was saved to real DB
         saved_language = await get_chat_language(chat_id)
@@ -192,17 +192,17 @@ class TestVoiceMessageFlow:
         await from_voice_to_text(mock_private_update, mock_context)
 
         # No errors, no responses
-        mock_private_update.message.reply_text.assert_not_called()
+        mock_private_update.answer.assert_not_called()
 
     async def test_no_effective_user_returns_early(
         self, mock_private_update, mock_context, mock_telegram_voice
     ):
-        """Handler returns early when effective_user is None (channel forward)."""
-        mock_private_update.message.voice = mock_telegram_voice
-        mock_private_update.effective_user = None
+        """Handler returns early when message.from_user is None (channel forward)."""
+        mock_private_update.voice = mock_telegram_voice
+        mock_private_update.from_user = None
 
         await from_voice_to_text(mock_private_update, mock_context)
-        mock_private_update.message.reply_text.assert_not_called()
+        mock_private_update.answer.assert_not_called()
 
     async def test_blocked_user_rejected(
         self, mock_private_update, mock_context, mock_telegram_voice
@@ -517,7 +517,7 @@ class TestToggleCleanup:
         await toggle_cleanup(mock_private_update, mock_context)
 
         assert await get_auto_cleanup(chat_id) is True
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "enabled" in reply_text.lower()
 
     async def test_disables_cleanup(self, mock_private_update, mock_context):
@@ -529,48 +529,45 @@ class TestToggleCleanup:
         await toggle_cleanup(mock_private_update, mock_context)
 
         assert await get_auto_cleanup(chat_id) is False
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "disabled" in reply_text.lower()
 
 
 class TestEnterYourCommand:
     """Test /enter_your_command handler."""
 
-    async def test_prompts_for_command_input(self, mock_private_update, mock_context):
-        """User is prompted to enter custom command."""
-        result = await enter_your_command(mock_private_update, mock_context)
+    async def test_prompts_for_command_input(self, mock_private_update, mock_context, mock_state):
+        """User is prompted to enter custom command (FSM state set)."""
+        await enter_your_command(mock_private_update, mock_context, mock_state)
 
-        mock_private_update.message.reply_text.assert_called_once_with(
-            "Please enter your command for GPT:"
-        )
-        assert result == WAITING_FOR_COMMAND
+        mock_private_update.answer.assert_called_once_with("Please enter your command for GPT:")
+        mock_state.set_state.assert_called_once_with(WAITING_FOR_COMMAND)
 
-    async def test_non_admin_blocked_in_group(self, mock_group_update, mock_context):
-        """Non-admin in group chat - returns END."""
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
+    async def test_non_admin_blocked_in_group(self, mock_group_update, mock_context, mock_state):
+        """Non-admin in group chat - state is not set."""
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
-        result = await enter_your_command(mock_group_update, mock_context)
+        await enter_your_command(mock_group_update, mock_context, mock_state)
 
-        mock_group_update.message.reply_text.assert_not_called()
-        assert result == ConversationHandler.END
+        mock_group_update.answer.assert_not_called()
+        mock_state.set_state.assert_not_called()
 
 
 class TestHandleCommandInput:
     """Test command input handler with real DB."""
 
-    async def test_saves_custom_command(self, mock_private_update, mock_context):
-        """Custom command is saved to real DB."""
+    async def test_saves_custom_command(self, mock_private_update, mock_state):
+        """Custom command is saved to real DB and state is cleared."""
         chat_id = "u_12345"
-        mock_private_update.message.text = "my_custom_command"
+        mock_private_update.text = "my_custom_command"
 
-        result = await handle_command_input(mock_private_update, mock_context)
+        await handle_command_input(mock_private_update, mock_state)
 
-        # Verify command was saved to real DB
         saved_command = await get_gpt_command(chat_id)
         assert saved_command == "my_custom_command"
-        mock_private_update.message.reply_text.assert_called_once()
-        assert "my_custom_command" in mock_private_update.message.reply_text.call_args[0][0]
-        assert result == ConversationHandler.END
+        mock_state.clear.assert_called_once()
+        mock_private_update.answer.assert_called_once()
+        assert "my_custom_command" in mock_private_update.answer.call_args[0][0]
 
 
 class TestConnectGithub:
@@ -595,8 +592,8 @@ class TestConnectGithub:
         ):
             await connect_github(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        mock_private_update.answer.assert_called_once()
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "ABCD-1234" in reply_text
         assert "github.com/login/device" in reply_text
 
@@ -610,7 +607,7 @@ class TestConnectGithub:
         ):
             await connect_github(mock_private_update, mock_context)
 
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "Failed" in reply_text
 
 
@@ -628,7 +625,7 @@ class TestToggleObsidian:
 
         # Verify state changed in real DB
         assert await get_save_to_obsidian(chat_id) is True
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "enabled" in reply_text
 
     async def test_toggles_off(self, mock_private_update, mock_context):
@@ -642,7 +639,7 @@ class TestToggleObsidian:
 
         # Verify state changed in real DB
         assert await get_save_to_obsidian(chat_id) is False
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "disabled" in reply_text
 
 
@@ -662,7 +659,7 @@ class TestDisconnectGithub:
         # Verify settings cleared in real DB
         assert await get_github_settings(chat_id) is None
         assert await get_save_to_obsidian(chat_id) is False
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "disconnected" in reply_text.lower()
 
 
@@ -679,7 +676,7 @@ class TestToggleCategorize:
 
         # Verify state changed in real DB
         assert await get_auto_categorize(chat_id) is True
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "enabled" in reply_text.lower()
 
     async def test_disables_categorization(self, mock_private_update, mock_context):
@@ -692,7 +689,7 @@ class TestToggleCategorize:
 
         # Verify state changed in real DB
         assert await get_auto_categorize(chat_id) is False
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "disabled" in reply_text.lower()
 
 
@@ -710,7 +707,7 @@ class TestCategorizeAll:
         ):
             await categorize_all(mock_private_update, mock_context)
 
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "5" in reply_text
 
     async def test_shows_no_files_message(self, mock_private_update, mock_context):
@@ -724,7 +721,7 @@ class TestCategorizeAll:
         ):
             await categorize_all(mock_private_update, mock_context)
 
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "no files" in reply_text.lower()
 
     async def test_requires_github_connection(self, mock_private_update, mock_context):
@@ -737,7 +734,7 @@ class TestCategorizeAll:
 
         await categorize_all(mock_private_update, mock_context)
 
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "GitHub" in reply_text
 
 
@@ -752,8 +749,8 @@ class TestHubCommands:
 
         await settings_hub(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        call_args = mock_private_update.message.reply_text.call_args
+        mock_private_update.answer.assert_called_once()
+        call_args = mock_private_update.answer.call_args
         assert "reply_markup" in call_args.kwargs
 
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
@@ -771,7 +768,7 @@ class TestHubCommands:
 
         await settings_hub(mock_group_update, mock_context)
 
-        mock_group_update.message.reply_text.assert_not_called()
+        mock_group_update.answer.assert_not_called()
 
     async def test_obsidian_hub_without_github(self, mock_private_update, mock_context):
         """Obsidian hub shows only 'Connect GitHub' when not connected."""
@@ -784,8 +781,8 @@ class TestHubCommands:
 
         await obsidian_hub(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        call_args = mock_private_update.message.reply_text.call_args
+        mock_private_update.answer.assert_called_once()
+        call_args = mock_private_update.answer.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
 
         # Only one button: Connect GitHub
@@ -803,8 +800,8 @@ class TestHubCommands:
 
         await obsidian_hub(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        call_args = mock_private_update.message.reply_text.call_args
+        mock_private_update.answer.assert_called_once()
+        call_args = mock_private_update.answer.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
 
         # Should have: toggle_sync, toggle_sort, categorize, disconnect
@@ -823,8 +820,8 @@ class TestHubCommands:
 
         await account_hub(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        call_args = mock_private_update.message.reply_text.call_args
+        mock_private_update.answer.assert_called_once()
+        call_args = mock_private_update.answer.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
 
         callback_datas = [row[0].callback_data for row in keyboard]
@@ -843,7 +840,7 @@ class TestHubCommands:
 
         await account_hub(mock_private_update, mock_context)
 
-        call_args = mock_private_update.message.reply_text.call_args
+        call_args = mock_private_update.answer.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
 
         callback_datas = [row[0].callback_data for row in keyboard]
@@ -863,7 +860,7 @@ class TestHubCommands:
 
         await account_hub(mock_private_update, mock_context)
 
-        call_args = mock_private_update.message.reply_text.call_args
+        call_args = mock_private_update.answer.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
 
         callback_datas = [row[0].callback_data for row in keyboard]
@@ -875,7 +872,7 @@ class TestHubCommands:
 
         await account_hub(mock_group_update, mock_context)
 
-        mock_group_update.message.reply_text.assert_not_called()
+        mock_group_update.answer.assert_not_called()
 
     async def test_hub_callback_triggers_language(
         self, mock_private_update, mock_context, mock_callback_query
@@ -886,7 +883,7 @@ class TestHubCommands:
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
 
-        await hub_callback_router(mock_private_update, mock_context)
+        await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
         mock_callback_query.edit_message_text.assert_called_once()
@@ -911,7 +908,7 @@ class TestHubCallbackRouting:
         mock_private_update.callback_query = mock_callback_query
         mock_context.bot.send_message = AsyncMock()
 
-        await hub_callback_router(mock_private_update, mock_context)
+        await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
         mock_context.bot.send_message.assert_called_once()
@@ -925,14 +922,14 @@ class TestHubCallbackRouting:
         mock_callback_query.data = "hub_buy"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = 12345
-        mock_callback_query.message.reply_text = AsyncMock()
+        mock_callback_query.answer = AsyncMock()
         mock_private_update.callback_query = mock_callback_query
         mock_private_update.message = None
 
-        await hub_callback_router(mock_private_update, mock_context)
+        await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        mock_callback_query.message.reply_text.assert_called_once()
+        mock_callback_query.answer.assert_called_once()
 
     async def test_account_mystats_callback(
         self, mock_private_update, mock_context, mock_callback_query
@@ -941,13 +938,13 @@ class TestHubCallbackRouting:
         mock_callback_query.data = "hub_mystats"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = 12345
-        mock_callback_query.message.reply_text = AsyncMock()
+        mock_callback_query.answer = AsyncMock()
         mock_private_update.callback_query = mock_callback_query
 
-        await hub_callback_router(mock_private_update, mock_context)
+        await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        mock_callback_query.message.reply_text.assert_called_once()
+        mock_callback_query.answer.assert_called_once()
 
     async def test_obsidian_toggle_callback(
         self, mock_private_update, mock_context, mock_callback_query
@@ -959,10 +956,10 @@ class TestHubCallbackRouting:
         mock_callback_query.data = "hub_toggle_obsidian"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = 12345
-        mock_callback_query.message.reply_text = AsyncMock()
+        mock_callback_query.answer = AsyncMock()
         mock_private_update.callback_query = mock_callback_query
 
-        await hub_callback_router(mock_private_update, mock_context)
+        await hub_callback_router(mock_callback_query, mock_context)
 
         assert await get_save_to_obsidian(chat_id) is True
 
@@ -973,13 +970,13 @@ class TestHubCallbackRouting:
         mock_callback_query.data = "hub_unlink_whatsapp"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = 12345
-        mock_callback_query.message.reply_text = AsyncMock()
+        mock_callback_query.answer = AsyncMock()
         mock_private_update.callback_query = mock_callback_query
 
-        await hub_callback_router(mock_private_update, mock_context)
+        await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        mock_callback_query.message.reply_text.assert_called_once()
+        mock_callback_query.answer.assert_called_once()
 
 
 class TestSettingsHubTierDependentUI:
@@ -999,7 +996,7 @@ class TestSettingsHubTierDependentUI:
         with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
-        call_args = mock_private_update.message.reply_text.call_args
+        call_args = mock_private_update.answer.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
         callback_datas = [row[0].callback_data for row in keyboard]
 
@@ -1025,7 +1022,7 @@ class TestSettingsHubTierDependentUI:
         with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
-        call_args = mock_private_update.message.reply_text.call_args
+        call_args = mock_private_update.answer.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
         callback_datas = [row[0].callback_data for row in keyboard]
 
@@ -1055,7 +1052,7 @@ class TestProviderSelectionFlow:
         mock_callback_query.message.chat.id = user_id
         mock_private_update.callback_query = mock_callback_query
 
-        await provider_buttons(mock_private_update, mock_context)
+        await provider_buttons(mock_callback_query, mock_context)
 
         # Verify provider persisted in DB
         saved = await get_preferred_provider(chat_id)
@@ -1084,7 +1081,7 @@ class TestProviderSelectionFlow:
         mock_callback_query.message.chat.id = user_id
         mock_private_update.callback_query = mock_callback_query
 
-        await provider_buttons(mock_private_update, mock_context)
+        await provider_buttons(mock_callback_query, mock_context)
 
         # Verify provider reset to None (auto)
         saved = await get_preferred_provider(chat_id)
@@ -1102,11 +1099,12 @@ class TestProviderSelectionFlow:
         mock_callback_query.data = "set_prov_wit"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = group_chat_id
+        mock_callback_query.message.chat.type = "group"
         mock_group_update.callback_query = mock_callback_query
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.OWNER)
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
 
-        await provider_buttons(mock_group_update, mock_context)
+        await provider_buttons(mock_callback_query, mock_context)
 
         saved = await get_preferred_provider(chat_id)
         assert saved == const.PROVIDER_WIT

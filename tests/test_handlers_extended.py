@@ -5,8 +5,7 @@ lang_buttons in group chat."""
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from telegram.constants import ChatMemberStatus
-from telegram.ext import ConversationHandler
+from aiogram.enums import ChatMemberStatus
 
 from src import const
 from src.credits import add_credits
@@ -42,7 +41,7 @@ class TestToggleCleanup:
         await toggle_cleanup(mock_private_update, mock_context)
 
         assert await get_auto_cleanup(chat_id) is True
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "enabled" in reply_text.lower()
 
     async def test_disables_cleanup(self, mock_private_update, mock_context):
@@ -53,7 +52,7 @@ class TestToggleCleanup:
         await toggle_cleanup(mock_private_update, mock_context)
 
         assert await get_auto_cleanup(chat_id) is False
-        reply_text = mock_private_update.message.reply_text.call_args[0][0]
+        reply_text = mock_private_update.answer.call_args[0][0]
         assert "disabled" in reply_text.lower()
 
 
@@ -191,7 +190,7 @@ class TestSetupObsidianGit:
             "src.telegram.obsidian_handlers.create_obsidian_git_config",
             AsyncMock(return_value=True),
         ):
-            await setup_obsidian_git(mock_private_update, mock_context)
+            await setup_obsidian_git(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
         alert_text = mock_callback_query.answer.call_args[0][0]
@@ -212,7 +211,7 @@ class TestSetupObsidianGit:
             "src.telegram.obsidian_handlers.create_obsidian_git_config",
             AsyncMock(return_value=False),
         ):
-            await setup_obsidian_git(mock_private_update, mock_context)
+            await setup_obsidian_git(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
 
@@ -230,7 +229,7 @@ class TestSetupObsidianGit:
         mock_callback_query.data = "hub_setup_obsidian_git"
         mock_private_update.callback_query = mock_callback_query
 
-        await setup_obsidian_git(mock_private_update, mock_context)
+        await setup_obsidian_git(mock_callback_query, mock_context)
 
         mock_callback_query.edit_message_text.assert_called_once()
 
@@ -252,7 +251,7 @@ class TestProviderMenuViaHub:
         mock_private_update.callback_query = mock_callback_query
 
         with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
-            await hub_callback_router(mock_private_update, mock_context)
+            await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
         mock_callback_query.edit_message_text.assert_called_once()
@@ -277,7 +276,7 @@ class TestProviderMenuViaHub:
         mock_private_update.callback_query = mock_callback_query
 
         with patch("src.telegram.settings_handlers.settings.groq_api_key", ""):
-            await hub_callback_router(mock_private_update, mock_context)
+            await hub_callback_router(mock_callback_query, mock_context)
 
         call_args = mock_callback_query.edit_message_text.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
@@ -301,7 +300,7 @@ class TestProviderMenuViaHub:
         mock_private_update.callback_query = mock_callback_query
 
         with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
-            await hub_callback_router(mock_private_update, mock_context)
+            await hub_callback_router(mock_callback_query, mock_context)
 
         call_args = mock_callback_query.edit_message_text.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
@@ -318,26 +317,22 @@ class TestProviderMenuViaHub:
 class TestEnterCommandFromHub:
     """Test enter_your_command_from_hub callback handler."""
 
-    async def test_returns_waiting_state(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
-        """Callback triggers GPT command input mode."""
-        mock_callback_query.message.reply_text = AsyncMock()
-        mock_private_update.callback_query = mock_callback_query
+    async def test_returns_waiting_state(self, mock_callback_query, mock_state):
+        """Callback triggers GPT command input mode (FSM state set)."""
+        mock_callback_query.answer = AsyncMock()
 
-        result = await enter_your_command_from_hub(mock_private_update, mock_context)
+        await enter_your_command_from_hub(mock_callback_query, mock_state)
 
-        assert result == WAITING_FOR_COMMAND
         mock_callback_query.answer.assert_called_once()
-        mock_callback_query.message.reply_text.assert_called_once()
+        mock_state.set_state.assert_called_once_with(WAITING_FOR_COMMAND)
 
-    async def test_no_query_returns_end(self, mock_private_update, mock_context):
-        """Returns END when callback_query is None."""
-        mock_private_update.callback_query = None
+    async def test_no_query_returns_end(self, mock_callback_query, mock_state):
+        """Returns early when callback.message is not a Message instance."""
+        mock_callback_query.message = None  # InaccessibleMessage / None case
 
-        result = await enter_your_command_from_hub(mock_private_update, mock_context)
+        await enter_your_command_from_hub(mock_callback_query, mock_state)
 
-        assert result == ConversationHandler.END
+        mock_state.set_state.assert_not_called()
 
 
 class TestLangButtonsGroupChat:
@@ -352,11 +347,12 @@ class TestLangButtonsGroupChat:
         mock_callback_query.data = "set_lang_ru"
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = group_chat_id
+        mock_callback_query.message.chat.type = "group"
         mock_group_update.callback_query = mock_callback_query
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.OWNER)
+        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
 
-        await lang_buttons(mock_group_update, mock_context)
+        await lang_buttons(mock_callback_query, mock_context)
 
         mock_callback_query.edit_message_text.assert_called_once()
         assert await get_chat_language(chat_id) == "ru"
@@ -374,7 +370,7 @@ class TestHubCallbackUnknownAction:
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
 
-        await hub_callback_router(mock_private_update, mock_context)
+        await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
         # No handler called — no further messages

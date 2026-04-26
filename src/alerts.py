@@ -2,7 +2,7 @@
 
 import logging
 
-from telegram import Bot
+from aiogram import Bot
 
 from src import const
 from src.config import settings
@@ -18,7 +18,7 @@ REVENUE_MILESTONES = [10, 50, 100, 500, 1000]
 async def send_admin_alert(bot: Bot, message: str) -> None:
     for admin_id in settings.admin_user_ids:
         try:
-            await bot.send_message(chat_id=admin_id, text=message, parse_mode="HTML")
+            await bot.send_message(chat_id=int(admin_id), text=message, parse_mode="HTML")
         except Exception as e:
             logger.error("Failed to send alert to admin %s: %s", admin_id, e)
 

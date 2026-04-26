@@ -23,9 +23,13 @@ async def test_sends_voice_and_transcription_to_admin(
         mock_transcribe.return_value = ("привет мир", 5, 1)
         await run_selftest(mock_bot)
 
-    mock_bot.send_voice.assert_called_once_with(
-        chat_id=int(ADMIN_ID), voice=SAMPLE_AUDIO, duration=SAMPLE_DURATION
-    )
+    mock_bot.send_voice.assert_called_once()
+    voice_kwargs = mock_bot.send_voice.call_args.kwargs
+    assert voice_kwargs["chat_id"] == int(ADMIN_ID)
+    assert voice_kwargs["duration"] == SAMPLE_DURATION
+    # aiogram wraps raw bytes in BufferedInputFile
+    sent_file = voice_kwargs["voice"]
+    assert getattr(sent_file, "data", None) == SAMPLE_AUDIO or sent_file == SAMPLE_AUDIO
     mock_bot.send_message.assert_called_once()
     message_text = mock_bot.send_message.call_args[1]["text"]
     assert "\u2705 Wit.ai" in message_text

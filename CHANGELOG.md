@@ -25,6 +25,24 @@
   Added `mock_callback_query.message = MagicMock(spec=Message)` in fixtures so handler tests still pass
 - FastAPI `/health` tests reworked as integration (real `create_fastapi_app`, WhatsApp disabled via
   `fastapi_app_no_whatsapp` fixture) — no longer depend on local `.env` WhatsApp credentials
+- **Migrated Telegram framework: python-telegram-bot v22 → aiogram v3.27.** Full rewrite of
+  `src/telegram/*`, `src/main.py`, `src/alerts.py`, `src/selftest.py`, `src/gpt_commands.py`.
+    - Lifecycle: `ApplicationBuilder` → `Bot + Dispatcher + Router` with `await dp.start_polling(bot)`.
+    - Conversation FSM: `ConversationHandler` → `aiogram.fsm.state.StatesGroup` (`GptCommandStates.waiting`).
+    - Bot-sender guard: `TypeHandler(group=-1) + ApplicationHandlerStop` → `BotSenderRejectMiddleware`
+      on `dp.update.outer_middleware`.
+    - Filters: `filters.VOICE | filters.AUDIO`, `filters.SUCCESSFUL_PAYMENT`, `filters.TEXT & ~filters.COMMAND`
+      → magic-filter `F.voice | F.audio`, `F.successful_payment`, `F.text & ~F.text.startswith("/")`.
+    - Callback handlers: aiogram-native `(callback: CallbackQuery, bot: Bot)` signatures; PTB
+      `Update`/`Context` thread is gone.
+    - Voice download: `voice.get_file().download_as_bytearray()` → `bot.download(voice, destination=buf)`.
+    - Selftest `bot.send_voice(voice=bytes)` → `BufferedInputFile(bytes, filename=...)`.
+    - `chat_params.py` accepts `Message | CallbackQuery` directly; `is_user_admin(event, bot)` takes
+      `Bot` instead of PTB `Context`.
+    - Test fixtures rewritten as aiogram-shape mocks; ~190 tests updated.
+    - Removed three `# ty: ignore[invalid-argument-type]` PTB-ConversationHandler suppressions.
+    - Net effect: `uv run ty check src` shows 6 → 3 ignores (only Beanie/Motor + 2 pywa stubs remain).
+- aiohttp constraint pinned to `>=3.13.4` to address CVE-2026-3451x cluster (transitive via aiogram).
 
 ## [0.8.13] — 2026-04-13
 

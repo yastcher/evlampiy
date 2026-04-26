@@ -77,11 +77,14 @@ class TestEvlampiyCommand:
         assert "get_user_settings" in tool_names
         assert "get_categories" in tool_names
 
-    async def test_skips_when_no_message(self, mock_private_update, mock_context):
-        """Does nothing when update.message is None."""
-        mock_private_update.message = None
+    async def test_skips_when_message_text_empty(self, mock_private_update, mock_context):
+        """Empty message.text is fed as empty user prompt; conversation still runs."""
+        mock_private_update.text = ""
 
-        with patch("src.gpt_commands.run_tool_conversation", AsyncMock()) as mock_conv:
+        with patch(
+            "src.gpt_commands.run_tool_conversation",
+            AsyncMock(return_value="ok"),
+        ) as mock_conv:
             await evlampiy_command(mock_private_update, mock_context)
 
-        mock_conv.assert_not_called()
+        mock_conv.assert_called_once()

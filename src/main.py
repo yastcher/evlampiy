@@ -4,7 +4,7 @@ import threading
 
 from src.config import settings
 from src.mongo import init_beanie_models
-from src.telegram.setup import build_application
+from src.telegram.setup import run_bot
 from src.whatsapp.app import run_fastapi_server
 
 logging.basicConfig(
@@ -14,7 +14,8 @@ logging.basicConfig(
 trash_loggers = (
     "httpcore",
     "httpx",
-    "telegram.ext.ExtBot",
+    "aiogram.event",
+    "aiogram.dispatcher",
     "pydub.converter",
     "urllib3",
     "pymongo",
@@ -26,21 +27,21 @@ for logger_name in trash_loggers:
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
-    if not settings.telegram_bot_token:
-        raise ValueError("need TELEGRAM_BOT_TOKEN env variables")
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(init_beanie_models())
+async def _async_main() -> None:
+    await init_beanie_models()
 
     if settings.whatsapp_token and settings.whatsapp_phone_id:
         api_thread = threading.Thread(target=run_fastapi_server, daemon=True)
         api_thread.start()
         logger.info("FastAPI server started for WhatsApp webhook")
 
-    application = build_application()
-    application.run_polling()
+    await run_bot()
+
+
+def main() -> None:
+    if not settings.telegram_bot_token:
+        raise ValueError("need TELEGRAM_BOT_TOKEN env variables")
+    asyncio.run(_async_main())
 
 
 if __name__ == "__main__":

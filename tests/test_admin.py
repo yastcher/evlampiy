@@ -168,15 +168,15 @@ class TestAdminCommands:
     async def test_admin_hub_shown_to_admin(self, mock_private_update, mock_context, admin_auth):
         """Admin can see admin hub."""
         mock_private_update.effective_user.id = 999
-        await admin_hub(mock_private_update, mock_context)
-        mock_private_update.message.reply_text.assert_called_once()
+        await admin_hub(mock_private_update)
+        mock_private_update.answer.assert_called_once()
 
     async def test_admin_hub_hidden_from_non_admin(self, mock_private_update, mock_context):
         """Non-admin cannot see admin hub."""
         mock_private_update.effective_user.id = 123
         with patch.object(settings, "admin_user_ids_raw", ""):
-            await admin_hub(mock_private_update, mock_context)
-        mock_private_update.message.reply_text.assert_not_called()
+            await admin_hub(mock_private_update)
+        mock_private_update.answer.assert_not_called()
 
     async def test_add_vip_command(self, mock_private_update, mock_context, admin_auth):
         """Admin can add VIP user."""
@@ -186,7 +186,7 @@ class TestAdminCommands:
 
         vips = await get_users_by_role(const.ROLE_VIP)
         assert "12345" in vips
-        mock_private_update.message.reply_text.assert_called_once()
+        mock_private_update.answer.assert_called_once()
 
     async def test_remove_vip_command(self, mock_private_update, mock_context, admin_auth):
         """Admin can remove VIP user."""
@@ -223,7 +223,7 @@ class TestAdminCommands:
         mock_context.args = ["12345", "abc"]
         await add_credits_command(mock_private_update, mock_context)
 
-        call_text = mock_private_update.message.reply_text.call_args[0][0]
+        call_text = mock_private_update.answer.call_args[0][0]
         assert "/add_credits" in call_text
 
     async def test_remove_tester_command(self, mock_private_update, mock_context, admin_auth):
@@ -243,7 +243,7 @@ class TestAdminCommands:
         mock_context.args = ["99999"]
         await remove_vip_command(mock_private_update, mock_context)
 
-        call_text = mock_private_update.message.reply_text.call_args[0][0]
+        call_text = mock_private_update.answer.call_args[0][0]
         assert "not found" in call_text.lower()
 
     async def test_admin_callback_vip_list(
@@ -254,9 +254,10 @@ class TestAdminCommands:
 
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_vip"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         mock_callback_query.edit_message_text.assert_called_once()
         call_text = mock_callback_query.edit_message_text.call_args[0][0]
@@ -270,9 +271,10 @@ class TestAdminCommands:
 
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_testers"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         mock_callback_query.edit_message_text.assert_called_once()
         call_text = mock_callback_query.edit_message_text.call_args[0][0]
@@ -284,9 +286,10 @@ class TestAdminCommands:
         """Admin callback shows credits usage hint."""
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_credits"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         mock_callback_query.edit_message_text.assert_called_once()
         call_text = mock_callback_query.edit_message_text.call_args[0][0]
@@ -298,9 +301,10 @@ class TestAdminCommands:
         """Admin stats callback builds stats text and updates message."""
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_stats"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         mock_callback_query.edit_message_text.assert_called_once()
         call_kwargs = mock_callback_query.edit_message_text.call_args[1]
@@ -313,7 +317,7 @@ class TestAdminCommands:
         await block_command(mock_private_update, mock_context)
 
         assert await is_blocked_user("12345") is True
-        mock_private_update.message.reply_text.assert_called_once()
+        mock_private_update.answer.assert_called_once()
 
     async def test_unblock_command(self, mock_private_update, mock_context, admin_auth):
         """Admin can unblock a user."""
@@ -324,7 +328,7 @@ class TestAdminCommands:
         await unblock_command(mock_private_update, mock_context)
 
         assert await is_blocked_user("12345") is False
-        mock_private_update.message.reply_text.assert_called_once()
+        mock_private_update.answer.assert_called_once()
 
     async def test_admin_callback_blocked_list(
         self, mock_private_update, mock_context, mock_callback_query, admin_auth
@@ -334,9 +338,10 @@ class TestAdminCommands:
 
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_blocked"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         mock_callback_query.edit_message_text.assert_called_once()
         call_text = mock_callback_query.edit_message_text.call_args[0][0]
@@ -351,7 +356,7 @@ class TestAdminCommands:
             await remove_vip_command(mock_private_update, mock_context)
             await add_tester_command(mock_private_update, mock_context)
             await remove_tester_command(mock_private_update, mock_context)
-        mock_private_update.message.reply_text.assert_not_called()
+        mock_private_update.answer.assert_not_called()
 
     async def test_add_vip_no_args(self, mock_private_update, mock_context, admin_auth):
         """Add VIP without args shows usage."""
@@ -359,7 +364,7 @@ class TestAdminCommands:
         mock_context.args = []
         await add_vip_command(mock_private_update, mock_context)
 
-        call_text = mock_private_update.message.reply_text.call_args[0][0]
+        call_text = mock_private_update.answer.call_args[0][0]
         assert "/add_vip" in call_text
 
     async def test_add_credits_negative_amount(self, mock_private_update, mock_context, admin_auth):
@@ -368,7 +373,7 @@ class TestAdminCommands:
         mock_context.args = ["12345", "-5"]
         await add_credits_command(mock_private_update, mock_context)
 
-        call_text = mock_private_update.message.reply_text.call_args[0][0]
+        call_text = mock_private_update.answer.call_args[0][0]
         assert "/add_credits" in call_text
 
 
@@ -382,10 +387,10 @@ class TestStatsCommand:
         await increment_transcription_stats()
         await increment_payment_stats(50)
 
-        await stats_command(mock_private_update, mock_context)
+        await stats_command(mock_private_update)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        call_text = mock_private_update.message.reply_text.call_args[0][0]
+        mock_private_update.answer.assert_called_once()
+        call_text = mock_private_update.answer.call_args[0][0]
         # Verify real stats are shown in response
         assert "3" in call_text  # transcriptions count
         assert "50" in call_text  # credits sold
@@ -395,9 +400,9 @@ class TestStatsCommand:
         mock_private_update.effective_user.id = 123
 
         with patch.object(settings, "admin_user_ids_raw", ""):
-            await stats_command(mock_private_update, mock_context)
+            await stats_command(mock_private_update)
 
-        mock_private_update.message.reply_text.assert_not_called()
+        mock_private_update.answer.assert_not_called()
 
 
 class TestMyStatsCommand:
@@ -410,8 +415,8 @@ class TestMyStatsCommand:
 
         await mystats_command(mock_private_update, mock_context)
 
-        mock_private_update.message.reply_text.assert_called_once()
-        call_text = mock_private_update.message.reply_text.call_args[0][0]
+        mock_private_update.answer.assert_called_once()
+        call_text = mock_private_update.answer.call_args[0][0]
         assert "50" in call_text
 
     async def test_mystats_shows_tier(self, mock_private_update, mock_context):
@@ -423,7 +428,7 @@ class TestMyStatsCommand:
 
         await mystats_command(mock_private_update, mock_context)
 
-        call_text = mock_private_update.message.reply_text.call_args[0][0]
+        call_text = mock_private_update.answer.call_args[0][0]
         assert "paid" in call_text.lower()
 
 
@@ -615,9 +620,10 @@ class TestAdminProviderPanel:
 
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_prov_c_groq"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         # Verify persisted in DB
         saved = await get_bot_config("categorization_provider", "")
@@ -635,9 +641,10 @@ class TestAdminProviderPanel:
 
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_prov_g_openrouter"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         saved = await get_bot_config("gpt_provider", "")
         assert saved == const.PROVIDER_OPENROUTER
@@ -649,9 +656,10 @@ class TestAdminProviderPanel:
 
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_prov_c_unknown_provider"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         # Should NOT have persisted the invalid provider
         saved = await get_bot_config("categorization_provider", "")
@@ -663,9 +671,10 @@ class TestAdminProviderPanel:
         """Back button returns to admin hub."""
         mock_private_update.effective_user.id = 999
         mock_callback_query.data = "adm_back"
-        mock_private_update.callback_query = mock_callback_query
 
-        await admin_callback_router(mock_private_update, mock_context)
+        mock_callback_query.from_user.id = 999
+
+        await admin_callback_router(mock_callback_query)
 
         mock_callback_query.edit_message_text.assert_called_once()
         call_args = mock_callback_query.edit_message_text.call_args

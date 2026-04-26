@@ -5,7 +5,8 @@ import logging
 import pathlib
 import tomllib
 
-import telegram
+from aiogram import Bot
+from aiogram.types import BufferedInputFile
 
 from src import const
 from src.ai_client import cleanup_text
@@ -130,7 +131,7 @@ def _test_config() -> tuple[str, str | None]:
     return "OK", None
 
 
-async def run_selftest(bot: telegram.Bot) -> None:
+async def run_selftest(bot: Bot) -> None:
     """Run transcription self-test and send results to admins."""
     try:
         await _run_selftest_inner(bot)
@@ -138,7 +139,7 @@ async def run_selftest(bot: telegram.Bot) -> None:
         logger.exception("Self-test failed unexpectedly")
 
 
-async def _run_selftest_inner(bot: telegram.Bot) -> None:
+async def _run_selftest_inner(bot: Bot) -> None:
     admin_ids = settings.admin_user_ids
     if not admin_ids:
         logger.debug("No admin_user_ids configured, skipping self-test")
@@ -161,7 +162,7 @@ async def _run_selftest_inner(bot: telegram.Bot) -> None:
 
 
 async def _selftest_for_admin(
-    bot: telegram.Bot, admin_id: str, audio_bytes: bytes, duration: int, version: str
+    bot: Bot, admin_id: str, audio_bytes: bytes, duration: int, version: str
 ) -> None:
     language = RUSSIAN
     # todo =Y change it later
@@ -204,5 +205,6 @@ async def _selftest_for_admin(
 
     message = _build_message(version, sections)
     chat_id = int(admin_id)
-    await bot.send_voice(chat_id=chat_id, voice=audio_bytes, duration=duration)
+    voice_file = BufferedInputFile(audio_bytes, filename="selftest.ogg")
+    await bot.send_voice(chat_id=chat_id, voice=voice_file, duration=duration)
     await bot.send_message(chat_id=chat_id, text=message)

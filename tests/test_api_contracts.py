@@ -2,6 +2,7 @@
 
 import inspect
 
+from aiogram.fsm.state import State
 from fastapi.testclient import TestClient
 
 from src.telegram.admin import admin_callback_router
@@ -31,14 +32,25 @@ class TestCommandHandlerContracts:
         ]
         assert not non_async, f"Sync handlers (must be async): {non_async}"
 
-    def test_all_handlers_accept_update_and_context(self):
-        """Each handler must accept (update, context) positional params."""
+    def test_all_handlers_first_param_is_message(self):
+        """Each command handler's first positional param is the aiogram Message event.
+
+        Handlers may take additional DI parameters (bot, command, state) — we only
+        require that the first positional slot accepts the incoming Message.
+        """
         bad = []
         for name, handler in COMMAND_HANDLERS.items():
             sig = inspect.signature(handler)
-            params = list(sig.parameters.keys())
-            if len(params) < 2:
-                bad.append(f"{name}: only {len(params)} params ({params})")
+            params = list(sig.parameters.values())
+            if not params:
+                bad.append(f"{name}: no parameters")
+                continue
+            first = params[0]
+            if first.kind not in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            ):
+                bad.append(f"{name}: first param {first.name!r} is not positional")
         assert not bad, "Handlers with wrong signature:\n" + "\n".join(f"  {b}" for b in bad)
 
 
@@ -120,8 +132,9 @@ class TestFastAPIContracts:
 class TestConversationHandlerContract:
     """ConversationHandler for /enter_your_command is properly structured."""
 
-    def test_waiting_state_constant_is_int(self):
-        assert isinstance(WAITING_FOR_COMMAND, int)
+    def test_waiting_state_constant_is_fsm_state(self):
+
+        assert isinstance(WAITING_FOR_COMMAND, State)
 
     def test_command_input_handler_is_async(self):
         assert inspect.iscoroutinefunction(handle_command_input)

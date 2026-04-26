@@ -4,8 +4,8 @@ import logging
 import typing
 from collections.abc import Sequence
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ContextTypes
+from aiogram.filters import CommandObject
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from src import const
 from src.config import settings
@@ -37,13 +37,13 @@ def _t(key: str, **kwargs: typing.Any) -> str:
 
 def _hub_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton(_t("btn_manage_vip"), callback_data="adm_vip")],
-            [InlineKeyboardButton(_t("btn_manage_testers"), callback_data="adm_testers")],
-            [InlineKeyboardButton(_t("btn_manage_blocked"), callback_data="adm_blocked")],
-            [InlineKeyboardButton(_t("btn_admin_stats"), callback_data="adm_stats")],
-            [InlineKeyboardButton(_t("btn_add_credits"), callback_data="adm_credits")],
-            [InlineKeyboardButton("🤖 LLM Providers", callback_data="adm_providers")],
+        inline_keyboard=[
+            [InlineKeyboardButton(text=_t("btn_manage_vip"), callback_data="adm_vip")],
+            [InlineKeyboardButton(text=_t("btn_manage_testers"), callback_data="adm_testers")],
+            [InlineKeyboardButton(text=_t("btn_manage_blocked"), callback_data="adm_blocked")],
+            [InlineKeyboardButton(text=_t("btn_admin_stats"), callback_data="adm_stats")],
+            [InlineKeyboardButton(text=_t("btn_add_credits"), callback_data="adm_credits")],
+            [InlineKeyboardButton(text="🤖 LLM Providers", callback_data="adm_providers")],
         ]
     )
 
@@ -61,14 +61,26 @@ async def _build_providers_panel() -> tuple[str, InlineKeyboardMarkup]:
 
     def _btn(prefix: str, current: str, p: str) -> InlineKeyboardButton:
         label = f"✓ {p}" if p == current else p
-        return InlineKeyboardButton(label, callback_data=f"adm_prov_{prefix}_{p}")
+        return InlineKeyboardButton(text=label, callback_data=f"adm_prov_{prefix}_{p}")
 
     keyboard = [
         [_btn("c", categ, p) for p in _LLM_PROVIDERS],
         [_btn("g", gpt, p) for p in _LLM_PROVIDERS],
-        [InlineKeyboardButton("← Back", callback_data="adm_back")],
+        [InlineKeyboardButton(text="← Back", callback_data="adm_back")],
     ]
-    return text, InlineKeyboardMarkup(keyboard)
+    return text, InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def _split_args(command: CommandObject | typing.Any | None) -> list[str]:
+    """Extract positional args from a CommandObject. Tolerates a pre-split list."""
+    if command is None:
+        return []
+    raw = getattr(command, "args", None)
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [str(a) for a in raw]
+    return str(raw).split()
 
 
 def _parse_user_id(args: Sequence[str]) -> str | None:
@@ -81,53 +93,60 @@ def _parse_user_id(args: Sequence[str]) -> str | None:
     return user_id
 
 
-async def admin_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def admin_hub(message: Message) -> None:
     """Admin panel with inline keyboard."""
-    if update.effective_user is None or update.message is None:
+    if message.from_user is None:
         return
-    if not is_admin_user(str(update.effective_user.id)):
+    if not is_admin_user(str(message.from_user.id)):
         return
+    await message.answer(_t("admin_hub_title"), reply_markup=_hub_keyboard())
 
-    await update.message.reply_text(_t("admin_hub_title"), reply_markup=_hub_keyboard())
 
-
-async def _handle_role_list(query: typing.Any, role: str, text_key: str) -> None:
-    """Show list of users with given role."""
+async def _handle_role_list(callback: CallbackQuery, role: str, text_key: str) -> None:
+    if not isinstance(callback.message, Message):
+        return
     users = await get_users_by_role(role)
     user_list = "\n".join(f"• {uid}" for uid in users) if users else _t("admin_list_empty")
-    await query.edit_message_text(_t(text_key, users=user_list), parse_mode="HTML")
+    await callback.message.edit_text(_t(text_key, users=user_list), parse_mode="HTML")
 
 
-async def _handle_stats(query: typing.Any) -> None:
+async def _handle_stats(callback: CallbackQuery) -> None:
+    if not isinstance(callback.message, Message):
+        return
     text = await build_stats_text()
-    await query.edit_message_text(text, parse_mode="HTML")
+    await callback.message.edit_text(text, parse_mode="HTML")
 
 
-async def _handle_credits(query: typing.Any) -> None:
+async def _handle_credits(callback: CallbackQuery) -> None:
+    if not isinstance(callback.message, Message):
+        return
     text = _t("admin_usage", command="/add_credits <user_id> <amount>")
-    await query.edit_message_text(text)
+    await callback.message.edit_text(text)
 
 
-async def _handle_providers(query: typing.Any) -> None:
+async def _handle_providers(callback: CallbackQuery) -> None:
+    if not isinstance(callback.message, Message):
+        return
     text, markup = await _build_providers_panel()
-    await query.edit_message_text(text, reply_markup=markup, parse_mode="HTML")
+    await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
 
-async def _handle_back(query: typing.Any) -> None:
-    await query.edit_message_text(_t("admin_hub_title"), reply_markup=_hub_keyboard())
+async def _handle_back(callback: CallbackQuery) -> None:
+    if not isinstance(callback.message, Message):
+        return
+    await callback.message.edit_text(_t("admin_hub_title"), reply_markup=_hub_keyboard())
 
 
-async def _handle_provider_change(query: typing.Any, action: str) -> None:
+async def _handle_provider_change(callback: CallbackQuery, action: str) -> None:
     """Handle prov_c_* / prov_g_* callback actions."""
-    # action format: "prov_{c|g}_{provider}"
     config_key = "categorization_provider" if action[5] == "c" else "gpt_provider"
     provider = action[7:]
     if provider in _LLM_PROVIDERS:
         await set_bot_config(config_key, provider)
-    await _handle_providers(query)
+    await _handle_providers(callback)
 
 
-_ACTION_HANDLERS: dict[str, typing.Callable[..., typing.Awaitable[None]]] = {
+_ACTION_HANDLERS: dict[str, typing.Callable[[CallbackQuery], typing.Awaitable[None]]] = {
     "vip": lambda q: _handle_role_list(q, const.ROLE_VIP, "admin_vip_list"),
     "testers": lambda q: _handle_role_list(q, const.ROLE_TESTER, "admin_tester_list"),
     "blocked": lambda q: _handle_role_list(q, const.ROLE_BLOCKED, "admin_blocked_list"),
@@ -138,181 +157,154 @@ _ACTION_HANDLERS: dict[str, typing.Callable[..., typing.Awaitable[None]]] = {
 }
 
 
-async def admin_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def admin_callback_router(callback: CallbackQuery) -> None:
     """Route admin hub button presses."""
-    if update.effective_user is None:
+    if callback.from_user is None or callback.data is None:
         return
-    if not is_admin_user(str(update.effective_user.id)):
+    if not is_admin_user(str(callback.from_user.id)):
         return
+    await callback.answer()
 
-    query = update.callback_query
-    if query is None or query.data is None:
-        return
-    await query.answer()
-
-    action = query.data.replace("adm_", "")
+    action = callback.data.replace("adm_", "")
 
     _MIN_PROV_ACTION_LEN = 7  # "prov_c_" prefix
     if action.startswith("prov_") and len(action) >= _MIN_PROV_ACTION_LEN:
-        await _handle_provider_change(query, action)
+        await _handle_provider_change(callback, action)
         return
 
     handler = _ACTION_HANDLERS.get(action)
     if handler:
-        await handler(query)
+        await handler(callback)
 
 
-async def add_vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def add_vip_command(message: Message, command: CommandObject) -> None:
     """Add a user to VIP list. Usage: /add_vip <user_id>"""
-    if update.effective_user is None or update.message is None:
-        return
-    if not is_admin_user(str(update.effective_user.id)):
+    if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(context.args or [])
+    user_id = _parse_user_id(_split_args(command))
     if not user_id:
-        await update.message.reply_text(_t("admin_usage", command="/add_vip <user_id>"))
+        await message.answer(_t("admin_usage", command="/add_vip <user_id>"))
         return
 
-    admin_id = str(update.effective_user.id)
+    admin_id = str(message.from_user.id)
     await add_user_role(user_id, const.ROLE_VIP, admin_id)
-    await update.message.reply_text(_t("admin_user_added", user_id=user_id, role="VIP"))
+    await message.answer(_t("admin_user_added", user_id=user_id, role="VIP"))
 
 
-async def remove_vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def remove_vip_command(message: Message, command: CommandObject) -> None:
     """Remove a user from VIP list. Usage: /remove_vip <user_id>"""
-    if update.effective_user is None or update.message is None:
-        return
-    if not is_admin_user(str(update.effective_user.id)):
+    if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(context.args or [])
+    user_id = _parse_user_id(_split_args(command))
     if not user_id:
-        await update.message.reply_text(_t("admin_usage", command="/remove_vip <user_id>"))
+        await message.answer(_t("admin_usage", command="/remove_vip <user_id>"))
         return
 
     removed = await remove_user_role(user_id, const.ROLE_VIP)
     if removed:
-        await update.message.reply_text(_t("admin_user_removed", user_id=user_id, role="VIP"))
+        await message.answer(_t("admin_user_removed", user_id=user_id, role="VIP"))
     else:
-        await update.message.reply_text(_t("admin_user_not_found", user_id=user_id, role="VIP"))
+        await message.answer(_t("admin_user_not_found", user_id=user_id, role="VIP"))
 
 
-async def add_tester_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def add_tester_command(message: Message, command: CommandObject) -> None:
     """Add a user to tester list. Usage: /add_tester <user_id>"""
-    if update.effective_user is None or update.message is None:
-        return
-    if not is_admin_user(str(update.effective_user.id)):
+    if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(context.args or [])
+    user_id = _parse_user_id(_split_args(command))
     if not user_id:
-        await update.message.reply_text(_t("admin_usage", command="/add_tester <user_id>"))
+        await message.answer(_t("admin_usage", command="/add_tester <user_id>"))
         return
 
-    admin_id = str(update.effective_user.id)
+    admin_id = str(message.from_user.id)
     await add_user_role(user_id, const.ROLE_TESTER, admin_id)
-    await update.message.reply_text(_t("admin_user_added", user_id=user_id, role="tester"))
+    await message.answer(_t("admin_user_added", user_id=user_id, role="tester"))
 
 
-async def remove_tester_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def remove_tester_command(message: Message, command: CommandObject) -> None:
     """Remove a user from tester list. Usage: /remove_tester <user_id>"""
-    if update.effective_user is None or update.message is None:
-        return
-    if not is_admin_user(str(update.effective_user.id)):
+    if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(context.args or [])
+    user_id = _parse_user_id(_split_args(command))
     if not user_id:
-        await update.message.reply_text(_t("admin_usage", command="/remove_tester <user_id>"))
+        await message.answer(_t("admin_usage", command="/remove_tester <user_id>"))
         return
 
     removed = await remove_user_role(user_id, const.ROLE_TESTER)
     if removed:
-        await update.message.reply_text(_t("admin_user_removed", user_id=user_id, role="tester"))
+        await message.answer(_t("admin_user_removed", user_id=user_id, role="tester"))
     else:
-        await update.message.reply_text(_t("admin_user_not_found", user_id=user_id, role="tester"))
+        await message.answer(_t("admin_user_not_found", user_id=user_id, role="tester"))
 
 
-async def block_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def block_command(message: Message, command: CommandObject) -> None:
     """Block a user. Usage: /block <user_id> [reason]"""
-    if update.effective_user is None or update.message is None:
-        return
-    if not is_admin_user(str(update.effective_user.id)):
+    if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    args = context.args or []
+    args = _split_args(command)
     user_id = _parse_user_id(args)
     if not user_id:
-        await update.message.reply_text(_t("admin_usage", command="/block <user_id> [reason]"))
+        await message.answer(_t("admin_usage", command="/block <user_id> [reason]"))
         return
 
-    admin_id = str(update.effective_user.id)
+    admin_id = str(message.from_user.id)
     reason = " ".join(args[1:]) if len(args) > 1 else ""
     await add_user_role(user_id, const.ROLE_BLOCKED, admin_id)
     if reason:
         logger.info("User %s blocked by %s. Reason: %s", user_id, admin_id, reason)
     else:
         logger.info("User %s blocked by %s", user_id, admin_id)
-    await update.message.reply_text(_t("admin_user_blocked", user_id=user_id))
+    await message.answer(_t("admin_user_blocked", user_id=user_id))
 
 
-async def unblock_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def unblock_command(message: Message, command: CommandObject) -> None:
     """Unblock a user. Usage: /unblock <user_id>"""
-    if update.effective_user is None or update.message is None:
-        return
-    if not is_admin_user(str(update.effective_user.id)):
+    if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(context.args or [])
+    user_id = _parse_user_id(_split_args(command))
     if not user_id:
-        await update.message.reply_text(_t("admin_usage", command="/unblock <user_id>"))
+        await message.answer(_t("admin_usage", command="/unblock <user_id>"))
         return
 
     removed = await remove_user_role(user_id, const.ROLE_BLOCKED)
     if removed:
-        await update.message.reply_text(_t("admin_user_unblocked", user_id=user_id))
+        await message.answer(_t("admin_user_unblocked", user_id=user_id))
     else:
-        await update.message.reply_text(_t("admin_user_not_found", user_id=user_id, role="blocked"))
+        await message.answer(_t("admin_user_not_found", user_id=user_id, role="blocked"))
 
 
-async def add_credits_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def add_credits_command(message: Message, command: CommandObject) -> None:
     """Add credits to a user. Usage: /add_credits <user_id> <amount>"""
-    if update.effective_user is None or update.message is None:
-        return
-    if not is_admin_user(str(update.effective_user.id)):
+    if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
     expected_args = 2
-    args = context.args or []
+    args = _split_args(command)
+    usage_text = _t("admin_usage", command="/add_credits <user_id> <amount>")
     if len(args) < expected_args:
-        await update.message.reply_text(
-            _t("admin_usage", command="/add_credits <user_id> <amount>")
-        )
+        await message.answer(usage_text)
         return
 
     user_id = args[0].strip()
     if not user_id.isdigit():
-        await update.message.reply_text(
-            _t("admin_usage", command="/add_credits <user_id> <amount>")
-        )
+        await message.answer(usage_text)
         return
 
     try:
         amount = int(args[1])
     except ValueError:
-        await update.message.reply_text(
-            _t("admin_usage", command="/add_credits <user_id> <amount>")
-        )
+        await message.answer(usage_text)
         return
 
     if amount <= 0:
-        await update.message.reply_text(
-            _t("admin_usage", command="/add_credits <user_id> <amount>")
-        )
+        await message.answer(usage_text)
         return
 
     balance = await admin_add_credits(user_id, amount)
-    await update.message.reply_text(
-        _t("admin_credits_added", amount=amount, user_id=user_id, balance=balance)
-    )
+    await message.answer(_t("admin_credits_added", amount=amount, user_id=user_id, balance=balance))

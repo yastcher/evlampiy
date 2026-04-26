@@ -1,27 +1,25 @@
 """Telegram application setup: handler registration and bot initialization."""
 
 import logging
+import typing
 
-from telegram import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat, Update
-from telegram.ext import (
-    Application,
-    ApplicationBuilder,
-    ApplicationHandlerStop,
-    CallbackQueryHandler,
-    CommandHandler,
-    ContextTypes,
-    ConversationHandler,
-    MessageHandler,
-    PreCheckoutQueryHandler,
-    TypeHandler,
-    filters,
+from aiogram import BaseMiddleware, Bot, Dispatcher, F, Router
+from aiogram.client.default import DefaultBotProperties
+from aiogram.filters import Command
+from aiogram.types import (
+    BotCommand,
+    BotCommandScopeAllPrivateChats,
+    BotCommandScopeChat,
+    Message,
+    TelegramObject,
+    Update,
 )
 
 from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.selftest import run_selftest
 from src.telegram import account_handlers, admin, handlers, obsidian_handlers, settings_handlers
-from src.telegram.chat_params import is_bot_sender
+from src.telegram.handlers import GptCommandStates
 from src.telegram.payments import (
     balance_command,
     buy_command,
@@ -33,7 +31,7 @@ from src.telegram.voice import from_voice_to_text
 
 logger = logging.getLogger(__name__)
 
-COMMAND_HANDLERS = {
+COMMAND_HANDLERS: dict[str, typing.Callable[..., typing.Awaitable[typing.Any]]] = {
     "start": handlers.start,
     "settings": settings_handlers.settings_hub,
     "obsidian": obsidian_handlers.obsidian_hub,
@@ -64,57 +62,69 @@ COMMAND_HANDLERS = {
 
 BOT_COMMANDS = {
     "en": [
-        BotCommand("start", "Start work"),
-        BotCommand("settings", "⚙️ Settings"),
-        BotCommand("obsidian", "📝 Notes"),
-        BotCommand("account", "💰 Account"),
+        BotCommand(command="start", description="Start work"),
+        BotCommand(command="settings", description="⚙️ Settings"),
+        BotCommand(command="obsidian", description="📝 Notes"),
+        BotCommand(command="account", description="💰 Account"),
     ],
     "ru": [
-        BotCommand("start", "Начать работу"),
-        BotCommand("settings", "⚙️ Настройки"),
-        BotCommand("obsidian", "📝 Заметки"),
-        BotCommand("account", "💰 Аккаунт"),
+        BotCommand(command="start", description="Начать работу"),
+        BotCommand(command="settings", description="⚙️ Настройки"),
+        BotCommand(command="obsidian", description="📝 Заметки"),
+        BotCommand(command="account", description="💰 Аккаунт"),
     ],
     "es": [
-        BotCommand("start", "Iniciar"),
-        BotCommand("settings", "⚙️ Configuración"),
-        BotCommand("obsidian", "📝 Notas"),
-        BotCommand("account", "💰 Cuenta"),
+        BotCommand(command="start", description="Iniciar"),
+        BotCommand(command="settings", description="⚙️ Configuración"),
+        BotCommand(command="obsidian", description="📝 Notas"),
+        BotCommand(command="account", description="💰 Cuenta"),
     ],
     "de": [
-        BotCommand("start", "Starten"),
-        BotCommand("settings", "⚙️ Einstellungen"),
-        BotCommand("obsidian", "📝 Notizen"),
-        BotCommand("account", "💰 Konto"),
+        BotCommand(command="start", description="Starten"),
+        BotCommand(command="settings", description="⚙️ Einstellungen"),
+        BotCommand(command="obsidian", description="📝 Notizen"),
+        BotCommand(command="account", description="💰 Konto"),
     ],
 }
 
 ADMIN_COMMANDS = [
-    BotCommand("admin", "🔧 Admin panel"),
-    BotCommand("stats", "📊 System stats"),
-    BotCommand("add_vip", "⭐ Add VIP user"),
-    BotCommand("remove_vip", "⭐ Remove VIP user"),
-    BotCommand("add_tester", "🧪 Add tester"),
-    BotCommand("remove_tester", "🧪 Remove tester"),
-    BotCommand("add_credits", "💰 Add credits to user"),
-    BotCommand("block", "🚫 Block user"),
-    BotCommand("unblock", "✅ Unblock user"),
+    BotCommand(command="admin", description="🔧 Admin panel"),
+    BotCommand(command="stats", description="📊 System stats"),
+    BotCommand(command="add_vip", description="⭐ Add VIP user"),
+    BotCommand(command="remove_vip", description="⭐ Remove VIP user"),
+    BotCommand(command="add_tester", description="🧪 Add tester"),
+    BotCommand(command="remove_tester", description="🧪 Remove tester"),
+    BotCommand(command="add_credits", description="💰 Add credits to user"),
+    BotCommand(command="block", description="🚫 Block user"),
+    BotCommand(command="unblock", description="✅ Unblock user"),
 ]
 
 
-async def _reject_bot_senders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Block any update originating from another Telegram bot."""
-    if is_bot_sender(update) and update.effective_user is not None:
-        logger.debug(
-            "Rejected update from bot sender: user_id=%s",
-            update.effective_user.id,
-        )
-        raise ApplicationHandlerStop
+class BotSenderRejectMiddleware(BaseMiddleware):
+    """Outer middleware that drops updates originating from another Telegram bot.
+
+    Equivalent to PTB's `TypeHandler(group=-1)` + `ApplicationHandlerStop` pattern.
+    """
+
+    async def __call__(
+        self,
+        handler: typing.Callable[
+            [TelegramObject, dict[str, typing.Any]], typing.Awaitable[typing.Any]
+        ],
+        event: TelegramObject,
+        data: dict[str, typing.Any],
+    ) -> typing.Any:
+        if isinstance(event, Update):
+            inner = event.event
+            user = getattr(inner, "from_user", None)
+            if user is not None and getattr(user, "is_bot", False):
+                logger.debug("Rejected update from bot sender: user_id=%s", user.id)
+                return None
+        return await handler(event, data)
 
 
-async def post_init(application: Application) -> None:  # type: ignore[type-arg]
-    bot = application.bot
-
+async def setup_bot_commands(bot: Bot) -> None:
+    """Register localized bot command menus and admin scopes."""
     for lang_code, commands in BOT_COMMANDS.items():
         await bot.set_my_commands(
             commands,
@@ -129,47 +139,81 @@ async def post_init(application: Application) -> None:  # type: ignore[type-arg]
             scope=BotCommandScopeChat(chat_id=int(admin_id)),
         )
 
-    await run_selftest(bot)
 
-
-def build_application() -> Application:  # type: ignore[type-arg]
-    """Build and configure the Telegram Application with all handlers."""
-    application = (
-        ApplicationBuilder().token(settings.telegram_bot_token).post_init(post_init).build()
-    )
-
-    application.add_handler(TypeHandler(Update, _reject_bot_senders), group=-1)
+def build_router() -> Router:
+    """Build aiogram Router with all command and callback handlers."""
+    router = Router()
 
     for command_name, command_handler in COMMAND_HANDLERS.items():
-        application.add_handler(CommandHandler(command_name, command_handler))
+        router.message.register(command_handler, Command(command_name))
 
-    application.add_handler(
-        CallbackQueryHandler(settings_handlers.lang_buttons, pattern="^set_lang_")
+    router.callback_query.register(settings_handlers.lang_buttons, F.data.startswith("set_lang_"))
+    router.callback_query.register(
+        settings_handlers.provider_buttons, F.data.startswith("set_prov_")
     )
-    application.add_handler(
-        CallbackQueryHandler(settings_handlers.provider_buttons, pattern="^set_prov_")
+    # Conversation entry point for /enter_your_command via hub button
+    router.callback_query.register(
+        handlers.enter_your_command_from_hub, F.data == "hub_gpt_command"
     )
-    application.add_handler(CallbackQueryHandler(handlers.hub_callback_router, pattern="^hub_"))
-    application.add_handler(CallbackQueryHandler(admin.admin_callback_router, pattern="^adm_"))
-    application.add_handler(CallbackQueryHandler(buy_package_callback, pattern="^buy_pkg_"))
+    router.callback_query.register(handlers.hub_callback_router, F.data.startswith("hub_"))
+    router.callback_query.register(admin.admin_callback_router, F.data.startswith("adm_"))
+    router.callback_query.register(buy_package_callback, F.data.startswith("buy_pkg_"))
 
-    application.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, from_voice_to_text))
+    # Voice / audio messages
+    router.message.register(from_voice_to_text, F.voice | F.audio)
 
-    application.add_handler(PreCheckoutQueryHandler(handle_pre_checkout))
-    application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, handle_successful_payment))
+    # Payments
+    router.pre_checkout_query.register(handle_pre_checkout)
+    router.message.register(handle_successful_payment, F.successful_payment)
 
-    enter_command_handler = ConversationHandler(
-        entry_points=[  # ty: ignore[invalid-argument-type]
-            CommandHandler("enter_your_command", handlers.enter_your_command),
-            CallbackQueryHandler(handlers.enter_your_command_from_hub, pattern="^hub_gpt_command$"),
-        ],
-        states={  # ty: ignore[invalid-argument-type]
-            handlers.WAITING_FOR_COMMAND: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.handle_command_input)
-            ]
-        },
-        fallbacks=[],
+    # Conversation: text input while in WAITING_FOR_COMMAND state
+    router.message.register(
+        handlers.handle_command_input,
+        GptCommandStates.waiting,
+        F.text,
+        ~F.text.startswith("/"),
     )
-    application.add_handler(enter_command_handler)  # ty: ignore[invalid-argument-type]
 
-    return application
+    return router
+
+
+def build_dispatcher() -> Dispatcher:
+    """Build aiogram Dispatcher with middleware and routers."""
+    dp = Dispatcher()
+    dp.update.outer_middleware(BotSenderRejectMiddleware())
+    dp.include_router(build_router())
+    return dp
+
+
+def build_bot() -> Bot:
+    """Build aiogram Bot with default HTML parse mode for compatibility."""
+    return Bot(
+        token=settings.telegram_bot_token,
+        default=DefaultBotProperties(parse_mode=None),
+    )
+
+
+async def run_bot() -> None:
+    """Initialize bot, register commands, run self-test, and start polling."""
+    bot = build_bot()
+    dp = build_dispatcher()
+    try:
+        await setup_bot_commands(bot)
+        await run_selftest(bot)
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
+
+
+__all__ = [
+    "ADMIN_COMMANDS",
+    "BOT_COMMANDS",
+    "COMMAND_HANDLERS",
+    "BotSenderRejectMiddleware",
+    "Message",
+    "build_bot",
+    "build_dispatcher",
+    "build_router",
+    "run_bot",
+    "setup_bot_commands",
+]

@@ -1,10 +1,11 @@
 """Telegram voice message handler."""
 
+import io
 import logging
 import typing
 
-from telegram import Update
-from telegram.ext import ContextTypes
+from aiogram import Bot
+from aiogram.types import Audio, Message, Voice
 
 from src import const
 from src.alerts import check_and_send_alerts
@@ -61,18 +62,15 @@ def _select_provider(
     """
     groq_available = bool(settings.groq_api_key)
 
-    # Free tier: Wit only, no Groq fallback, ignore preference
     if tier == UserTier.FREE:
         return const.PROVIDER_WIT if wit_available else None
 
-    # Paid tiers with explicit preference
     if preferred_provider == const.PROVIDER_GROQ and groq_available:
         return const.PROVIDER_GROQ
 
     if preferred_provider == const.PROVIDER_WIT and wit_available:
         return const.PROVIDER_WIT
 
-    # Auto or fallback: Wit primary, Groq secondary
     if wit_available:
         return const.PROVIDER_WIT
     return const.PROVIDER_GROQ if groq_available else None
@@ -120,7 +118,7 @@ def _build_voice_response(text: str, gpt_command: str, message_id: int) -> dict[
 class _VoiceContext(typing.NamedTuple):
     """Validated context for voice message processing."""
 
-    voice: typing.Any  # telegram Voice or Audio object
+    voice: Voice | Audio
     user_id: UserId
     chat_id: ChatId
     language: Language
@@ -129,35 +127,32 @@ class _VoiceContext(typing.NamedTuple):
     message_id: int
 
 
-async def _validate_voice_input(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> _VoiceContext | None:
+async def _validate_voice_input(message: Message, bot: Bot) -> _VoiceContext | None:
     """Validate voice input and resolve user context. Sends error message on failure."""
-    message = update.message
-    voice = (message.voice or message.audio) if message else None
-    if not voice or not message:
+    voice: Voice | Audio | None = message.voice or message.audio
+    if not voice:
         return None
 
     logger.debug(
         "MSG: voice=%s, audio=%s, user=%s, forward_origin=%s",
         bool(message.voice),
         bool(message.audio),
-        update.effective_user.id if update.effective_user else None,
+        message.from_user.id if message.from_user else None,
         message.forward_origin,
     )
 
-    if not update.effective_user:
+    if not message.from_user:
         logger.debug("No effective_user, skipping (likely channel forward)")
         return None
 
-    user_id = str(update.effective_user.id)
-    chat_id = get_chat_id(update)
+    user_id = str(message.from_user.id)
+    chat_id = get_chat_id(message)
     language = await get_chat_language(chat_id)
 
     if await is_blocked_user(user_id):
         await send_response(
-            update,
-            context,
+            message,
+            bot,
             response=translates["blocked_message"].get(
                 language, translates["blocked_message"]["en"]
             ),
@@ -171,8 +166,8 @@ async def _validate_voice_input(
 
     if provider is None:
         await send_response(
-            update,
-            context,
+            message,
+            bot,
             response=translates["service_unavailable"].get(
                 language, translates["service_unavailable"]["en"]
             ),
@@ -183,8 +178,8 @@ async def _validate_voice_input(
         ok, _msg = await can_perform_operation(user_id, 1)
         if not ok:
             await send_response(
-                update,
-                context,
+                message,
+                bot,
                 response=translates["insufficient_credits"].get(
                     language, translates["insufficient_credits"]["en"]
                 ),
@@ -194,18 +189,23 @@ async def _validate_voice_input(
     return _VoiceContext(voice, user_id, chat_id, language, provider, tier, message.message_id)
 
 
-async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def _download_voice(bot: Bot, voice: Voice | Audio) -> bytes:
+    """Download voice/audio file content from Telegram."""
+    buf = io.BytesIO()
+    await bot.download(voice, destination=buf)
+    return buf.getvalue()
+
+
+async def from_voice_to_text(message: Message, bot: Bot) -> None:
     """Handle incoming voice/audio message from Telegram."""
-    ctx = await _validate_voice_input(update, context)
+    ctx = await _validate_voice_input(message, bot)
     if not ctx:
         return
 
-    # 1. Transcription
-    voice_file = await ctx.voice.get_file()
-    file_data = await voice_file.download_as_bytearray()
+    file_data = await _download_voice(bot, ctx.voice)
 
     text, duration, wit_requests = await transcribe_audio(
-        bytes(file_data), audio_format="ogg", language=ctx.language, provider=ctx.provider
+        file_data, audio_format="ogg", language=ctx.language, provider=ctx.provider
     )
 
     logger.debug("Voice message translation: %s", text)
@@ -213,7 +213,6 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.debug("Empty voice message.")
         return
 
-    # 2. Calculate cost and deduct
     token_cost = calculate_token_cost(duration)
     if not await has_unlimited_voice_access(ctx.user_id):
         result = await deduct_credits(ctx.user_id, token_cost)
@@ -223,24 +222,22 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         if result.overdraft:
             await send_response(
-                update,
-                context,
+                message,
+                bot,
                 response=translates["credits_exhausted_warning"].get(
                     ctx.language, translates["credits_exhausted_warning"]["en"]
                 ),
             )
 
-    # 3. Track provider usage
     if ctx.provider == const.PROVIDER_WIT:
         await increment_wit_usage(wit_requests, language=ctx.language)
-        await check_and_send_alerts(context.bot)
+        await check_and_send_alerts(bot)
     elif ctx.provider == const.PROVIDER_GROQ:
         await record_groq_usage(duration)
 
     await increment_transcription_stats()
     await increment_user_stats(ctx.user_id, audio_seconds=duration)
 
-    # 4. Cleanup: always for Obsidian, conditionally for reply
     settings_chat_id = (
         f"u_{ctx.user_id}" if ctx.chat_id.startswith("g_") and ctx.user_id else ctx.chat_id
     )
@@ -255,7 +252,6 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
             obsidian_text = await cleanup_transcript(raw_text, context=recent_context)
         await save_recent_transcription(settings_chat_id, obsidian_text)
 
-    # 5. Obsidian integration
     original_for_obsidian = raw_text if raw_text != obsidian_text else None
     await _handle_obsidian_save(
         ctx.chat_id,
@@ -265,7 +261,6 @@ async def from_voice_to_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         original_text=original_for_obsidian,
     )
 
-    # 6. Send response
     gpt_command = await get_gpt_command(ctx.chat_id)
     response_kwargs = _build_voice_response(text, gpt_command, ctx.message_id)
-    await send_response(update, context, **response_kwargs)
+    await send_response(message, bot, **response_kwargs)

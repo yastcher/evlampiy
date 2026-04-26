@@ -1,88 +1,129 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from telegram import Message
+from aiogram.types import CallbackQuery, Chat, Message, User
 
 import src.ai_client
 import src.whatsapp.client
 from src.whatsapp.app import create_fastapi_app
 
 
+def _build_user_mock(user_id: int = 12345, *, is_bot: bool = False) -> MagicMock:
+    user = MagicMock(spec=User)
+    user.id = user_id
+    user.is_bot = is_bot
+    user.first_name = "Test"
+    user.username = "testuser"
+    user.language_code = "en"
+    return user
+
+
+def _build_chat_mock(chat_id: int, chat_type: str) -> MagicMock:
+    chat = MagicMock(spec=Chat)
+    chat.id = chat_id
+    chat.type = chat_type
+    chat.title = None
+    return chat
+
+
+def _build_message_mock(*, chat_id: int, chat_type: str, user_id: int = 12345) -> MagicMock:
+    """Build an aiogram-shape Message mock with answer/reply/edit_text as AsyncMocks.
+
+    Also exposes PTB-compat aliases (`effective_user`, `effective_chat`, `message`)
+    so legacy tests can keep using familiar attribute paths during the migration.
+    """
+    msg = MagicMock()
+    msg.__class__ = Message  # so isinstance(msg, Message) passes in handler narrowing
+    msg.message_id = 1
+    msg.text = ""
+    msg.voice = None
+    msg.audio = None
+    msg.forward_origin = None
+    msg.successful_payment = None
+    msg.chat = _build_chat_mock(chat_id, chat_type)
+    msg.from_user = _build_user_mock(user_id)
+    msg.answer = AsyncMock()
+    msg.reply = AsyncMock()
+    msg.edit_text = AsyncMock()
+    # PTB-compat aliases (kept until tests are fully migrated)
+    msg.effective_user = msg.from_user
+    msg.effective_chat = msg.chat
+    msg.message = msg
+    msg.callback_query = None
+    msg.pre_checkout_query = None
+    return msg
+
+
 @pytest.fixture
 def mock_private_update():
-    """Mock Update object for private chat."""
-    update = MagicMock()
-    update.effective_chat.type = "private"
-    update.effective_chat.id = 12345
-    update.effective_user.id = 12345
-    update.message = MagicMock()
-    update.message.reply_text = AsyncMock()
-    update.message.text = ""
-    update.message.message_id = 1
-    update.message.voice = None
-    update.message.audio = None
-    update.message.forward_from = None
-    update.message.forward_from_chat = None
-    update.callback_query = None
-    return update
+    """Mock aiogram Message for private chat (name kept for backwards-compat)."""
+    return _build_message_mock(chat_id=12345, chat_type="private", user_id=12345)
 
 
 @pytest.fixture
 def mock_group_update():
-    """Mock Update object for group chat."""
-    update = MagicMock()
-    update.effective_chat.type = "group"
-    update.effective_chat.id = -100123456
-    update.effective_user.id = 12345
-    update.message = MagicMock()
-    update.message.reply_text = AsyncMock()
-    update.message.text = ""
-    update.message.message_id = 1
-    update.message.chat.id = -100123456
-    update.message.voice = None
-    update.message.audio = None
-    update.message.forward_from = None
-    update.message.forward_from_chat = None
-    update.callback_query = None
-    return update
+    """Mock aiogram Message for group chat (name kept for backwards-compat)."""
+    return _build_message_mock(chat_id=-100123456, chat_type="group", user_id=12345)
 
 
 @pytest.fixture
 def mock_context():
-    """Mock Context object."""
-    context = MagicMock()
-    context.bot = MagicMock()
-    context.bot.send_message = AsyncMock()
-    context.bot.get_chat_member = AsyncMock()
-    return context
+    """Mock aiogram Bot (replacement for PTB context.bot).
+
+    Self-referencing: `mock_context is mock_context.bot`. This lets handlers
+    that accept `bot: Bot` and tests that assert via `mock_context.bot.X` both
+    work — the same AsyncMock is exposed under both names.
+    """
+    bot = AsyncMock()
+    bot.bot = bot
+    return bot
+
+
+@pytest.fixture
+def mock_state():
+    """Mock aiogram FSMContext."""
+    state = AsyncMock()
+    state.set_state = AsyncMock()
+    state.clear = AsyncMock()
+    state.get_state = AsyncMock(return_value=None)
+    state.get_data = AsyncMock(return_value={})
+    state.update_data = AsyncMock()
+    return state
 
 
 @pytest.fixture
 def mock_callback_query():
-    """Mock callback query for inline button press."""
+    """Mock aiogram CallbackQuery."""
     query = MagicMock()
+    query.__class__ = CallbackQuery
+    query.id = "cbq_1"
+    query.data = ""
+    query.from_user = _build_user_mock(12345)
     query.answer = AsyncMock()
-    query.edit_message_text = AsyncMock()
-    # Use spec=Message so isinstance(query.message, Message) checks pass in handlers
-    query.message = MagicMock(spec=Message)
+    query.message = _build_message_mock(chat_id=12345, chat_type="private", user_id=12345)
+    # Convenience: the inner message gets a separate `edit_message_text` AsyncMock that
+    # legacy tests can assert against (PTB-style); aiogram callbacks do not have this
+    # method, but we keep the alias for now to limit churn.
+    query.edit_message_text = query.message.edit_text
     return query
 
 
 @pytest.fixture
 def mock_telegram_voice():
-    """Mock Telegram voice file with download capability."""
+    """Mock aiogram Voice."""
     voice = MagicMock()
-    voice.get_file = AsyncMock()
-    voice.get_file.return_value.download_as_bytearray = AsyncMock(return_value=b"fake_audio_data")
+    voice.file_id = "voice_file_id"
+    voice.file_unique_id = "voice_unique"
+    voice.duration = 5
     return voice
 
 
 @pytest.fixture
 def mock_telegram_audio():
-    """Mock Telegram audio file with download capability."""
+    """Mock aiogram Audio."""
     audio = MagicMock()
-    audio.get_file = AsyncMock()
-    audio.get_file.return_value.download_as_bytearray = AsyncMock(return_value=b"fake_audio_data")
+    audio.file_id = "audio_file_id"
+    audio.file_unique_id = "audio_unique"
     audio.duration = 30
     return audio
 
@@ -262,17 +303,19 @@ def whatsapp_voice_external_mocks(mock_httpx_download_response):
 
 @pytest.fixture
 def make_update_factory():
-    """Factory for creating Update mocks with configurable is_bot flag."""
+    """Factory for creating aiogram event mocks with configurable is_bot flag.
+
+    Returned object is shaped like a Message (has `from_user`) — used by tests
+    that exercise the bot-sender outer middleware.
+    """
 
     def _create(*, is_bot: bool | None) -> MagicMock:
-        update = MagicMock()
+        event = MagicMock()
         if is_bot is None:
-            update.effective_user = None
+            event.from_user = None
         else:
-            update.effective_user = MagicMock()
-            update.effective_user.is_bot = is_bot
-            update.effective_user.id = 999
-        return update
+            event.from_user = _build_user_mock(999, is_bot=is_bot)
+        return event
 
     return _create
 
@@ -289,7 +332,7 @@ def mock_selftest_cleanup():
 
 @pytest.fixture
 def mock_bot():
-    """Mock Telegram Bot for selftest."""
+    """Mock aiogram Bot for selftest."""
     bot = AsyncMock()
     bot.send_voice = AsyncMock()
     bot.send_message = AsyncMock()

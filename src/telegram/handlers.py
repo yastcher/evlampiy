@@ -3,8 +3,10 @@
 import logging
 from collections.abc import Sequence
 
-from telegram import Message, Update
-from telegram.ext import ContextTypes, ConversationHandler
+from aiogram import Bot
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, Message
 
 from src import const
 from src.ai_client import CATEGORIZATION_FALLBACK_CHAIN, GPT_FALLBACK_CHAIN
@@ -17,7 +19,7 @@ from src.telegram.account_handlers import (
     mystats_command,
     unlink_whatsapp,
 )
-from src.telegram.chat_params import get_chat_id, is_user_admin
+from src.telegram.chat_params import EventLike, get_chat_id, is_user_admin
 from src.telegram.obsidian_handlers import (
     categorize_all,
     connect_github,
@@ -38,52 +40,56 @@ from src.wit_tracking import get_all_wit_usage_this_month
 
 logger = logging.getLogger(__name__)
 
-WAITING_FOR_COMMAND = 1
+
+class GptCommandStates(StatesGroup):
+    """FSM states for the /enter_your_command flow."""
+
+    waiting = State()
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not await is_user_admin(update, context):
+# Backwards-compatible alias for tests / older code paths
+WAITING_FOR_COMMAND = GptCommandStates.waiting
+
+
+async def start(message: Message, bot: Bot) -> None:
+    if not await is_user_admin(message, bot):
         return
 
-    if update.message is None:
-        return
-    chat_id = get_chat_id(update)
+    chat_id = get_chat_id(message)
     chat_language = await get_chat_language(chat_id)
     gpt_command = await get_gpt_command(chat_id)
     text_to_send = translates["start_message"][chat_language].format(
         chat_language=chat_language,
         gpt_command=gpt_command,
     )
-    await update.message.reply_text(text_to_send, parse_mode="HTML")
+    await message.answer(text_to_send, parse_mode="HTML")
 
 
-async def enter_your_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
-    if not await is_user_admin(update, context):
-        return ConversationHandler.END
+async def enter_your_command(message: Message, bot: Bot, state: FSMContext) -> None:
+    if not await is_user_admin(message, bot):
+        return
 
-    if update.message is None:
-        return ConversationHandler.END
-    await update.message.reply_text("Please enter your command for GPT:")
-    return WAITING_FOR_COMMAND
+    await message.answer("Please enter your command for GPT:")
+    await state.set_state(GptCommandStates.waiting)
 
 
-async def handle_command_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    if update.message is None or update.message.text is None:
-        return ConversationHandler.END
-    chat_id = get_chat_id(update)
-    gpt_command = update.message.text
-    await set_gpt_command(chat_id, gpt_command)
-    await update.message.reply_text(f"Your command '{gpt_command}' has been saved.")
-    return ConversationHandler.END
+async def handle_command_input(message: Message, state: FSMContext) -> None:
+    text = message.text
+    if not text:
+        await state.clear()
+        return
+    chat_id = get_chat_id(message)
+    await set_gpt_command(chat_id, text)
+    await message.answer(f"Your command '{text}' has been saved.")
+    await state.clear()
 
 
-async def enter_your_command_from_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    query = update.callback_query
-    if query is None or not isinstance(query.message, Message):
-        return ConversationHandler.END
-    await query.answer()
-    await query.message.reply_text("Please enter your command for GPT:")
-    return WAITING_FOR_COMMAND
+async def enter_your_command_from_hub(callback: CallbackQuery, state: FSMContext) -> None:
+    if not isinstance(callback.message, Message):
+        return
+    await callback.answer()
+    await callback.message.answer("Please enter your command for GPT:")
+    await state.set_state(GptCommandStates.waiting)
 
 
 # ---------------------------------------------------------------------------
@@ -113,7 +119,6 @@ async def build_stats_text() -> str:
             return "Warning"
         return "OK"
 
-    # LLM provider key status
     keys: dict[str, bool] = {
         const.PROVIDER_GROQ: bool(settings.groq_api_key),
         const.PROVIDER_GEMINI: bool(settings.gemini_api_key),
@@ -134,7 +139,6 @@ async def build_stats_text() -> str:
     categ_chain = _chain_str(categ_primary, CATEGORIZATION_FALLBACK_CHAIN)
     gpt_chain = _chain_str(gpt_primary, GPT_FALLBACK_CHAIN)
 
-    # Providers with keys that are not part of any active chain
     all_chain_providers = set(CATEGORIZATION_FALLBACK_CHAIN) | set(GPT_FALLBACK_CHAIN)
     unused_with_key = [p for p, has_key in keys.items() if has_key and p not in all_chain_providers]
     unused_line = f"\n• Not in chain: {', '.join(unused_with_key)}" if unused_with_key else ""
@@ -174,13 +178,13 @@ async def build_stats_text() -> str:
     )
 
 
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user is None or update.message is None:
+async def stats_command(message: Message) -> None:
+    if message.from_user is None:
         return
-    if not is_admin_user(str(update.effective_user.id)):
+    if not is_admin_user(str(message.from_user.id)):
         return
     text = await build_stats_text()
-    await update.message.reply_text(text, parse_mode="HTML")
+    await message.answer(text, parse_mode="HTML")
 
 
 # ---------------------------------------------------------------------------
@@ -205,13 +209,14 @@ _HUB_ACTIONS = {
 }
 
 
-async def hub_callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    if query is None or query.data is None:
+async def hub_callback_router(callback: CallbackQuery, bot: Bot) -> None:
+    if callback.data is None:
         return
-    await query.answer()
+    await callback.answer()
 
-    action = query.data.replace("hub_", "")
+    action = callback.data.replace("hub_", "")
     handler = _HUB_ACTIONS.get(action)
     if handler:
-        await handler(update, context)
+        # All hub-action handlers accept (event, bot) where event is Message or CallbackQuery
+        event: EventLike = callback
+        await handler(event, bot)
