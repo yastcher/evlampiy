@@ -1,9 +1,17 @@
 services:
 
   mongodb:
-    image: mongo:latest
+    # Pinned to prevent regression: mongo 8.0.5..8.0.20 and 8.2.x crash with
+    # SIGSEGV ~30s after startup on hosts with kernel 6.x + glibc 2.39+.
+    # Verified working: 8.0.3, 8.0.4. Re-test before bumping past 8.0.4.
+    image: mongo:8.0.3
     volumes:
       - ../mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   dev:
     build:
@@ -19,4 +27,5 @@ services:
       - ~/.claude:/root/.claude
       - ~/.claude.json:/root/.claude.json
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy

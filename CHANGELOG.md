@@ -11,6 +11,10 @@
   initialization: `init_whatsapp_client(server)` now creates the `WhatsApp` client with `server=app`
   in the constructor (the documented pywa pattern), so webhook routes are registered correctly.
   Replaced `global _wa_client` with a `_WhatsAppClientHolder` class per project convention
+- MongoDB image pinned to `mongo:8.0.3` in both `docker-compose.yml` and
+  `.devcontainer/docker-compose.dev.yml` to prevent regression: versions 8.0.5..8.0.20 and 8.2.x crash
+  with SIGSEGV ~30s after startup on hosts with kernel 6.x + glibc 2.39+. Verified working: 8.0.3,
+  8.0.4. Re-test before bumping past 8.0.4.
 
 ### Changed
 
