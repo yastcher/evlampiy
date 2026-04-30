@@ -28,12 +28,14 @@ def create_fastapi_app() -> FastAPI:
     return app
 
 
-def run_fastapi_server() -> None:
-    """Run FastAPI server in a separate thread."""
+async def serve_fastapi() -> None:
+    """Serve FastAPI inside the current asyncio loop."""
     app = create_fastapi_app()
-    uvicorn.run(
+    config = uvicorn.Config(
         app,
         host=settings.fastapi_host,
         port=settings.fastapi_port,
         log_level="warning",
     )
+    server = uvicorn.Server(config)
+    await server.serve()

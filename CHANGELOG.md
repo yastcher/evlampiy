@@ -47,6 +47,11 @@
     - Removed three `# ty: ignore[invalid-argument-type]` PTB-ConversationHandler suppressions.
     - Net effect: `uv run ty check src` shows 6 → 3 ignores (only Beanie/Motor + 2 pywa stubs remain).
 - aiohttp constraint pinned to `>=3.13.4` to address CVE-2026-3451x cluster (transitive via aiogram).
+- Unified asyncio loop: replaced `threading.Thread(target=run_fastapi_server)` in `src/main.py` with
+  `asyncio.TaskGroup` running `run_bot()` and `serve_fastapi()` (uvicorn `Server.serve()`) in the same
+  loop. Eliminates threading/asyncio mix — graceful shutdown, exception propagation, and shared
+  state without locks. `src/whatsapp/app.py::run_fastapi_server` (sync) replaced by
+  `serve_fastapi` (async).
 
 ## [0.8.13] — 2026-04-13
 

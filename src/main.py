@@ -1,11 +1,10 @@
 import asyncio
 import logging
-import threading
 
 from src.config import settings
 from src.mongo import init_beanie_models
 from src.telegram.setup import run_bot
-from src.whatsapp.app import run_fastapi_server
+from src.whatsapp.app import serve_fastapi
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -30,12 +29,11 @@ logger = logging.getLogger(__name__)
 async def _async_main() -> None:
     await init_beanie_models()
 
-    if settings.whatsapp_token and settings.whatsapp_phone_id:
-        api_thread = threading.Thread(target=run_fastapi_server, daemon=True)
-        api_thread.start()
-        logger.info("FastAPI server started for WhatsApp webhook")
-
-    await run_bot()
+    async with asyncio.TaskGroup() as task_group:
+        task_group.create_task(run_bot())
+        if settings.whatsapp_token and settings.whatsapp_phone_id:
+            task_group.create_task(serve_fastapi())
+            logger.info("FastAPI server enabled for WhatsApp webhook")
 
 
 def main() -> None:
