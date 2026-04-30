@@ -19,7 +19,6 @@ coverage.xml
 cover/
 .agents
 *.session
-.claude/tasks
 .claude/settings.local.json
 data
 mongo_data

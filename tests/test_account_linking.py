@@ -1,7 +1,7 @@
 """Tests for account linking between Telegram and WhatsApp."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from src.account_linking import (
     LINK_CODE_LENGTH,
@@ -187,7 +187,7 @@ class TestWhatsAppLinkHandler:
         code = await generate_link_code(user_id)
 
         mock_wa = MagicMock()
-        mock_wa.send_message = MagicMock()
+        mock_wa.send_message = AsyncMock()
 
         mock_message = MagicMock()
         mock_message.from_user.wa_id = phone
@@ -205,7 +205,7 @@ class TestWhatsAppLinkHandler:
 
     async def test_rejects_invalid_code(self):
         mock_wa = MagicMock()
-        mock_wa.send_message = MagicMock()
+        mock_wa.send_message = AsyncMock()
 
         mock_message = MagicMock()
         mock_message.from_user.wa_id = "79001234567"

@@ -182,3 +182,5 @@ Do not finish until lint, tests, security review, and tech lead review pass.
 ## Gotchas
 
 - Comments and logs in English
+- Когда нужно уменьшить техдолг - ищи в первую очередь строки "# todo =Y" и какой то текст с пояснением дальше. Затем
+  различные исключения правил ruff или ty. Затем улучшение структуры тестов.

@@ -262,10 +262,10 @@ def mock_whatsapp_message():
 
 @pytest.fixture
 def mock_whatsapp_client():
-    """Mock WhatsApp client."""
+    """Mock WhatsApp client (pywa_async — methods are awaitables)."""
     wa = MagicMock()
-    wa.get_media_url.return_value = "https://example.com/audio.ogg"
-    wa.send_message = MagicMock()
+    wa.get_media_url = AsyncMock(return_value="https://example.com/audio.ogg")
+    wa.send_message = AsyncMock()
     return wa
 
 

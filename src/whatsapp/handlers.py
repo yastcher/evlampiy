@@ -1,11 +1,10 @@
 """WhatsApp message handlers."""
 
-import asyncio
 import logging
 
 import httpx
-from pywa import WhatsApp
 from pywa.types import Message
+from pywa_async import WhatsApp
 
 from src import const
 from src.account_linking import confirm_link, get_linked_telegram_id
@@ -49,21 +48,19 @@ async def handle_link_command(wa: WhatsApp, message: Message) -> None:
     code = parts[1] if len(parts) > 1 else ""
 
     if not code:
-        await asyncio.to_thread(wa.send_message, to=phone, text="Usage: link <code>")
+        await wa.send_message(to=phone, text="Usage: link <code>")
         return
 
     result = await confirm_link(code, phone)
     if result == "success":
-        await asyncio.to_thread(wa.send_message, to=phone, text="Account linked successfully!")
+        await wa.send_message(to=phone, text="Account linked successfully!")
     elif result == "rate_limited":
-        await asyncio.to_thread(
-            wa.send_message,
+        await wa.send_message(
             to=phone,
             text="Too many attempts. Please wait 5 minutes and try again.",
         )
     else:
-        await asyncio.to_thread(
-            wa.send_message,
+        await wa.send_message(
             to=phone,
             text="Invalid or expired code. Try /link_whatsapp in Telegram.",
         )
@@ -83,7 +80,7 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
 
     # Download voice file from WhatsApp
     try:
-        media_url = wa.get_media_url(audio.id)
+        media_url = await wa.get_media_url(audio.id)
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 media_url,  # ty: ignore[invalid-argument-type]
@@ -136,5 +133,5 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
             )
 
     # Send transcription back
-    await asyncio.to_thread(wa.send_message, to=phone_number, text=text)
+    await wa.send_message(to=phone_number, text=text)
     logger.info("Sent transcription to WhatsApp user %s", phone_number)

@@ -1,7 +1,7 @@
 """WhatsApp client initialization."""
 
 from fastapi import FastAPI
-from pywa import WhatsApp
+from pywa_async import WhatsApp
 
 from src.config import settings
 

@@ -4,7 +4,7 @@ version = "0.9.0"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = [{ name = "Yast", email = "yastcher@gmail.com" }]
-requires-python = "~=3.14.0"
+requires-python = "~=3.14"
 dependencies = [
     "httpx[http2]>=0.28.1",
     "python-dotenv~=1.2.2",
@@ -23,7 +23,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff~=0.15.0",
+    "ruff>=0.15.0",
     "ty>=0.0.32",
     "pytest>=9.0.2",
     "pytest-asyncio~=1.3",

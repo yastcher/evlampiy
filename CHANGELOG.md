@@ -51,7 +51,11 @@
   `asyncio.TaskGroup` running `run_bot()` and `serve_fastapi()` (uvicorn `Server.serve()`) in the same
   loop. Eliminates threading/asyncio mix — graceful shutdown, exception propagation, and shared
   state without locks. `src/whatsapp/app.py::run_fastapi_server` (sync) replaced by
-  `serve_fastapi` (async).
+  `serve_fastapi` (async). Side-effect of moving pywa into the main loop: switched
+  `from pywa import WhatsApp` → `from pywa_async import WhatsApp` in `src/whatsapp/{client,handlers}.py`
+  and converted `asyncio.to_thread(wa.send_message, ...)` / `wa.get_media_url(...)` to direct
+  `await wa.send_message(...)` / `await wa.get_media_url(...)`. Without this the async pywa callbacks
+  raise `ValueError: Async callbacks ... are not supported in the sync version of pywa`.
 
 ## [0.8.13] — 2026-04-13
 
