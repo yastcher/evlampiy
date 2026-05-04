@@ -143,6 +143,10 @@ async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> 
         "generationConfig": {
             "maxOutputTokens": max_tokens,
             "temperature": temperature,
+            # Disable thinking for current tasks (cleanup/categorize/tool-calling are
+            # formatting jobs, not reasoning). Without this, gemini-2.5-* spends most of
+            # maxOutputTokens on hidden thinking tokens and truncates the visible answer.
+            "thinkingConfig": {"thinkingBudget": 0},
         },
     }
     url = f"{const.GEMINI_API_BASE}/v1beta/models/{settings.gemini_model}:generateContent"
@@ -156,6 +160,9 @@ async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> 
         if not candidates:
             logger.error("Gemini returned empty candidates")
             return None
+        finish_reason = candidates[0].get("finishReason")
+        if finish_reason and finish_reason != "STOP":
+            logger.warning("Gemini finishReason=%s (response may be truncated)", finish_reason)
         return str(candidates[0]["content"]["parts"][0]["text"])
 
     if response.status_code == http.HTTPStatus.TOO_MANY_REQUESTS:

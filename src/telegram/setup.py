@@ -1,5 +1,6 @@
 """Telegram application setup: handler registration and bot initialization."""
 
+import asyncio
 import logging
 import typing
 
@@ -197,11 +198,15 @@ async def run_bot() -> None:
     """Initialize bot, register commands, run self-test, and start polling."""
     bot = build_bot()
     dp = build_dispatcher()
+    selftest_task: asyncio.Task[None] | None = None
     try:
         await setup_bot_commands(bot)
-        await run_selftest(bot)
+        # Selftest runs as a background task so a hanging provider never blocks polling.
+        selftest_task = asyncio.create_task(run_selftest(bot), name="selftest")
         await dp.start_polling(bot)
     finally:
+        if selftest_task is not None and not selftest_task.done():
+            selftest_task.cancel()
         await bot.session.close()
 
 

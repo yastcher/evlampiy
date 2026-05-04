@@ -1,5 +1,6 @@
 """Startup self-test: verify transcription pipeline and notify admins."""
 
+import asyncio
 import importlib.metadata
 import logging
 import pathlib
@@ -12,6 +13,7 @@ from src import const
 from src.ai_client import cleanup_text
 from src.config import LANGUAGES, RUSSIAN, settings
 from src.localization import translates
+from src.prompts import CLEANUP_PROMPT_BASE
 from src.transcription.service import get_audio_duration_seconds, transcribe_audio
 
 logger = logging.getLogger(__name__)
@@ -92,11 +94,14 @@ async def _test_provider(
 
 async def _test_cleanup() -> tuple[str, str | None]:
     """Test LLM cleanup pipeline, return (cleaned_text, error_or_none)."""
+    prompt = f"{CLEANUP_PROMPT_BASE}\nTranscription:\n{_CLEANUP_SAMPLE}"
     try:
-        result = await cleanup_text(_CLEANUP_SAMPLE, max_tokens=200)
+        result = await asyncio.wait_for(cleanup_text(prompt, max_tokens=200), timeout=60.0)
         if not result or not result.strip():
             return "", "LLM returned empty response"
         return f"\u00ab{result.strip()}\u00bb", None
+    except TimeoutError:
+        return "", "timeout (>60s)"
     except Exception as exc:
         return "", f"error: {exc}"
 

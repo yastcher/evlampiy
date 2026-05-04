@@ -15,6 +15,11 @@
   `.devcontainer/docker-compose.dev.yml` to prevent regression: versions 8.0.5..8.0.20 and 8.2.x crash
   with SIGSEGV ~30s after startup on hosts with kernel 6.x + glibc 2.39+. Verified working: 8.0.3,
   8.0.4. Re-test before bumping past 8.0.4.
+- Selftest LLM-cleanup check sent the raw transcription text directly to `cleanup_text` (low-level
+  LLM call) without the cleanup system prompt. The model treated the input as a chat message and
+  replied conversationally ("Отлично! Поздравляю..."), making the check a false-positive. Fixed by
+  prepending `CLEANUP_PROMPT_BASE` (the same prompt used by `cleanup_transcript` in production) to
+  the sample before the LLM call.
 
 ### Changed
 
