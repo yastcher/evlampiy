@@ -18,7 +18,7 @@ from src.mongo import (
     remove_user_role,
     set_bot_config,
 )
-from src.telegram.handlers import build_stats_text
+from src.services.stats_service import build_stats_text
 
 logger = logging.getLogger(__name__)
 

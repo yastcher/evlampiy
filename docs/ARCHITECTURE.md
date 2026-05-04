@@ -27,6 +27,8 @@ src/
 │   ├── service.py          - Provider-agnostic transcription API
 │   ├── wit_client.py       - Wit.ai integration (chunked audio)
 │   └── groq_client.py      - Groq Whisper integration
+├── services/               # Use-case layer (framework-agnostic, no aiogram/pywa)
+│   └── stats_service.py    - Admin /stats text builder
 ├── ai_client.py            - Multi-provider LLM client with token bucket rate limiter
 ├── ai_chat.py              - Messages-based chat completion with tool calling support
 ├── tools.py                - Tool definitions and implementations for GPT tool calling

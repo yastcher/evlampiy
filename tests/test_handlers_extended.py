@@ -1,5 +1,5 @@
 """Extended handler tests: coverage for connect_github OAuth flow, toggle_cleanup,
-setup_obsidian_git, provider menu, enter_command_from_hub, build_stats_text,
+setup_obsidian_git, provider menu, enter_command_from_hub,
 lang_buttons in group chat."""
 
 import asyncio
@@ -22,7 +22,6 @@ from src.mongo import (
 )
 from src.telegram.handlers import (
     WAITING_FOR_COMMAND,
-    build_stats_text,
     enter_your_command_from_hub,
     hub_callback_router,
 )
@@ -375,78 +374,3 @@ class TestHubCallbackUnknownAction:
         mock_callback_query.answer.assert_called_once()
         # No handler called — no further messages
         mock_callback_query.edit_message_text.assert_not_called()
-
-
-class TestBuildStatsWitStatus:
-    """Test build_stats_text with Wit.ai at different usage levels."""
-
-    async def test_wit_warning_threshold(self):
-        """Wit.ai at 80% shows Warning status."""
-        with (
-            patch("src.telegram.handlers.get_monthly_stats", AsyncMock(return_value=None)),
-            patch(
-                "src.telegram.handlers.get_all_wit_usage_this_month",
-                AsyncMock(return_value={"ru": 400}),
-            ),
-            patch("src.telegram.handlers.settings.wit_free_monthly_limit", 500),
-            patch("src.telegram.handlers.settings.groq_api_key", ""),
-            patch("src.telegram.handlers.settings.gemini_api_key", ""),
-            patch("src.telegram.handlers.settings.anthropic_bot_api_key", ""),
-            patch("src.telegram.handlers.settings.openrouter_api_key", ""),
-            patch("src.telegram.handlers.settings.gpt_token", ""),
-            patch("src.telegram.handlers.settings.groq_audio_daily_limit", 7200),
-            patch("src.telegram.handlers.settings.categorization_provider", "deepseek"),
-            patch("src.telegram.handlers.settings.gpt_provider", "deepseek"),
-            patch("src.telegram.handlers.get_bot_config", AsyncMock(return_value="deepseek")),
-        ):
-            text = await build_stats_text()
-
-        assert "Warning" in text
-
-    async def test_wit_critical_threshold(self):
-        """Wit.ai at 95% shows CRITICAL status."""
-        with (
-            patch("src.telegram.handlers.get_monthly_stats", AsyncMock(return_value=None)),
-            patch(
-                "src.telegram.handlers.get_all_wit_usage_this_month",
-                AsyncMock(return_value={"ru": 475}),
-            ),
-            patch("src.telegram.handlers.settings.wit_free_monthly_limit", 500),
-            patch("src.telegram.handlers.settings.groq_api_key", ""),
-            patch("src.telegram.handlers.settings.gemini_api_key", ""),
-            patch("src.telegram.handlers.settings.anthropic_bot_api_key", ""),
-            patch("src.telegram.handlers.settings.openrouter_api_key", ""),
-            patch("src.telegram.handlers.settings.gpt_token", ""),
-            patch("src.telegram.handlers.settings.groq_audio_daily_limit", 7200),
-            patch("src.telegram.handlers.settings.categorization_provider", "deepseek"),
-            patch("src.telegram.handlers.settings.gpt_provider", "deepseek"),
-            patch("src.telegram.handlers.get_bot_config", AsyncMock(return_value="deepseek")),
-        ):
-            text = await build_stats_text()
-
-        assert "CRITICAL" in text
-
-    async def test_wit_ok_status(self):
-        """Wit.ai below 80% shows OK status."""
-        with (
-            patch("src.telegram.handlers.get_monthly_stats", AsyncMock(return_value=None)),
-            patch(
-                "src.telegram.handlers.get_all_wit_usage_this_month",
-                AsyncMock(return_value={"ru": 100}),
-            ),
-            patch("src.telegram.handlers.settings.wit_free_monthly_limit", 500),
-            patch("src.telegram.handlers.settings.groq_api_key", ""),
-            patch("src.telegram.handlers.settings.gemini_api_key", ""),
-            patch("src.telegram.handlers.settings.anthropic_bot_api_key", ""),
-            patch("src.telegram.handlers.settings.openrouter_api_key", ""),
-            patch("src.telegram.handlers.settings.gpt_token", ""),
-            patch("src.telegram.handlers.settings.groq_audio_daily_limit", 7200),
-            patch("src.telegram.handlers.settings.categorization_provider", "deepseek"),
-            patch("src.telegram.handlers.settings.gpt_provider", "deepseek"),
-            patch("src.telegram.handlers.get_bot_config", AsyncMock(return_value="deepseek")),
-        ):
-            text = await build_stats_text()
-
-        assert "OK" in text
-        assert "Warning" not in text
-        assert "CRITICAL" not in text

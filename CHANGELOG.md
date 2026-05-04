@@ -52,6 +52,11 @@
     - Removed three `# ty: ignore[invalid-argument-type]` PTB-ConversationHandler suppressions.
     - Net effect: `uv run ty check src` shows 6 → 3 ignores (only Beanie/Motor + 2 pywa stubs remain).
 - aiohttp constraint pinned to `>=3.13.4` to address CVE-2026-3451x cluster (transitive via aiogram).
+- Architecture isolation: extracted `build_stats_text` from `src/telegram/handlers.py` to a new
+  `src/services/stats_service.py` (framework-agnostic). Breaks the cyclic-ish dependency
+  `src/telegram/admin.py → src/telegram/handlers.py` — admin now imports the service directly.
+  Tests `TestBuildStatsWitStatus*` moved to `tests/services/test_stats_service.py`. First step of
+  `.claude/plans/architecture-isolation.md`.
 - Unified asyncio loop: replaced `threading.Thread(target=run_fastapi_server)` in `src/main.py` with
   `asyncio.TaskGroup` running `run_bot()` and `serve_fastapi()` (uvicorn `Server.serve()`) in the same
   loop. Eliminates threading/asyncio mix — graceful shutdown, exception propagation, and shared
