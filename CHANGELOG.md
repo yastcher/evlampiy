@@ -57,6 +57,15 @@
   `src/telegram/admin.py → src/telegram/handlers.py` — admin now imports the service directly.
   Tests `TestBuildStatsWitStatus*` moved to `tests/services/test_stats_service.py`. First step of
   `.claude/plans/architecture-isolation.md`.
+- Architecture isolation: added `src/services/voice_pipeline.py::process_voice` —
+  framework-agnostic transcription → cleanup → Obsidian → categorize pipeline. Both
+  `src/telegram/voice.py::from_voice_to_text` and
+  `src/whatsapp/handlers.py::handle_voice_message` became thin adapters that
+  download audio + call the service; ~50 lines of duplicated cleanup/Obsidian/categorize logic
+  consolidated. Telegram-specific concerns (credits, alerts, gpt-command formatting,
+  provider selection) stay in the adapter. Service-level smoke tests added in
+  `tests/services/test_voice_pipeline.py`. Existing voice tests updated via fixture rewiring
+  (`voice_external_mocks` / `whatsapp_voice_external_mocks` patches now target the service).
 - Unified asyncio loop: replaced `threading.Thread(target=run_fastapi_server)` in `src/main.py` with
   `asyncio.TaskGroup` running `run_bot()` and `serve_fastapi()` (uvicorn `Server.serve()`) in the same
   loop. Eliminates threading/asyncio mix — graceful shutdown, exception propagation, and shared

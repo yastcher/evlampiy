@@ -171,7 +171,7 @@ class TestHandleVoiceMessage:
 
         with (
             patch("src.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99999")),
-            patch("src.whatsapp.handlers.get_auto_cleanup", AsyncMock(return_value=True)),
+            patch("src.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)),
             patch("src.whatsapp.handlers.get_user_tier", AsyncMock(return_value=UserTier.PAID)),
         ):
             await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
@@ -193,7 +193,7 @@ class TestHandleVoiceMessage:
 
         with (
             patch("src.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99998")),
-            patch("src.whatsapp.handlers.get_auto_cleanup", AsyncMock(return_value=True)),
+            patch("src.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)),
             patch("src.whatsapp.handlers.get_user_tier", AsyncMock(return_value=UserTier.FREE)),
         ):
             await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)

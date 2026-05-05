@@ -8,21 +8,13 @@ from pywa_async import WhatsApp
 
 from src import const
 from src.account_linking import confirm_link, get_linked_telegram_id
-from src.categorization import categorize_note
 from src.config import settings
 from src.credits import get_user_tier
 from src.dto import UserTier
 from src.mongo import (
-    get_auto_categorize,
-    get_auto_cleanup,
     get_chat_language,
-    get_github_settings,
-    get_recent_transcriptions,
-    save_recent_transcription,
 )
-from src.obsidian import save_transcription_to_obsidian
-from src.transcript_cleanup import cleanup_transcript
-from src.transcription.service import transcribe_audio
+from src.services.voice_pipeline import process_voice
 from src.whatsapp.client import WHATSAPP_CHAT_PREFIX
 
 logger = logging.getLogger(__name__)
@@ -67,18 +59,16 @@ async def handle_link_command(wa: WhatsApp, message: Message) -> None:
 
 
 async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
-    """Handle voice message from WhatsApp."""
+    """Handle voice message from WhatsApp — thin adapter over `voice_pipeline`."""
     phone_number = message.from_user.wa_id
     chat_id = f"{WHATSAPP_CHAT_PREFIX}{phone_number}"
 
-    # Get audio from voice or audio message
     audio = message.voice or message.audio
     if not audio:
         return
 
     language = await get_chat_language(chat_id)
 
-    # Download voice file from WhatsApp
     try:
         media_url = await wa.get_media_url(audio.id)
         async with httpx.AsyncClient() as client:
@@ -92,46 +82,20 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         logger.error("Failed to download WhatsApp audio: %s", e)
         return
 
-    # WhatsApp voice messages are opus in ogg container
-    text, _, _ = await transcribe_audio(audio_bytes, audio_format="ogg", language=language)
+    telegram_user_id = await get_linked_telegram_id(phone_number)
+    tier = await get_user_tier(telegram_user_id) if telegram_user_id else UserTier.FREE
 
-    if not text:
+    result = await process_voice(
+        audio_bytes=audio_bytes,
+        audio_format="ogg",
+        source=const.SOURCE_WHATSAPP,
+        chat_id=chat_id,
+        language=language,
+        tier=tier,
+    )
+    if result is None:
         logger.debug("Empty WhatsApp voice message from %s", phone_number)
         return
 
-    # Cleanup: always for Obsidian, conditionally for reply (only for linked paid users)
-    telegram_user_id = await get_linked_telegram_id(phone_number)
-    raw_text = text
-    obsidian_text = text
-    if telegram_user_id:
-        tier = await get_user_tier(telegram_user_id)
-        if tier != UserTier.FREE:
-            recent_context = await get_recent_transcriptions(chat_id)
-            if await get_auto_cleanup(chat_id):
-                text = await cleanup_transcript(raw_text, context=recent_context)
-                obsidian_text = text  # no double call
-            else:
-                # Clean silently for Obsidian only
-                obsidian_text = await cleanup_transcript(raw_text, context=recent_context)
-            await save_recent_transcription(chat_id, obsidian_text)
-
-    original_for_obsidian = raw_text if raw_text != obsidian_text else None
-    saved, filename = await save_transcription_to_obsidian(
-        chat_id,
-        obsidian_text,
-        const.SOURCE_WHATSAPP,
-        language,
-        original_text=original_for_obsidian,
-    )
-    if saved and filename and await get_auto_categorize(chat_id):
-        repo_info = await get_github_settings(chat_id)
-        if repo_info:
-            await categorize_note(
-                repo_info=repo_info,
-                filename=filename,
-                content=obsidian_text,
-            )
-
-    # Send transcription back
-    await wa.send_message(to=phone_number, text=text)
+    await wa.send_message(to=phone_number, text=result.text)
     logger.info("Sent transcription to WhatsApp user %s", phone_number)

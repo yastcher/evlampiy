@@ -218,24 +218,29 @@ def capture_ai_sleep():
 
 @pytest.fixture
 def voice_external_mocks():
-    """Mock external boundaries for voice handler (Trophy: real DB, mock I/O)."""
+    """Mock external boundaries for voice handler (Trophy: real DB, mock I/O).
+
+    transcribe_audio / save_transcription_to_obsidian / cleanup_transcript / categorize_note
+    live in `src.services.voice_pipeline` after PR2 of architecture-isolation.
+    send_response / check_and_send_alerts stay in the telegram adapter.
+    """
     with (
         patch(
-            "src.telegram.voice.transcribe_audio",
+            "src.services.voice_pipeline.transcribe_audio",
             AsyncMock(return_value=("Hello world", 5, 1)),
         ) as mock_transcribe,
         patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
         patch(
-            "src.telegram.voice.save_transcription_to_obsidian",
+            "src.services.voice_pipeline.save_transcription_to_obsidian",
             AsyncMock(return_value=(False, None)),
         ) as mock_obsidian,
         patch("src.telegram.voice.check_and_send_alerts", AsyncMock()) as mock_alerts,
         patch(
-            "src.telegram.voice.cleanup_transcript",
+            "src.services.voice_pipeline.cleanup_transcript",
             AsyncMock(side_effect=lambda t, **kwargs: t),
         ) as mock_cleanup,
         patch(
-            "src.telegram.voice.categorize_note",
+            "src.services.voice_pipeline.categorize_note",
             AsyncMock(return_value="work"),
         ) as mock_categorize,
     ):
@@ -278,16 +283,16 @@ def whatsapp_voice_external_mocks(mock_httpx_download_response):
     with (
         patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
         patch(
-            "src.whatsapp.handlers.transcribe_audio",
+            "src.services.voice_pipeline.transcribe_audio",
             AsyncMock(return_value=("Hello world", 5, 1)),
         ) as mock_transcribe,
         patch(
-            "src.whatsapp.handlers.save_transcription_to_obsidian",
+            "src.services.voice_pipeline.save_transcription_to_obsidian",
             AsyncMock(return_value=(True, "income/note.md")),
         ) as mock_save,
-        patch("src.whatsapp.handlers.categorize_note", AsyncMock()) as mock_categorize,
+        patch("src.services.voice_pipeline.categorize_note", AsyncMock()) as mock_categorize,
         patch(
-            "src.whatsapp.handlers.cleanup_transcript",
+            "src.services.voice_pipeline.cleanup_transcript",
             AsyncMock(side_effect=lambda t, **kwargs: t),
         ) as mock_cleanup,
     ):

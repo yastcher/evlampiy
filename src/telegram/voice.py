@@ -1,4 +1,4 @@
-"""Telegram voice message handler."""
+"""Telegram voice message handler — thin adapter over `src.services.voice_pipeline`."""
 
 import io
 import logging
@@ -9,7 +9,6 @@ from aiogram.types import Audio, Message, Voice
 
 from src import const
 from src.alerts import check_and_send_alerts
-from src.categorization import categorize_note
 from src.config import settings
 from src.credits import (
     calculate_token_cost,
@@ -25,21 +24,10 @@ from src.credits import (
 )
 from src.dto import UserTier
 from src.localization import translates
-from src.mongo import (
-    get_auto_categorize,
-    get_auto_cleanup,
-    get_chat_language,
-    get_github_settings,
-    get_gpt_command,
-    get_preferred_provider,
-    get_recent_transcriptions,
-    save_recent_transcription,
-)
-from src.obsidian import save_transcription_to_obsidian
+from src.mongo import get_chat_language, get_gpt_command, get_preferred_provider
+from src.services.voice_pipeline import process_voice
 from src.telegram.bot import send_response
 from src.telegram.chat_params import get_chat_id
-from src.transcript_cleanup import cleanup_transcript
-from src.transcription.service import transcribe_audio
 from src.types import ChatId, Language, UserId
 from src.wit_tracking import increment_wit_usage, is_wit_available
 
@@ -51,14 +39,11 @@ def _select_provider(
     wit_available: bool,
     preferred_provider: str | None = None,
 ) -> str | None:
-    """
-    Select transcription provider based on user tier, availability, and preference.
+    """Select transcription provider based on user tier, availability, and preference.
 
     Default for all tiers: Wit.ai. Paid tiers can override via preferred_provider.
     Free/Blocked: preference ignored, auto-selection only.
-
-    Returns:
-        const.PROVIDER_GROQ, const.PROVIDER_WIT, or None if no provider available
+    Returns the provider name or ``None`` if no provider is available.
     """
     groq_available = bool(settings.groq_api_key)
 
@@ -76,37 +61,8 @@ def _select_provider(
     return const.PROVIDER_GROQ if groq_available else None
 
 
-async def _handle_obsidian_save(
-    chat_id: ChatId,
-    text: str,
-    language: Language,
-    user_id: UserId | None = None,
-    original_text: str | None = None,
-) -> None:
-    """Save transcription to Obsidian and auto-categorize if enabled."""
-    settings_chat_id = f"u_{user_id}" if chat_id.startswith("g_") and user_id else None
-    saved, filename = await save_transcription_to_obsidian(
-        chat_id,
-        text,
-        const.SOURCE_TELEGRAM,
-        language,
-        settings_chat_id=settings_chat_id,
-        original_text=original_text,
-    )
-    lookup_id = settings_chat_id or chat_id
-    if not (saved and filename and await get_auto_categorize(lookup_id)):
-        return
-    repo_info = await get_github_settings(lookup_id)
-    if repo_info:
-        await categorize_note(
-            repo_info=repo_info,
-            filename=filename,
-            content=text,
-        )
-
-
 def _build_voice_response(text: str, gpt_command: str, message_id: int) -> dict[str, typing.Any]:
-    """Build response kwargs for voice transcription."""
+    """Build response kwargs: GPT-command-prefixed messages get a dedicated label."""
     if text.lower().startswith(gpt_command):
         return {
             "response": f"Command \\*{gpt_command}* detected in the voice message."
@@ -204,23 +160,31 @@ async def from_voice_to_text(message: Message, bot: Bot) -> None:
 
     file_data = await _download_voice(bot, ctx.voice)
 
-    text, duration, wit_requests = await transcribe_audio(
-        file_data, audio_format="ogg", language=ctx.language, provider=ctx.provider
+    settings_chat_id = f"u_{ctx.user_id}" if ctx.chat_id.startswith("g_") and ctx.user_id else None
+    result = await process_voice(
+        audio_bytes=file_data,
+        audio_format="ogg",
+        source=const.SOURCE_TELEGRAM,
+        chat_id=ctx.chat_id,
+        language=ctx.language,
+        provider=ctx.provider,
+        tier=ctx.tier,
+        settings_chat_id=settings_chat_id,
     )
-
-    logger.debug("Voice message translation: %s", text)
-    if not text:
-        logger.debug("Empty voice message.")
+    if result is None:
         return
 
-    token_cost = calculate_token_cost(duration)
+    token_cost = calculate_token_cost(result.duration)
     if not await has_unlimited_voice_access(ctx.user_id):
-        result = await deduct_credits(ctx.user_id, token_cost)
+        deduct_result = await deduct_credits(ctx.user_id, token_cost)
         await record_user_usage(
-            ctx.user_id, duration, token_cost, result.free_used, result.purchased_used
+            ctx.user_id,
+            result.duration,
+            token_cost,
+            deduct_result.free_used,
+            deduct_result.purchased_used,
         )
-
-        if result.overdraft:
+        if deduct_result.overdraft:
             await send_response(
                 message,
                 bot,
@@ -230,37 +194,14 @@ async def from_voice_to_text(message: Message, bot: Bot) -> None:
             )
 
     if ctx.provider == const.PROVIDER_WIT:
-        await increment_wit_usage(wit_requests, language=ctx.language)
+        await increment_wit_usage(result.wit_requests, language=ctx.language)
         await check_and_send_alerts(bot)
     elif ctx.provider == const.PROVIDER_GROQ:
-        await record_groq_usage(duration)
+        await record_groq_usage(result.duration)
 
     await increment_transcription_stats()
-    await increment_user_stats(ctx.user_id, audio_seconds=duration)
-
-    settings_chat_id = (
-        f"u_{ctx.user_id}" if ctx.chat_id.startswith("g_") and ctx.user_id else ctx.chat_id
-    )
-    raw_text = text
-    obsidian_text = text
-    if ctx.tier != UserTier.FREE:
-        recent_context = await get_recent_transcriptions(settings_chat_id)
-        if await get_auto_cleanup(settings_chat_id):
-            text = await cleanup_transcript(raw_text, context=recent_context)
-            obsidian_text = text
-        else:
-            obsidian_text = await cleanup_transcript(raw_text, context=recent_context)
-        await save_recent_transcription(settings_chat_id, obsidian_text)
-
-    original_for_obsidian = raw_text if raw_text != obsidian_text else None
-    await _handle_obsidian_save(
-        ctx.chat_id,
-        obsidian_text,
-        ctx.language,
-        user_id=ctx.user_id,
-        original_text=original_for_obsidian,
-    )
+    await increment_user_stats(ctx.user_id, audio_seconds=result.duration)
 
     gpt_command = await get_gpt_command(ctx.chat_id)
-    response_kwargs = _build_voice_response(text, gpt_command, ctx.message_id)
+    response_kwargs = _build_voice_response(result.text, gpt_command, ctx.message_id)
     await send_response(message, bot, **response_kwargs)
