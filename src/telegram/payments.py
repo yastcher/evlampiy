@@ -1,7 +1,6 @@
 """Telegram Stars payment handlers."""
 
 import logging
-import typing
 
 from aiogram import Bot
 from aiogram.types import (
@@ -16,34 +15,14 @@ from aiogram.types import (
 from src import const
 from src.alerts import check_and_send_alerts
 from src.config import settings
-from src.credits import (
-    add_credits,
-    current_month_key,
-    get_credits,
-    get_total_credits,
-    increment_payment_stats,
-)
+from src.credits import current_month_key, get_credits
 from src.dto import UserMonthlyUsage
 from src.localization import translates
 from src.mongo import get_chat_language
+from src.services.payments_service import CREDIT_PACKAGES, award_tokens, package_payload
 from src.telegram.chat_params import EventLike, get_chat_id, reply_text
 
 logger = logging.getLogger(__name__)
-
-
-class _Package(typing.TypedDict):
-    name: str
-    stars: int
-    tokens: int
-    callback: str
-
-
-CREDIT_PACKAGES: list[_Package] = [
-    {"name": "Small", "stars": 10, "tokens": 10, "callback": "buy_pkg_0"},
-    {"name": "Medium", "stars": 25, "tokens": 30, "callback": "buy_pkg_1"},
-    {"name": "Large", "stars": 50, "tokens": 65, "callback": "buy_pkg_2"},
-    {"name": "XL", "stars": 100, "tokens": 140, "callback": "buy_pkg_3"},
-]
 
 
 def _format_duration(seconds: int) -> str:
@@ -61,9 +40,9 @@ async def buy_command(event: EventLike, bot: Bot) -> None:
     language = await get_chat_language(chat_id)
 
     keyboard: list[list[InlineKeyboardButton]] = []
-    for pkg in CREDIT_PACKAGES:
+    for idx, pkg in enumerate(CREDIT_PACKAGES):
         label = f"{pkg['name']} — {pkg['tokens']} tokens ({pkg['stars']}★)"
-        keyboard.append([InlineKeyboardButton(text=label, callback_data=pkg["callback"])])
+        keyboard.append([InlineKeyboardButton(text=label, callback_data=f"buy_pkg_{idx}")])
 
     reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
     text = translates["buy_packages_prompt"].get(language, translates["buy_packages_prompt"]["en"])
@@ -86,7 +65,7 @@ async def buy_package_callback(callback: CallbackQuery, bot: Bot) -> None:
         chat_id=chat_id,
         title=f"{pkg['name']} Token Package",
         description=f"{pkg['tokens']} tokens for voice transcription",
-        payload=f"buy_tokens_{idx}",
+        payload=package_payload(idx),
         currency=const.TELEGRAM_STARS_CURRENCY,
         prices=[LabeledPrice(label=f"{pkg['tokens']} Tokens", amount=pkg["stars"])],
     )
@@ -104,27 +83,12 @@ async def handle_successful_payment(message: Message, bot: Bot) -> None:
     user_id = str(message.from_user.id)
     payment = message.successful_payment
 
-    payload = payment.invoice_payload
-    if payload.startswith("buy_tokens_"):
-        idx = int(payload.split("_")[-1])
-        tokens_to_add = CREDIT_PACKAGES[idx]["tokens"]
-    else:
-        tokens_to_add = payment.total_amount
+    result = await award_tokens(user_id, payment.invoice_payload, payment.total_amount)
+    await check_and_send_alerts(bot, credits_just_sold=result.tokens_added)
 
-    new_purchased = await add_credits(user_id, tokens_to_add)
-    await increment_payment_stats(tokens_to_add)
-    await check_and_send_alerts(bot, credits_just_sold=tokens_to_add)
-    logger.info(
-        "User %s purchased %s tokens, purchased balance: %s",
-        user_id,
-        tokens_to_add,
-        new_purchased,
-    )
-
-    total = await get_total_credits(user_id)
     await bot.send_message(
         chat_id=message.chat.id,
-        text=f"Tokens added: +{tokens_to_add}\nBalance: {total}",
+        text=f"Tokens added: +{result.tokens_added}\nBalance: {result.new_total_balance}",
     )
 
 

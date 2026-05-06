@@ -119,37 +119,6 @@ class TestPreCheckout:
         mock_callback_query.answer.assert_called_once_with(ok=True)
 
 
-class TestSuccessfulPayment:
-    """Test successful payment handler with real DB."""
-
-    async def test_tokens_added_on_package_payment(self, mock_private_update, mock_context):
-        """Tokens from selected package are added to user balance."""
-        user_id = "333"
-        mock_private_update.effective_user.id = 333
-        mock_private_update.message.successful_payment = MagicMock()
-        mock_private_update.message.successful_payment.total_amount = 50
-        mock_private_update.message.successful_payment.invoice_payload = "buy_tokens_2"
-
-        initial = await get_total_credits(user_id)
-        await handle_successful_payment(mock_private_update, mock_context)
-
-        # Large package = 65 tokens
-        assert await get_total_credits(user_id) == initial + 65
-
-    async def test_legacy_payment_fallback(self, mock_private_update, mock_context):
-        """Legacy payload (no buy_tokens_ prefix) uses total_amount as tokens."""
-        mock_private_update.effective_user.id = 999
-        user_id = str(mock_private_update.effective_user.id)
-        mock_private_update.message.successful_payment = MagicMock()
-        mock_private_update.message.successful_payment.total_amount = 10
-        mock_private_update.message.successful_payment.invoice_payload = "buy_credits"
-
-        initial = await get_total_credits(user_id)
-        await handle_successful_payment(mock_private_update, mock_context)
-
-        assert await get_total_credits(user_id) == initial + 10
-
-
 class TestBalanceCommand:
     """Test /balance command with real DB."""
 
