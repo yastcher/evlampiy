@@ -703,7 +703,7 @@ class TestCategorizeAll:
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
         with patch(
-            "src.telegram.obsidian_handlers.categorize_all_income", AsyncMock(return_value=5)
+            "src.services.notes_service.categorize_all_income", AsyncMock(return_value=5)
         ):
             await categorize_all(mock_private_update, mock_context)
 
@@ -717,7 +717,7 @@ class TestCategorizeAll:
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
         with patch(
-            "src.telegram.obsidian_handlers.categorize_all_income", AsyncMock(return_value=0)
+            "src.services.notes_service.categorize_all_income", AsyncMock(return_value=0)
         ):
             await categorize_all(mock_private_update, mock_context)
 

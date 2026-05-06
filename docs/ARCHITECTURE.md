@@ -28,6 +28,9 @@ src/
 │   ├── wit_client.py       - Wit.ai integration (chunked audio)
 │   └── groq_client.py      - Groq Whisper integration
 ├── services/               # Use-case layer (framework-agnostic, no aiogram/pywa)
+│   ├── admin_service.py    - Role assignment, block/unblock, credits, user-id validation
+│   ├── notes_service.py    - Toggle Obsidian sync / auto-categorize, run categorize_all
+│   ├── settings_service.py - Toggle auto-cleanup, persist transcription provider choice
 │   ├── stats_service.py    - Admin /stats text builder
 │   └── voice_pipeline.py   - Transcription → cleanup → Obsidian → categorize pipeline
 ├── ai_client.py            - Multi-provider LLM client with token bucket rate limiter

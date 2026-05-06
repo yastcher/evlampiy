@@ -6,7 +6,6 @@ import logging
 from aiogram import Bot
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from src.categorization import categorize_all_income
 from src.github_api import create_obsidian_git_config, get_or_create_obsidian_repo
 from src.github_oauth import get_github_device_code, poll_github_for_token
 from src.localization import translates
@@ -16,9 +15,13 @@ from src.mongo import (
     get_chat_language,
     get_github_settings,
     get_save_to_obsidian,
-    set_auto_categorize,
     set_github_settings,
     set_save_to_obsidian,
+)
+from src.services.notes_service import (
+    categorize_all_for_chat,
+    toggle_auto_categorize,
+    toggle_save_to_obsidian,
 )
 from src.telegram.chat_params import EventLike, get_chat_id, is_user_admin, reply_text
 
@@ -112,9 +115,7 @@ async def toggle_obsidian(event: EventLike, bot: Bot) -> None:
         return
 
     chat_id = get_chat_id(event)
-    current = await get_save_to_obsidian(chat_id)
-    new_value = not current
-    await set_save_to_obsidian(chat_id, new_value)
+    new_value = await toggle_save_to_obsidian(chat_id)
 
     language = await get_chat_language(chat_id)
     key = "obsidian_sync_enabled" if new_value else "obsidian_sync_disabled"
@@ -140,9 +141,7 @@ async def toggle_categorize(event: EventLike, bot: Bot) -> None:
 
     chat_id = get_chat_id(event)
     language = await get_chat_language(chat_id)
-    current = await get_auto_categorize(chat_id)
-    new_value = not current
-    await set_auto_categorize(chat_id, new_value)
+    new_value = await toggle_auto_categorize(chat_id)
 
     key = "categorize_enabled" if new_value else "categorize_disabled"
     text = translates[key].get(language, translates[key]["en"])
@@ -155,16 +154,14 @@ async def categorize_all(event: EventLike, bot: Bot) -> None:
 
     chat_id = get_chat_id(event)
     language = await get_chat_language(chat_id)
-    repo_info = await get_github_settings(chat_id)
+    has_repo, count = await categorize_all_for_chat(chat_id)
 
-    if not repo_info:
+    if not has_repo:
         text = translates["github_not_connected"].get(
             language, translates["github_not_connected"]["en"]
         )
         await reply_text(event, text)
         return
-
-    count = await categorize_all_income(repo_info)
 
     if count > 0:
         text = translates["categorize_done"].get(language, translates["categorize_done"]["en"])

@@ -66,6 +66,19 @@
   provider selection) stay in the adapter. Service-level smoke tests added in
   `tests/services/test_voice_pipeline.py`. Existing voice tests updated via fixture rewiring
   (`voice_external_mocks` / `whatsapp_voice_external_mocks` patches now target the service).
+- Architecture isolation: added three more domain services that hold the actual business
+  rules previously inlined in handlers. `src/services/notes_service.py` —
+  `toggle_save_to_obsidian` / `toggle_auto_categorize` / `categorize_all_for_chat (has_repo, count)`.
+  `src/services/settings_service.py` — `toggle_auto_cleanup`, `set_chat_provider_choice` (maps
+  UI token → persisted provider + confirmation key). `src/services/admin_service.py` — pure
+  `parse_user_id` / `parse_credits_amount` validators plus `assign_role` / `revoke_role` /
+  `block_user` / `unblock_user` / `change_credits` mongo wrappers (centralizes the audit logging
+  for blocks). Telegram handlers in `obsidian_handlers.py` / `settings_handlers.py` / `admin.py`
+  shrunk to thin adapters: i18n + keyboards + auth checks remain there, all toggles/validations
+  delegate to services. Pure-logic tests added in `tests/services/test_admin_service.py`,
+  `test_settings_service.py`, `test_notes_service.py`. Existing handler tests rewired one
+  patch (`src.telegram.obsidian_handlers.categorize_all_income` →
+  `src.services.notes_service.categorize_all_income`).
 - Unified asyncio loop: replaced `threading.Thread(target=run_fastapi_server)` in `src/main.py` with
   `asyncio.TaskGroup` running `run_bot()` and `serve_fastapi()` (uvicorn `Server.serve()`) in the same
   loop. Eliminates threading/asyncio mix — graceful shutdown, exception propagation, and shared

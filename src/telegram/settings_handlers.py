@@ -15,10 +15,9 @@ from src.mongo import (
     get_auto_cleanup,
     get_chat_language,
     get_preferred_provider,
-    set_auto_cleanup,
     set_chat_language,
-    set_preferred_provider,
 )
+from src.services.settings_service import set_chat_provider_choice, toggle_auto_cleanup
 from src.telegram.chat_params import (
     EventLike,
     get_chat_id,
@@ -80,9 +79,7 @@ async def toggle_cleanup(event: EventLike, bot: Bot) -> None:
 
     chat_id = get_chat_id(event)
     language = await get_chat_language(chat_id)
-    current = await get_auto_cleanup(chat_id)
-    new_value = not current
-    await set_auto_cleanup(chat_id, new_value)
+    new_value = await toggle_auto_cleanup(chat_id)
 
     key = "cleanup_enabled" if new_value else "cleanup_disabled"
     text = translates[key].get(language, translates[key]["en"])
@@ -223,15 +220,7 @@ async def provider_buttons(callback: CallbackQuery, bot: Bot) -> None:
         chat_id = f"{const.CHAT_PREFIX_GROUP}{callback.message.chat.id}"
 
     language = await get_chat_language(chat_id)
-
-    provider_map: dict[str, tuple[str | None, str]] = {
-        "auto": (None, "choose_my_provider_auto"),
-        "wit": (const.PROVIDER_WIT, "choose_my_provider_wit"),
-        "groq": (const.PROVIDER_GROQ, "choose_my_provider_groq"),
-    }
-
-    provider_value, translate_key = provider_map.get(choice, (None, "choose_my_provider_auto"))
-    await set_preferred_provider(chat_id, provider_value)
+    translate_key = await set_chat_provider_choice(chat_id, choice)
     if isinstance(callback.message, Message):
         await callback.message.edit_text(
             text=translates[translate_key].get(language, translates[translate_key]["en"])

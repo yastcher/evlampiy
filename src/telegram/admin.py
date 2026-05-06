@@ -2,21 +2,27 @@
 
 import logging
 import typing
-from collections.abc import Sequence
 
 from aiogram.filters import CommandObject
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from src import const
 from src.config import settings
-from src.credits import admin_add_credits, is_admin_user
+from src.credits import is_admin_user
 from src.localization import translates
 from src.mongo import (
-    add_user_role,
     get_bot_config,
     get_users_by_role,
-    remove_user_role,
     set_bot_config,
+)
+from src.services.admin_service import (
+    assign_role,
+    block_user,
+    change_credits,
+    parse_credits_amount,
+    parse_user_id,
+    revoke_role,
+    unblock_user,
 )
 from src.services.stats_service import build_stats_text
 
@@ -81,16 +87,6 @@ def _split_args(command: CommandObject | typing.Any | None) -> list[str]:
     if isinstance(raw, list):
         return [str(a) for a in raw]
     return str(raw).split()
-
-
-def _parse_user_id(args: Sequence[str]) -> str | None:
-    """Extract and validate user_id from command arguments."""
-    if not args:
-        return None
-    user_id = args[0].strip()
-    if not user_id.isdigit():
-        return None
-    return user_id
 
 
 async def admin_hub(message: Message) -> None:
@@ -182,13 +178,12 @@ async def add_vip_command(message: Message, command: CommandObject) -> None:
     if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(_split_args(command))
+    user_id = parse_user_id(_split_args(command))
     if not user_id:
         await message.answer(_t("admin_usage", command="/add_vip <user_id>"))
         return
 
-    admin_id = str(message.from_user.id)
-    await add_user_role(user_id, const.ROLE_VIP, admin_id)
+    await assign_role(user_id, const.ROLE_VIP, str(message.from_user.id))
     await message.answer(_t("admin_user_added", user_id=user_id, role="VIP"))
 
 
@@ -197,13 +192,12 @@ async def remove_vip_command(message: Message, command: CommandObject) -> None:
     if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(_split_args(command))
+    user_id = parse_user_id(_split_args(command))
     if not user_id:
         await message.answer(_t("admin_usage", command="/remove_vip <user_id>"))
         return
 
-    removed = await remove_user_role(user_id, const.ROLE_VIP)
-    if removed:
+    if await revoke_role(user_id, const.ROLE_VIP):
         await message.answer(_t("admin_user_removed", user_id=user_id, role="VIP"))
     else:
         await message.answer(_t("admin_user_not_found", user_id=user_id, role="VIP"))
@@ -214,13 +208,12 @@ async def add_tester_command(message: Message, command: CommandObject) -> None:
     if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(_split_args(command))
+    user_id = parse_user_id(_split_args(command))
     if not user_id:
         await message.answer(_t("admin_usage", command="/add_tester <user_id>"))
         return
 
-    admin_id = str(message.from_user.id)
-    await add_user_role(user_id, const.ROLE_TESTER, admin_id)
+    await assign_role(user_id, const.ROLE_TESTER, str(message.from_user.id))
     await message.answer(_t("admin_user_added", user_id=user_id, role="tester"))
 
 
@@ -229,13 +222,12 @@ async def remove_tester_command(message: Message, command: CommandObject) -> Non
     if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(_split_args(command))
+    user_id = parse_user_id(_split_args(command))
     if not user_id:
         await message.answer(_t("admin_usage", command="/remove_tester <user_id>"))
         return
 
-    removed = await remove_user_role(user_id, const.ROLE_TESTER)
-    if removed:
+    if await revoke_role(user_id, const.ROLE_TESTER):
         await message.answer(_t("admin_user_removed", user_id=user_id, role="tester"))
     else:
         await message.answer(_t("admin_user_not_found", user_id=user_id, role="tester"))
@@ -247,18 +239,13 @@ async def block_command(message: Message, command: CommandObject) -> None:
         return
 
     args = _split_args(command)
-    user_id = _parse_user_id(args)
+    user_id = parse_user_id(args)
     if not user_id:
         await message.answer(_t("admin_usage", command="/block <user_id> [reason]"))
         return
 
-    admin_id = str(message.from_user.id)
     reason = " ".join(args[1:]) if len(args) > 1 else ""
-    await add_user_role(user_id, const.ROLE_BLOCKED, admin_id)
-    if reason:
-        logger.info("User %s blocked by %s. Reason: %s", user_id, admin_id, reason)
-    else:
-        logger.info("User %s blocked by %s", user_id, admin_id)
+    await block_user(user_id, str(message.from_user.id), reason)
     await message.answer(_t("admin_user_blocked", user_id=user_id))
 
 
@@ -267,13 +254,12 @@ async def unblock_command(message: Message, command: CommandObject) -> None:
     if message.from_user is None or not is_admin_user(str(message.from_user.id)):
         return
 
-    user_id = _parse_user_id(_split_args(command))
+    user_id = parse_user_id(_split_args(command))
     if not user_id:
         await message.answer(_t("admin_usage", command="/unblock <user_id>"))
         return
 
-    removed = await remove_user_role(user_id, const.ROLE_BLOCKED)
-    if removed:
+    if await unblock_user(user_id):
         await message.answer(_t("admin_user_unblocked", user_id=user_id))
     else:
         await message.answer(_t("admin_user_not_found", user_id=user_id, role="blocked"))
@@ -291,20 +277,11 @@ async def add_credits_command(message: Message, command: CommandObject) -> None:
         await message.answer(usage_text)
         return
 
-    user_id = args[0].strip()
-    if not user_id.isdigit():
+    user_id = parse_user_id(args)
+    amount = parse_credits_amount(args[1]) if user_id else None
+    if user_id is None or amount is None:
         await message.answer(usage_text)
         return
 
-    try:
-        amount = int(args[1])
-    except ValueError:
-        await message.answer(usage_text)
-        return
-
-    if amount <= 0:
-        await message.answer(usage_text)
-        return
-
-    balance = await admin_add_credits(user_id, amount)
+    balance = await change_credits(user_id, amount)
     await message.answer(_t("admin_credits_added", amount=amount, user_id=user_id, balance=balance))
