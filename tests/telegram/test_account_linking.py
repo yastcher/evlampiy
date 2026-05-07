@@ -15,7 +15,7 @@ from src.account_linking import (
 )
 from src.dto import LinkAttempt, LinkCode
 from src.mongo import set_chat_language
-from src.telegram.account_handlers import link_whatsapp, unlink_whatsapp
+from src.telegram.handlers.account import link_whatsapp, unlink_whatsapp
 from src.whatsapp.handlers import handle_link_command
 
 

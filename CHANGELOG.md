@@ -66,6 +66,18 @@
   provider selection) stay in the adapter. Service-level smoke tests added in
   `tests/services/test_voice_pipeline.py`. Existing voice tests updated via fixture rewiring
   (`voice_external_mocks` / `whatsapp_voice_external_mocks` patches now target the service).
+- Architecture isolation: turned `src/telegram/handlers.py` into a `src/telegram/handlers/`
+  package and grouped all handler modules under it. Result:
+  `src/telegram/handlers/{common,account,admin,obsidian,payments,settings,voice}.py`.
+  `common.py` keeps the cross-cutting handlers from the old `handlers.py`
+  (`/start`, GPT-command FSM, `/stats`, `hub_callback_router`); the others are the
+  former `*_handlers.py` files renamed to short domain names. `src/telegram/setup.py`
+  now imports the submodules with `as`-aliases that match the legacy variable names
+  (`handlers`, `account_handlers`, etc.) so the routing table is unchanged.
+  No `*` re-exports in `__init__.py` — every caller uses an explicit
+  `from src.telegram.handlers.<domain> import …`. Test imports updated by sed (~30
+  files); `docs/test_docs.py::TestArchitectureFreshness._parse_tree_files` was
+  hardened to support arbitrary tree nesting (the old parser only tracked one level).
 - Architecture isolation: removed all PTB-compat aliases from `tests/fixtures.py`
   (`msg.effective_user`/`effective_chat` aliasing, `msg.message = msg` self-reference,
   `mock_context.bot = mock_context` self-reference, and the

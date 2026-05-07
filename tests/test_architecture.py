@@ -71,7 +71,61 @@ class TestTranscriptionIndependence:
         rule.assert_applies(_arch)
 
 
-# --- Rule 3: stdlib imports through module, not from-imports ---
+# --- Rule 3: services layer is framework-agnostic ---
+
+
+class TestServicesFrameworkIsolation:
+    """`src/services/*` must not import aiogram / pywa / fastapi.
+
+    Catches regressions where a use-case service starts depending on a delivery channel.
+    """
+
+    def test_services_do_not_import_aiogram(self):
+        violations = _imports_targeting(_PREFIX + ".src.services", ("aiogram",))
+        assert not violations, (
+            "services modules import aiogram (must stay framework-agnostic):\n"
+            + "\n".join(f"  {v}" for v in violations)
+        )
+
+    def test_services_do_not_import_pywa(self):
+        violations = _imports_targeting(_PREFIX + ".src.services", ("pywa", "pywa_async"))
+        assert not violations, (
+            "services modules import pywa (must stay framework-agnostic):\n"
+            + "\n".join(f"  {v}" for v in violations)
+        )
+
+    def test_services_do_not_import_fastapi(self):
+        violations = _imports_targeting(_PREFIX + ".src.services", ("fastapi", "uvicorn"))
+        assert not violations, (
+            "services modules import fastapi/uvicorn (must stay framework-agnostic):\n"
+            + "\n".join(f"  {v}" for v in violations)
+        )
+
+    def test_services_do_not_import_telegram_handlers(self):
+        """Services must not depend on adapter modules — that's an inversion."""
+        violations = _imports_targeting(_PREFIX + ".src.services", (_PREFIX + ".src.telegram",))
+        assert not violations, (
+            "services modules import src.telegram (inverted dependency):\n"
+            + "\n".join(f"  {v}" for v in violations)
+        )
+
+
+def _imports_targeting(source_pkg: str, targets: tuple[str, ...]) -> list[str]:
+    """Return nodes under ``source_pkg`` that import any module in ``targets``."""
+    graph = _arch._graph._graph
+    violations: list[str] = []
+    for src_node in graph.nodes():
+        if not src_node.startswith(source_pkg):
+            continue
+        for dst_node in graph.successors(src_node):
+            for target in targets:
+                if dst_node == target or dst_node.startswith(target + "."):
+                    violations.append(f"{src_node} → {dst_node}")
+                    break
+    return violations
+
+
+# --- Rule 4: stdlib imports through module, not from-imports ---
 
 # Modules that must be imported as `import X`, never `from X import ...`
 _STDLIB_MODULE_IMPORTS = ("datetime", "typing")

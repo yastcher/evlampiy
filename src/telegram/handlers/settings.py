@@ -6,7 +6,6 @@ from aiogram import Bot
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from src import const
-from src.ai_client import _PROVIDER_LIMITS
 from src.config import settings
 from src.credits import get_user_tier
 from src.dto import UserTier
@@ -191,16 +190,6 @@ async def hub_show_language_menu(event: EventLike, bot: Bot) -> None:
 async def hub_show_provider(event: EventLike, bot: Bot) -> None:
     if isinstance(event, CallbackQuery):
         await _show_provider_menu(event)
-
-
-def provider_icon(name: str, keys: dict[str, bool]) -> str:
-    """Return check/cross based on whether the provider has a key configured."""
-    return "✅" if keys.get(name) else "❌"
-
-
-def provider_rpm(name: str) -> str:
-    rpm = _PROVIDER_LIMITS.get(name)
-    return f" {rpm}rpm" if rpm else ""
 
 
 async def provider_buttons(callback: CallbackQuery, bot: Bot) -> None:

@@ -7,14 +7,14 @@ from src.alerts import check_and_send_alerts
 from src.credits import add_credits, get_total_credits, get_user_tier, increment_payment_stats
 from src.dto import UserTier
 from src.mongo import set_chat_language
-from src.telegram.payments import (
+from src.telegram.handlers.payments import (
     balance_command,
     buy_command,
     buy_package_callback,
     handle_pre_checkout,
     handle_successful_payment,
 )
-from src.telegram.settings_handlers import settings_hub
+from src.telegram.handlers.settings import settings_hub
 
 
 class TestPaymentFlow:
@@ -182,7 +182,7 @@ class TestPaymentTierTransition:
         assert await get_user_tier(user_id) == UserTier.FREE
 
         # 2. Settings hub: only 2 base buttons
-        with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
+        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         keyboard = mock_private_update.answer.call_args.kwargs["reply_markup"].inline_keyboard
@@ -201,7 +201,7 @@ class TestPaymentTierTransition:
 
         # 5. Settings hub now shows 4 buttons (language, gpt, provider, cleanup)
         mock_private_update.answer.reset_mock()
-        with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
+        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         keyboard = mock_private_update.answer.call_args.kwargs["reply_markup"].inline_keyboard

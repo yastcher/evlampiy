@@ -63,10 +63,10 @@ class TestArchitectureFreshness:
     def _parse_tree_files(text: str) -> set[str]:
         """Extract relative file paths from the directory tree block."""
         # Match lines like: │   ├── handlers.py or ├── ai_client.py
-        # within the src/ tree block
+        # within the src/ tree block. Supports arbitrary nesting depth.
         in_src_block = False
         files: list[str] = []
-        current_prefix = ""
+        prefix_by_depth: dict[int, str] = {}
         for line in text.splitlines():
             if "src/" in line and "```" not in line and in_src_block is False:
                 in_src_block = True
@@ -75,22 +75,20 @@ class TestArchitectureFreshness:
                 break
             if not in_src_block:
                 continue
-            # Extract directory or file from tree line
-            # e.g. "├── telegram/" or "│   ├── handlers.py"
             m = re.search(r"[├└]── (\S+)", line)
             if not m:
                 continue
             name = m.group(1)
-            # Count depth by leading box-drawing characters
             indent = len(re.findall(r"│   |    ", line[: line.index("├" if "├" in line else "└")]))
+            parent = "".join(prefix_by_depth.get(d, "") for d in range(indent))
             if name.endswith("/"):
-                # Directory — update prefix for this depth
-                current_prefix = name
-            # File
-            elif indent == 0:
-                files.append(name)
+                prefix_by_depth[indent] = name
+                # Drop deeper entries — they belong to the previous sibling
+                for d in list(prefix_by_depth):
+                    if d > indent:
+                        del prefix_by_depth[d]
             else:
-                files.append(current_prefix + name)
+                files.append(parent + name)
         return set(files)
 
     def test_tree_files_exist_in_src(self):

@@ -25,15 +25,15 @@ from src.mongo import (
     set_preferred_provider,
     set_save_to_obsidian,
 )
-from src.telegram.account_handlers import account_hub
-from src.telegram.handlers import (
+from src.telegram.handlers.account import account_hub
+from src.telegram.handlers.common import (
     WAITING_FOR_COMMAND,
     enter_your_command,
     handle_command_input,
     hub_callback_router,
     start,
 )
-from src.telegram.obsidian_handlers import (
+from src.telegram.handlers.obsidian import (
     categorize_all,
     connect_github,
     disconnect_github,
@@ -41,14 +41,14 @@ from src.telegram.obsidian_handlers import (
     toggle_categorize,
     toggle_obsidian,
 )
-from src.telegram.settings_handlers import (
+from src.telegram.handlers.settings import (
     choose_language,
     lang_buttons,
     provider_buttons,
     settings_hub,
     toggle_cleanup,
 )
-from src.telegram.voice import from_voice_to_text
+from src.telegram.handlers.voice import from_voice_to_text
 
 
 class TestStartCommand:
@@ -217,7 +217,7 @@ class TestVoiceMessageFlow:
         await add_user_role(user_id, "blocked", "admin")
         mock_private_update.voice = mock_telegram_voice
 
-        with patch("src.telegram.voice.send_response", AsyncMock()) as mock_send:
+        with patch("src.telegram.handlers.voice.send_response", AsyncMock()) as mock_send:
             await from_voice_to_text(mock_private_update, mock_context)
 
             mock_send.assert_called_once()
@@ -256,8 +256,8 @@ class TestVoiceMessageFlow:
         mock_private_update.voice = mock_telegram_voice
 
         with (
-            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=False)),
-            patch("src.telegram.voice.settings.groq_api_key", ""),
+            patch("src.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=False)),
+            patch("src.telegram.handlers.voice.settings.groq_api_key", ""),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -277,7 +277,7 @@ class TestVoiceMessageFlow:
         await deduct_credits(user_id, 100)
         mock_private_update.voice = mock_telegram_voice
 
-        with patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)):
+        with patch("src.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=True)):
             await from_voice_to_text(mock_private_update, mock_context)
 
         call_kwargs = voice_external_mocks["send"].call_args.kwargs
@@ -298,8 +298,8 @@ class TestVoiceMessageFlow:
         voice_external_mocks["transcribe"].return_value = ("Hello", 10, 1)
 
         with (
-            patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=False)),
-            patch("src.telegram.voice.settings.groq_api_key", "test-key"),
+            patch("src.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=False)),
+            patch("src.telegram.handlers.voice.settings.groq_api_key", "test-key"),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -585,10 +585,10 @@ class TestConnectGithub:
 
         with (
             patch(
-                "src.telegram.obsidian_handlers.get_github_device_code",
+                "src.telegram.handlers.obsidian.get_github_device_code",
                 AsyncMock(return_value=device_info),
             ),
-            patch("src.telegram.obsidian_handlers.asyncio.create_task"),
+            patch("src.telegram.handlers.obsidian.asyncio.create_task"),
         ):
             await connect_github(mock_private_update, mock_context)
 
@@ -602,7 +602,7 @@ class TestConnectGithub:
         await set_chat_language("u_12345", "en")
 
         with patch(
-            "src.telegram.obsidian_handlers.get_github_device_code",
+            "src.telegram.handlers.obsidian.get_github_device_code",
             AsyncMock(return_value={"error": "unauthorized_client"}),
         ):
             await connect_github(mock_private_update, mock_context)
@@ -993,7 +993,7 @@ class TestSettingsHubTierDependentUI:
         # Make user PAID by purchasing credits
         await add_credits(user_id, 5)
 
-        with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
+        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         call_args = mock_private_update.answer.call_args
@@ -1019,7 +1019,7 @@ class TestSettingsHubTierDependentUI:
         await set_chat_language(chat_id, "en")
         # User has no credits added → FREE tier
 
-        with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
+        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         call_args = mock_private_update.answer.call_args

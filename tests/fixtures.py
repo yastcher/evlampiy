@@ -208,12 +208,12 @@ def voice_external_mocks():
             "src.services.voice_pipeline.transcribe_audio",
             AsyncMock(return_value=("Hello world", 5, 1)),
         ) as mock_transcribe,
-        patch("src.telegram.voice.send_response", AsyncMock()) as mock_send,
+        patch("src.telegram.handlers.voice.send_response", AsyncMock()) as mock_send,
         patch(
             "src.services.voice_pipeline.save_transcription_to_obsidian",
             AsyncMock(return_value=(False, None)),
         ) as mock_obsidian,
-        patch("src.telegram.voice.check_and_send_alerts", AsyncMock()) as mock_alerts,
+        patch("src.telegram.handlers.voice.check_and_send_alerts", AsyncMock()) as mock_alerts,
         patch(
             "src.services.voice_pipeline.cleanup_transcript",
             AsyncMock(side_effect=lambda t, **kwargs: t),

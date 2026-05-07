@@ -19,16 +19,30 @@ from aiogram.types import (
 from src.config import settings
 from src.gpt_commands import evlampiy_command
 from src.selftest import run_selftest
-from src.telegram import account_handlers, admin, handlers, obsidian_handlers, settings_handlers
-from src.telegram.handlers import GptCommandStates
-from src.telegram.payments import (
+from src.telegram.handlers import (
+    account as account_handlers,
+)
+from src.telegram.handlers import (
+    admin,
+)
+from src.telegram.handlers import (
+    common as handlers,
+)
+from src.telegram.handlers import (
+    obsidian as obsidian_handlers,
+)
+from src.telegram.handlers import (
+    settings as settings_handlers,
+)
+from src.telegram.handlers.common import GptCommandStates
+from src.telegram.handlers.payments import (
     balance_command,
     buy_command,
     buy_package_callback,
     handle_pre_checkout,
     handle_successful_payment,
 )
-from src.telegram.voice import from_voice_to_text
+from src.telegram.handlers.voice import from_voice_to_text
 
 logger = logging.getLogger(__name__)
 

@@ -5,15 +5,15 @@ import inspect
 from aiogram.fsm.state import State
 from fastapi.testclient import TestClient
 
-from src.telegram.admin import admin_callback_router
-from src.telegram.handlers import (
+from src.telegram.handlers.admin import admin_callback_router
+from src.telegram.handlers.common import (
     WAITING_FOR_COMMAND,
     enter_your_command_from_hub,
     handle_command_input,
     hub_callback_router,
 )
-from src.telegram.payments import buy_package_callback
-from src.telegram.settings_handlers import lang_buttons, provider_buttons
+from src.telegram.handlers.payments import buy_package_callback
+from src.telegram.handlers.settings import lang_buttons, provider_buttons
 from src.telegram.setup import ADMIN_COMMANDS, BOT_COMMANDS, COMMAND_HANDLERS
 
 

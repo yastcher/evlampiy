@@ -3,12 +3,21 @@
 from collections.abc import Sequence
 
 from src import const
-from src.ai_client import CATEGORIZATION_FALLBACK_CHAIN, GPT_FALLBACK_CHAIN
+from src.ai_client import _PROVIDER_LIMITS, CATEGORIZATION_FALLBACK_CHAIN, GPT_FALLBACK_CHAIN
 from src.config import settings
 from src.credits import current_month_key, get_monthly_stats
 from src.mongo import get_bot_config
-from src.telegram.settings_handlers import provider_icon, provider_rpm
 from src.wit_tracking import get_all_wit_usage_this_month
+
+
+def _provider_icon(name: str, keys: dict[str, bool]) -> str:
+    """Return check/cross based on whether the provider has a key configured."""
+    return "✅" if keys.get(name) else "❌"
+
+
+def _provider_rpm(name: str) -> str:
+    rpm = _PROVIDER_LIMITS.get(name)
+    return f" {rpm}rpm" if rpm else ""
 
 
 async def build_stats_text() -> str:
@@ -43,7 +52,7 @@ async def build_stats_text() -> str:
 
     def _chain_str(primary: str, fallback_chain: Sequence[str]) -> str:
         chain = [primary] + [p for p in fallback_chain if p != primary]
-        parts = [f"{p}{provider_rpm(p)} {provider_icon(p, keys)}" for p in chain]
+        parts = [f"{p}{_provider_rpm(p)} {_provider_icon(p, keys)}" for p in chain]
         return " → ".join(parts)
 
     categ_primary = await get_bot_config(

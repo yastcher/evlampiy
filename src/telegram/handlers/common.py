@@ -11,13 +11,13 @@ from src.credits import is_admin_user
 from src.localization import translates
 from src.mongo import get_chat_language, get_gpt_command, set_gpt_command
 from src.services.stats_service import build_stats_text
-from src.telegram.account_handlers import (
+from src.telegram.chat_params import EventLike, get_chat_id, is_user_admin
+from src.telegram.handlers.account import (
     link_whatsapp,
     mystats_command,
     unlink_whatsapp,
 )
-from src.telegram.chat_params import EventLike, get_chat_id, is_user_admin
-from src.telegram.obsidian_handlers import (
+from src.telegram.handlers.obsidian import (
     categorize_all,
     connect_github,
     disconnect_github,
@@ -25,8 +25,8 @@ from src.telegram.obsidian_handlers import (
     toggle_categorize,
     toggle_obsidian,
 )
-from src.telegram.payments import balance_command, buy_command
-from src.telegram.settings_handlers import (
+from src.telegram.handlers.payments import balance_command, buy_command
+from src.telegram.handlers.settings import (
     hub_show_language_menu,
     hub_show_provider,
     toggle_cleanup,
