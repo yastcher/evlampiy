@@ -98,8 +98,8 @@ class TestConnectGithubOAuthFlow:
         assert await get_save_to_obsidian(chat_id) is True
 
         # Verify confirmation sent
-        mock_context.bot.send_message.assert_called()
-        msg = mock_context.bot.send_message.call_args[1]["text"]
+        mock_context.send_message.assert_called()
+        msg = mock_context.send_message.call_args[1]["text"]
         assert "testowner" in msg
 
     async def test_oauth_timeout_sends_message(self, mock_private_update, mock_context):
@@ -130,8 +130,8 @@ class TestConnectGithubOAuthFlow:
             await asyncio.sleep(0.1)  # wait for background task
 
         # Verify timeout message sent
-        mock_context.bot.send_message.assert_called()
-        msg = mock_context.bot.send_message.call_args[1]["text"]
+        mock_context.send_message.assert_called()
+        msg = mock_context.send_message.call_args[1]["text"]
         assert "expired" in msg.lower() or "timeout" in msg.lower() or "timed" in msg.lower()
 
     async def test_oauth_repo_creation_failure(self, mock_private_update, mock_context):
@@ -166,8 +166,8 @@ class TestConnectGithubOAuthFlow:
             await asyncio.sleep(0.1)  # wait for background task
 
         # Verify error message sent
-        mock_context.bot.send_message.assert_called()
-        msg = mock_context.bot.send_message.call_args[1]["text"]
+        mock_context.send_message.assert_called()
+        msg = mock_context.send_message.call_args[1]["text"]
         assert "failed" in msg.lower() or "error" in msg.lower()
 
 
@@ -219,8 +219,8 @@ class TestSetupObsidianGit:
     ):
         """Shows error when GitHub not connected."""
         chat_id = "u_77777"
-        mock_private_update.effective_chat.id = 77777
-        mock_private_update.effective_user.id = 77777
+        mock_private_update.chat.id = 77777
+        mock_private_update.from_user.id = 77777
         mock_callback_query.from_user.id = 77777
         mock_callback_query.message.chat.id = 77777
         await set_chat_language(chat_id, "en")
@@ -230,7 +230,7 @@ class TestSetupObsidianGit:
 
         await setup_obsidian_git(mock_callback_query, mock_context)
 
-        mock_callback_query.edit_message_text.assert_called_once()
+        mock_callback_query.message.edit_text.assert_called_once()
 
 
 class TestProviderMenuViaHub:
@@ -253,8 +253,8 @@ class TestProviderMenuViaHub:
             await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        mock_callback_query.edit_message_text.assert_called_once()
-        call_args = mock_callback_query.edit_message_text.call_args
+        mock_callback_query.message.edit_text.assert_called_once()
+        call_args = mock_callback_query.message.edit_text.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
 
         callback_datas = [row[0].callback_data for row in keyboard]
@@ -277,7 +277,7 @@ class TestProviderMenuViaHub:
         with patch("src.telegram.settings_handlers.settings.groq_api_key", ""):
             await hub_callback_router(mock_callback_query, mock_context)
 
-        call_args = mock_callback_query.edit_message_text.call_args
+        call_args = mock_callback_query.message.edit_text.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
 
         callback_datas = [row[0].callback_data for row in keyboard]
@@ -301,7 +301,7 @@ class TestProviderMenuViaHub:
         with patch("src.telegram.settings_handlers.settings.groq_api_key", "test-key"):
             await hub_callback_router(mock_callback_query, mock_context)
 
-        call_args = mock_callback_query.edit_message_text.call_args
+        call_args = mock_callback_query.message.edit_text.call_args
         keyboard = call_args.kwargs["reply_markup"].inline_keyboard
 
         # Wit.ai button should have checkmark
@@ -349,11 +349,11 @@ class TestLangButtonsGroupChat:
         mock_callback_query.message.chat.type = "group"
         mock_group_update.callback_query = mock_callback_query
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
 
         await lang_buttons(mock_callback_query, mock_context)
 
-        mock_callback_query.edit_message_text.assert_called_once()
+        mock_callback_query.message.edit_text.assert_called_once()
         assert await get_chat_language(chat_id) == "ru"
 
 
@@ -373,4 +373,4 @@ class TestHubCallbackUnknownAction:
 
         mock_callback_query.answer.assert_called_once()
         # No handler called — no further messages
-        mock_callback_query.edit_message_text.assert_not_called()
+        mock_callback_query.message.edit_text.assert_not_called()

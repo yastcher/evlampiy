@@ -73,7 +73,7 @@ class TestStartCommand:
         await set_chat_language(chat_id, "ru")
         await set_gpt_command(chat_id, "евлампий")
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(
+        mock_context.get_chat_member.return_value = MagicMock(
             status=ChatMemberStatus.ADMINISTRATOR
         )
 
@@ -87,7 +87,7 @@ class TestStartCommand:
         await set_chat_language(chat_id, "ru")
         await set_gpt_command(chat_id, "евлампий")
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
 
         await start(mock_group_update, mock_context)
 
@@ -95,7 +95,7 @@ class TestStartCommand:
 
     async def test_group_chat_member_blocked(self, mock_group_update, mock_context):
         """Regular member sends /start in group chat - ignored."""
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
         await start(mock_group_update, mock_context)
 
@@ -118,7 +118,7 @@ class TestChooseLanguage:
 
     async def test_group_chat_non_admin_blocked(self, mock_group_update, mock_context):
         """Non-admin in group chat - ignored."""
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
         await choose_language(mock_group_update, mock_context)
 
@@ -158,7 +158,7 @@ class TestLanguageButtons:
         saved_language = await get_chat_language(chat_id)
         assert saved_language == lang_code
         mock_callback_query.answer.assert_called_once()
-        mock_callback_query.edit_message_text.assert_called_once()
+        mock_callback_query.message.edit_text.assert_called_once()
 
     async def test_group_chat_language_button(
         self, mock_group_update, mock_context, mock_callback_query
@@ -170,7 +170,7 @@ class TestLanguageButtons:
         mock_callback_query.message.chat.id = -100123456
         mock_callback_query.message.chat.type = "group"
         mock_group_update.callback_query = mock_callback_query
-        mock_context.bot.get_chat_member.return_value = MagicMock(
+        mock_context.get_chat_member.return_value = MagicMock(
             status=ChatMemberStatus.ADMINISTRATOR
         )
 
@@ -186,8 +186,8 @@ class TestVoiceMessageFlow:
 
     async def test_no_voice_or_audio_returns_early(self, mock_private_update, mock_context):
         """Handler returns early when no voice/audio message attached."""
-        mock_private_update.message.voice = None
-        mock_private_update.message.audio = None
+        mock_private_update.voice = None
+        mock_private_update.audio = None
 
         await from_voice_to_text(mock_private_update, mock_context)
 
@@ -210,12 +210,12 @@ class TestVoiceMessageFlow:
         """Blocked user gets rejected with blocked message."""
         user_id = "12360"
         chat_id = "u_12360"
-        mock_private_update.effective_user.id = 12360
-        mock_private_update.effective_chat.id = 12360
+        mock_private_update.from_user.id = 12360
+        mock_private_update.chat.id = 12360
 
         await set_chat_language(chat_id, "en")
         await add_user_role(user_id, "blocked", "admin")
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
 
         with patch("src.telegram.voice.send_response", AsyncMock()) as mock_send:
             await from_voice_to_text(mock_private_update, mock_context)
@@ -230,13 +230,13 @@ class TestVoiceMessageFlow:
         """Audio messages (not just voice) are processed."""
         user_id = "12361"
         chat_id = "u_12361"
-        mock_private_update.effective_user.id = 12361
-        mock_private_update.effective_chat.id = 12361
+        mock_private_update.from_user.id = 12361
+        mock_private_update.chat.id = 12361
 
         await set_chat_language(chat_id, "en")
         await add_credits(user_id, 100)
-        mock_private_update.message.voice = None
-        mock_private_update.message.audio = mock_telegram_audio
+        mock_private_update.voice = None
+        mock_private_update.audio = mock_telegram_audio
         voice_external_mocks["transcribe"].return_value = ("Audio text", 30, 1)
 
         await from_voice_to_text(mock_private_update, mock_context)
@@ -249,11 +249,11 @@ class TestVoiceMessageFlow:
     ):
         """Shows service unavailable when no transcription provider available."""
         chat_id = "u_12350"
-        mock_private_update.effective_user.id = 12350
-        mock_private_update.effective_chat.id = 12350
+        mock_private_update.from_user.id = 12350
+        mock_private_update.chat.id = 12350
 
         await set_chat_language(chat_id, "en")
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
 
         with (
             patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=False)),
@@ -270,12 +270,12 @@ class TestVoiceMessageFlow:
         """Shows insufficient tokens when user has no tokens."""
         user_id = "12351"
         chat_id = "u_12351"
-        mock_private_update.effective_user.id = 12351
-        mock_private_update.effective_chat.id = 12351
+        mock_private_update.from_user.id = 12351
+        mock_private_update.chat.id = 12351
 
         await set_chat_language(chat_id, "en")
         await deduct_credits(user_id, 100)
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
 
         with patch("src.telegram.voice.is_wit_available", AsyncMock(return_value=True)):
             await from_voice_to_text(mock_private_update, mock_context)
@@ -289,12 +289,12 @@ class TestVoiceMessageFlow:
         """Groq provider usage is recorded in stats."""
         user_id = "12352"
         chat_id = "u_12352"
-        mock_private_update.effective_user.id = 12352
-        mock_private_update.effective_chat.id = 12352
+        mock_private_update.from_user.id = 12352
+        mock_private_update.chat.id = 12352
 
         await set_chat_language(chat_id, "en")
         await add_credits(user_id, 100)
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
         voice_external_mocks["transcribe"].return_value = ("Hello", 10, 1)
 
         with (
@@ -314,8 +314,8 @@ class TestVoiceMessageFlow:
         """Voice message triggers auto-categorization when enabled."""
         user_id = "12353"
         chat_id = "u_12353"
-        mock_private_update.effective_user.id = 12353
-        mock_private_update.effective_chat.id = 12353
+        mock_private_update.from_user.id = 12353
+        mock_private_update.chat.id = 12353
 
         await set_chat_language(chat_id, "en")
         await set_gpt_command(chat_id, "евлампий")
@@ -323,7 +323,7 @@ class TestVoiceMessageFlow:
         await set_github_settings(chat_id, "owner", "repo", "token")
         await set_auto_categorize(chat_id, True)
 
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
         voice_external_mocks["transcribe"].return_value = ("Note content", 5, 1)
         voice_external_mocks["obsidian"].return_value = (True, "note.md")
 
@@ -342,7 +342,7 @@ class TestVoiceMessageFlow:
         await set_gpt_command(chat_id, "евлампий")
         await add_credits(user_id, 100)
 
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
 
         await from_voice_to_text(mock_private_update, mock_context)
 
@@ -355,14 +355,14 @@ class TestVoiceMessageFlow:
         """Voice message starting with command triggers GPT response indicator."""
         user_id = "12346"
         chat_id = "u_12346"
-        mock_private_update.effective_user.id = 12346
-        mock_private_update.effective_chat.id = 12346
+        mock_private_update.from_user.id = 12346
+        mock_private_update.chat.id = 12346
 
         await set_chat_language(chat_id, "ru")
         await set_gpt_command(chat_id, "евлампий")
         await add_credits(user_id, 100)
 
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
         voice_external_mocks["transcribe"].return_value = ("евлампий расскажи анекдот", 10, 1)
 
         await from_voice_to_text(mock_private_update, mock_context)
@@ -376,13 +376,13 @@ class TestVoiceMessageFlow:
         """Empty voice transcription produces no response."""
         user_id = "12347"
         chat_id = "u_12347"
-        mock_private_update.effective_user.id = 12347
-        mock_private_update.effective_chat.id = 12347
+        mock_private_update.from_user.id = 12347
+        mock_private_update.chat.id = 12347
 
         await set_chat_language(chat_id, "en")
         await add_credits(user_id, 100)
 
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
         voice_external_mocks["transcribe"].return_value = ("", 0, 0)
 
         await from_voice_to_text(mock_private_update, mock_context)
@@ -399,15 +399,15 @@ class TestVoiceMessageWithCleanup:
         """Voice message triggers cleanup when enabled for paid user."""
         user_id = "12360"
         chat_id = "u_12360"
-        mock_private_update.effective_user.id = 12360
-        mock_private_update.effective_chat.id = 12360
+        mock_private_update.from_user.id = 12360
+        mock_private_update.chat.id = 12360
 
         await set_chat_language(chat_id, "en")
         await set_gpt_command(chat_id, "евлампий")
         await add_credits(user_id, 100)
         await set_auto_cleanup(chat_id, True)
 
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
         voice_external_mocks["transcribe"].return_value = (
             "ну вот значит я хотел сказать что проект классный",
             5,
@@ -425,15 +425,15 @@ class TestVoiceMessageWithCleanup:
     ):
         """Free user: cleanup is never called, raw text sent as-is."""
         chat_id = "u_12370"
-        mock_private_update.effective_user.id = 12370
-        mock_private_update.effective_chat.id = 12370
+        mock_private_update.from_user.id = 12370
+        mock_private_update.chat.id = 12370
 
         await set_chat_language(chat_id, "en")
         await set_gpt_command(chat_id, "евлампий")
         await set_auto_cleanup(chat_id, True)  # enabled, but should be ignored for FREE
         # No add_credits → FREE tier
 
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
         raw_text = "ну короче значит всё хорошо"
         voice_external_mocks["transcribe"].return_value = (raw_text, 5, 1)
 
@@ -451,15 +451,15 @@ class TestVoiceMessageWithCleanup:
         """Paid user with cleanup OFF: Obsidian gets cleaned text, reply gets raw text."""
         user_id = "12371"
         chat_id = "u_12371"
-        mock_private_update.effective_user.id = 12371
-        mock_private_update.effective_chat.id = 12371
+        mock_private_update.from_user.id = 12371
+        mock_private_update.chat.id = 12371
 
         await set_chat_language(chat_id, "en")
         await set_gpt_command(chat_id, "евлампий")
         await add_credits(user_id, 100)
         await set_auto_cleanup(chat_id, False)  # cleanup OFF
 
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
         raw_text = "ну вот значит проект классный"
         cleaned_text = "Проект классный."
         voice_external_mocks["transcribe"].return_value = (raw_text, 5, 1)
@@ -483,8 +483,8 @@ class TestVoiceMessageWithCleanup:
         """User with barely enough credits: transcription succeeds + overdraft warning."""
         user_id = "12372"
         chat_id = "u_12372"
-        mock_private_update.effective_user.id = 12372
-        mock_private_update.effective_chat.id = 12372
+        mock_private_update.from_user.id = 12372
+        mock_private_update.chat.id = 12372
 
         await set_chat_language(chat_id, "en")
         await set_gpt_command(chat_id, "евлампий")
@@ -492,7 +492,7 @@ class TestVoiceMessageWithCleanup:
         # Deduct 3 from 10 → no overdraft. Need to exhaust first.
         await deduct_credits(user_id, 9)  # leaves 1 free token
 
-        mock_private_update.message.voice = mock_telegram_voice
+        mock_private_update.voice = mock_telegram_voice
         voice_external_mocks["transcribe"].return_value = ("Hello world", 60, 1)
         # Cost = ceil(60/20) = 3 tokens, but only 1 available → overdraft
 
@@ -727,8 +727,8 @@ class TestCategorizeAll:
     async def test_requires_github_connection(self, mock_private_update, mock_context):
         """Shows error when GitHub not connected."""
         chat_id = "u_categorize_no_gh"
-        mock_private_update.effective_chat.id = 999999
-        mock_private_update.effective_user.id = 999999
+        mock_private_update.chat.id = 999999
+        mock_private_update.from_user.id = 999999
         await set_chat_language(chat_id, "en")
         # No GitHub settings configured
 
@@ -764,7 +764,7 @@ class TestHubCommands:
     ):
         """Non-admin in group chat cannot use settings hub."""
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
 
         await settings_hub(mock_group_update, mock_context)
 
@@ -774,8 +774,8 @@ class TestHubCommands:
         """Obsidian hub shows only 'Connect GitHub' when not connected."""
 
         chat_id = "u_obsidian_no_gh"
-        mock_private_update.effective_chat.id = 888888
-        mock_private_update.effective_user.id = 888888
+        mock_private_update.chat.id = 888888
+        mock_private_update.from_user.id = 888888
         await set_chat_language(chat_id, "en")
         # No GitHub settings
 
@@ -833,8 +833,8 @@ class TestHubCommands:
         """Account hub shows 'Link WhatsApp' when not linked."""
 
         chat_id = "u_account_no_wa"
-        mock_private_update.effective_chat.id = 777777
-        mock_private_update.effective_user.id = 777777
+        mock_private_update.chat.id = 777777
+        mock_private_update.from_user.id = 777777
         await set_chat_language(chat_id, "en")
         # No WhatsApp linked
 
@@ -886,9 +886,9 @@ class TestHubCommands:
         await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        mock_callback_query.edit_message_text.assert_called_once()
+        mock_callback_query.message.edit_text.assert_called_once()
         # Should show language keyboard
-        call_args = mock_callback_query.edit_message_text.call_args
+        call_args = mock_callback_query.message.edit_text.call_args
         assert "reply_markup" in call_args.kwargs
 
 
@@ -906,13 +906,13 @@ class TestHubCallbackRouting:
         mock_callback_query.from_user.id = 12345
         mock_callback_query.message.chat.id = 12345
         mock_private_update.callback_query = mock_callback_query
-        mock_context.bot.send_message = AsyncMock()
+        mock_context.send_message = AsyncMock()
 
         await hub_callback_router(mock_callback_query, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        mock_context.bot.send_message.assert_called_once()
-        message_text = mock_context.bot.send_message.call_args[1]["text"]
+        mock_context.send_message.assert_called_once()
+        message_text = mock_context.send_message.call_args[1]["text"]
         assert "75" in message_text
 
     async def test_account_buy_callback(
@@ -1014,8 +1014,8 @@ class TestSettingsHubTierDependentUI:
     ):
         """Free user only sees base 2 buttons, no provider or cleanup."""
         chat_id = "u_55555"
-        mock_private_update.effective_user.id = 55555
-        mock_private_update.effective_chat.id = 55555
+        mock_private_update.from_user.id = 55555
+        mock_private_update.chat.id = 55555
         await set_chat_language(chat_id, "en")
         # User has no credits added → FREE tier
 
@@ -1059,7 +1059,7 @@ class TestProviderSelectionFlow:
         assert saved == const.PROVIDER_GROQ
 
         # Verify confirmation message shown
-        mock_callback_query.edit_message_text.assert_called_once()
+        mock_callback_query.message.edit_text.assert_called_once()
 
     async def test_select_auto_provider_sets_none(
         self, mock_private_update, mock_context, mock_callback_query
@@ -1102,7 +1102,7 @@ class TestProviderSelectionFlow:
         mock_callback_query.message.chat.type = "group"
         mock_group_update.callback_query = mock_callback_query
 
-        mock_context.bot.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.CREATOR)
 
         await provider_buttons(mock_callback_query, mock_context)
 

@@ -25,9 +25,9 @@ class TestPaymentFlow:
     ):
         """Complete flow: buy → select package → pre_checkout → payment → balance."""
         user_id = "222"
-        mock_private_update.effective_user.id = 222
-        mock_context.bot.send_invoice = AsyncMock()
-        mock_context.bot.send_message = AsyncMock()
+        mock_private_update.from_user.id = 222
+        mock_context.send_invoice = AsyncMock()
+        mock_context.send_message = AsyncMock()
 
         # 1. User starts purchase with /buy — sees package keyboard
         await buy_command(mock_private_update, mock_context)
@@ -41,8 +41,8 @@ class TestPaymentFlow:
         mock_private_update.callback_query = mock_callback_query
 
         await buy_package_callback(mock_callback_query, mock_context)
-        mock_context.bot.send_invoice.assert_called_once()
-        invoice_kwargs = mock_context.bot.send_invoice.call_args[1]
+        mock_context.send_invoice.assert_called_once()
+        invoice_kwargs = mock_context.send_invoice.call_args[1]
         assert invoice_kwargs["currency"] == const.TELEGRAM_STARS_CURRENCY
         assert invoice_kwargs["payload"] == "buy_tokens_1"
 
@@ -65,10 +65,10 @@ class TestPaymentFlow:
         assert new_balance == initial_balance + 30
 
         # 5. User checks balance
-        mock_context.bot.send_message.reset_mock()
+        mock_context.send_message.reset_mock()
         await balance_command(mock_private_update, mock_context)
-        mock_context.bot.send_message.assert_called_once()
-        message_text = mock_context.bot.send_message.call_args[1]["text"]
+        mock_context.send_message.assert_called_once()
+        message_text = mock_context.send_message.call_args[1]["text"]
         assert "30" in message_text or str(new_balance) in message_text
 
 
@@ -77,7 +77,7 @@ class TestBuyCommand:
 
     async def test_buy_shows_package_keyboard(self, mock_private_update, mock_context):
         """Buy command shows inline keyboard with 4 packages."""
-        mock_private_update.effective_user.id = 111
+        mock_private_update.from_user.id = 111
         await buy_command(mock_private_update, mock_context)
 
         mock_private_update.answer.assert_called_once()
@@ -99,12 +99,12 @@ class TestBuyPackageCallback:
         """Selecting a package sends the correct invoice."""
         mock_callback_query.data = "buy_pkg_2"  # Large package
         mock_private_update.callback_query = mock_callback_query
-        mock_context.bot.send_invoice = AsyncMock()
+        mock_context.send_invoice = AsyncMock()
 
         await buy_package_callback(mock_callback_query, mock_context)
 
-        mock_context.bot.send_invoice.assert_called_once()
-        kwargs = mock_context.bot.send_invoice.call_args[1]
+        mock_context.send_invoice.assert_called_once()
+        kwargs = mock_context.send_invoice.call_args[1]
         assert kwargs["currency"] == const.TELEGRAM_STARS_CURRENCY
         assert kwargs["payload"] == "buy_tokens_2"
         assert "65" in kwargs["description"]  # 65 tokens
@@ -125,14 +125,14 @@ class TestBalanceCommand:
     async def test_balance_shows_detailed_info(self, mock_private_update, mock_context):
         """Balance command shows free/purchased split."""
         user_id = "444"
-        mock_private_update.effective_user.id = 444
-        mock_context.bot.send_message = AsyncMock()
+        mock_private_update.from_user.id = 444
+        mock_context.send_message = AsyncMock()
 
         await add_credits(user_id, 50)
         await balance_command(mock_private_update, mock_context)
 
-        mock_context.bot.send_message.assert_called_once()
-        text = mock_context.bot.send_message.call_args[1]["text"]
+        mock_context.send_message.assert_called_once()
+        text = mock_context.send_message.call_args[1]["text"]
         assert "60" in text  # 10 free + 50 purchased
         assert "50" in text  # purchased
         assert "10" in text  # free
@@ -158,7 +158,7 @@ class TestMilestoneAlerts:
         ):
             mock_settings.admin_user_ids = ["123"]
             mock_settings.wit_free_monthly_limit = 500
-            await check_and_send_alerts(mock_context.bot, credits_just_sold=credits_for_10_dollars)
+            await check_and_send_alerts(mock_context, credits_just_sold=credits_for_10_dollars)
 
         milestone_alerts = [a for a in alerts_sent if "$10" in a]
         assert len(milestone_alerts) == 1
@@ -172,8 +172,8 @@ class TestPaymentTierTransition:
     ):
         """Full flow: FREE → payment → PAID → settings hub shows extra buttons."""
 
-        mock_private_update.effective_user.id = 55500
-        mock_private_update.effective_chat.id = 55500
+        mock_private_update.from_user.id = 55500
+        mock_private_update.chat.id = 55500
         user_id = "55500"
         chat_id = f"u_{user_id}"
         await set_chat_language(chat_id, "en")
@@ -190,9 +190,9 @@ class TestPaymentTierTransition:
 
         # 3. Simulate payment
         mock_private_update.answer.reset_mock()
-        mock_private_update.message.successful_payment = MagicMock()
-        mock_private_update.message.successful_payment.total_amount = 25
-        mock_private_update.message.successful_payment.invoice_payload = "buy_tokens_0"
+        mock_private_update.successful_payment = MagicMock()
+        mock_private_update.successful_payment.total_amount = 25
+        mock_private_update.successful_payment.invoice_payload = "buy_tokens_0"
 
         await handle_successful_payment(mock_private_update, mock_context)
 

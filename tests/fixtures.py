@@ -27,11 +27,7 @@ def _build_chat_mock(chat_id: int, chat_type: str) -> MagicMock:
 
 
 def _build_message_mock(*, chat_id: int, chat_type: str, user_id: int = 12345) -> MagicMock:
-    """Build an aiogram-shape Message mock with answer/reply/edit_text as AsyncMocks.
-
-    Also exposes PTB-compat aliases (`effective_user`, `effective_chat`, `message`)
-    so legacy tests can keep using familiar attribute paths during the migration.
-    """
+    """Build an aiogram-shape Message mock with answer/reply/edit_text as AsyncMocks."""
     msg = MagicMock()
     msg.__class__ = Message  # so isinstance(msg, Message) passes in handler narrowing
     msg.message_id = 1
@@ -45,12 +41,6 @@ def _build_message_mock(*, chat_id: int, chat_type: str, user_id: int = 12345) -
     msg.answer = AsyncMock()
     msg.reply = AsyncMock()
     msg.edit_text = AsyncMock()
-    # PTB-compat aliases (kept until tests are fully migrated)
-    msg.effective_user = msg.from_user
-    msg.effective_chat = msg.chat
-    msg.message = msg
-    msg.callback_query = None
-    msg.pre_checkout_query = None
     return msg
 
 
@@ -68,15 +58,8 @@ def mock_group_update():
 
 @pytest.fixture
 def mock_context():
-    """Mock aiogram Bot (replacement for PTB context.bot).
-
-    Self-referencing: `mock_context is mock_context.bot`. This lets handlers
-    that accept `bot: Bot` and tests that assert via `mock_context.bot.X` both
-    work — the same AsyncMock is exposed under both names.
-    """
-    bot = AsyncMock()
-    bot.bot = bot
-    return bot
+    """Mock aiogram Bot (passed as the `bot: Bot` arg in handlers)."""
+    return AsyncMock()
 
 
 @pytest.fixture
@@ -101,10 +84,6 @@ def mock_callback_query():
     query.from_user = _build_user_mock(12345)
     query.answer = AsyncMock()
     query.message = _build_message_mock(chat_id=12345, chat_type="private", user_id=12345)
-    # Convenience: the inner message gets a separate `edit_message_text` AsyncMock that
-    # legacy tests can assert against (PTB-style); aiogram callbacks do not have this
-    # method, but we keep the alias for now to limit churn.
-    query.edit_message_text = query.message.edit_text
     return query
 
 

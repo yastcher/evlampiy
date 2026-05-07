@@ -66,6 +66,20 @@
   provider selection) stay in the adapter. Service-level smoke tests added in
   `tests/services/test_voice_pipeline.py`. Existing voice tests updated via fixture rewiring
   (`voice_external_mocks` / `whatsapp_voice_external_mocks` patches now target the service).
+- Architecture isolation: removed all PTB-compat aliases from `tests/fixtures.py`
+  (`msg.effective_user`/`effective_chat` aliasing, `msg.message = msg` self-reference,
+  `mock_context.bot = mock_context` self-reference, and the
+  `mock_callback_query.edit_message_text` PTB-shorthand). Mocks now have a
+  faithful aiogram shape: tests access `mock_private_update.from_user` /
+  `mock_private_update.chat`, set `mock_private_update.successful_payment` directly,
+  call `bot.X` as `mock_context.X`, and use `mock_callback_query.message.edit_text`.
+  Test files moved into a `tests/telegram/` package (`test_user_flow.py`,
+  `test_admin.py`, `test_handlers_extended.py`, `test_payments.py`,
+  `test_account_linking.py`, `test_bot.py`, `test_gpt_commands.py`,
+  `test_bot_sender_guard.py`, `test_selftest.py`) so handler / adapter tests are
+  visually grouped next to the new `tests/services/` package. Infra tests
+  (`test_ai_*`, `test_mongo`, `test_transcription`, `test_categorization`,
+  `test_github_*`, etc.) stay at `tests/` root.
 - Architecture isolation: added `src/services/payments_service.py` —
   framework-agnostic Telegram-Stars payment crediting. Owns `CREDIT_PACKAGES` (business
   data: `name` / `stars` / `tokens`), `package_payload(idx)` / `tokens_for_payload`

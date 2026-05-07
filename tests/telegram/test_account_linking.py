@@ -135,7 +135,7 @@ class TestLinkWhatsAppCommand:
     """Test /link_whatsapp Telegram handler."""
 
     async def test_generates_code_in_private_chat(self, mock_private_update, mock_context):
-        mock_private_update.effective_user.id = 12345
+        mock_private_update.from_user.id = 12345
 
         await link_whatsapp(mock_private_update, mock_context)
 
@@ -155,7 +155,7 @@ class TestUnlinkWhatsAppCommand:
 
     async def test_unlinks_existing(self, mock_private_update, mock_context):
         user_id = "12345"
-        mock_private_update.effective_user.id = 12345
+        mock_private_update.from_user.id = 12345
         await set_chat_language("u_12345", "en")
 
         # Create a link first
@@ -169,7 +169,7 @@ class TestUnlinkWhatsAppCommand:
         assert "unlinked" in reply_text.lower()
 
     async def test_handles_no_link(self, mock_private_update, mock_context):
-        mock_private_update.effective_user.id = 99999
+        mock_private_update.from_user.id = 99999
         await set_chat_language("u_99999", "en")
 
         await unlink_whatsapp(mock_private_update, mock_context)

@@ -13,8 +13,8 @@ class TestSendResponse:
         """Short message should be sent as single message."""
         await send_response(mock_private_update, mock_context, response="Hello world")
 
-        mock_context.bot.send_message.assert_called_once()
-        call_kwargs = mock_context.bot.send_message.call_args.kwargs
+        mock_context.send_message.assert_called_once()
+        call_kwargs = mock_context.send_message.call_args.kwargs
         assert call_kwargs["text"] == "Hello world"
         assert call_kwargs["parse_mode"] == ParseMode.HTML
         assert call_kwargs["link_preview_options"].is_disabled is True
@@ -25,9 +25,9 @@ class TestSendResponse:
 
         await send_response(mock_private_update, mock_context, response=long_text)
 
-        assert mock_context.bot.send_message.call_count == 2
-        first_call = mock_context.bot.send_message.call_args_list[0]
-        second_call = mock_context.bot.send_message.call_args_list[1]
+        assert mock_context.send_message.call_count == 2
+        first_call = mock_context.send_message.call_args_list[0]
+        second_call = mock_context.send_message.call_args_list[1]
         assert len(first_call.kwargs["text"]) == MAX_TELEGRAM_MESSAGE_LENGTH
         assert len(second_call.kwargs["text"]) == 100
 
@@ -40,10 +40,10 @@ class TestSendResponse:
             mock_private_update, mock_context, response=long_text, keyboard=keyboard
         )
 
-        assert mock_context.bot.send_message.call_count == 3
-        first_call = mock_context.bot.send_message.call_args_list[0]
-        second_call = mock_context.bot.send_message.call_args_list[1]
-        third_call = mock_context.bot.send_message.call_args_list[2]
+        assert mock_context.send_message.call_count == 3
+        first_call = mock_context.send_message.call_args_list[0]
+        second_call = mock_context.send_message.call_args_list[1]
+        third_call = mock_context.send_message.call_args_list[2]
 
         assert first_call.kwargs["reply_markup"] == keyboard
         assert second_call.kwargs["reply_markup"] is None
@@ -58,14 +58,14 @@ class TestSendResponse:
             reply_to_message_id=42,
         )
 
-        call_kwargs = mock_context.bot.send_message.call_args.kwargs
+        call_kwargs = mock_context.send_message.call_args.kwargs
         assert call_kwargs["reply_to_message_id"] == 42
 
     async def test_empty_message_not_sent(self, mock_private_update, mock_context):
         """Empty message produces no chunks, nothing is sent."""
         await send_response(mock_private_update, mock_context, response="")
 
-        mock_context.bot.send_message.assert_not_called()
+        mock_context.send_message.assert_not_called()
 
     async def test_exact_max_length_message(self, mock_private_update, mock_context):
         """Message exactly at max length should be single chunk."""
@@ -73,4 +73,4 @@ class TestSendResponse:
 
         await send_response(mock_private_update, mock_context, response=exact_text)
 
-        mock_context.bot.send_message.assert_called_once()
+        mock_context.send_message.assert_called_once()

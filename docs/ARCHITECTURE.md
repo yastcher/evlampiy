@@ -66,7 +66,11 @@ tests/
 ├── test_architecture.py    - Domain isolation and import style rules (pytestarch)
 ├── test_api_contracts.py   - Handler registration, signatures, menu consistency
 ├── test_docs.py            - Link validation, ARCHITECTURE.md freshness, CHANGELOG format
-└── test_*.py               - Integration and unit tests
+├── services/               - Use-case service tests (no aiogram/pywa mocks)
+│   └── test_*_service.py, test_voice_pipeline.py
+├── telegram/               - Adapter-level handler tests (aiogram-shape mocks)
+│   └── test_user_flow.py, test_admin.py, test_payments.py, ...
+└── test_*.py               - Integration and unit tests for shared/infra code
 ```
 
 ## Data Flow
