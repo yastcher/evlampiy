@@ -287,7 +287,7 @@ class TestHandleLinkCommand:
         """Link command with rate limiting shows wait message."""
         mock_whatsapp_message.text = "link ABC123"
 
-        with patch("src.whatsapp.handlers.confirm_link", AsyncMock(return_value="rate_limited")):
+        with patch("src.services.account_linking_service.confirm_link", AsyncMock(return_value="rate_limited")):
             await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_called_once()
@@ -298,7 +298,7 @@ class TestHandleLinkCommand:
         """Link command with invalid code shows error."""
         mock_whatsapp_message.text = "link INVALID"
 
-        with patch("src.whatsapp.handlers.confirm_link", AsyncMock(return_value="invalid")):
+        with patch("src.services.account_linking_service.confirm_link", AsyncMock(return_value="invalid")):
             await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_called_once()
@@ -309,7 +309,7 @@ class TestHandleLinkCommand:
         """Link command with valid code succeeds."""
         mock_whatsapp_message.text = "link VALID123"
 
-        with patch("src.whatsapp.handlers.confirm_link", AsyncMock(return_value="success")):
+        with patch("src.services.account_linking_service.confirm_link", AsyncMock(return_value="success")):
             await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_called_once()

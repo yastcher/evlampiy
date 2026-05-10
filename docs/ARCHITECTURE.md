@@ -29,6 +29,7 @@ src/
 │   ├── wit_client.py       - Wit.ai integration (chunked audio)
 │   └── groq_client.py      - Groq Whisper integration
 ├── services/               # Use-case layer (framework-agnostic, no aiogram/pywa)
+│   ├── account_linking_service.py - WhatsApp `link <code>` flow (LinkOutcome)
 │   ├── admin_service.py    - Role assignment, block/unblock, credits, user-id validation
 │   ├── notes_service.py    - Toggle Obsidian sync / auto-categorize, run categorize_all
 │   ├── payments_service.py - Token packages + award_tokens on successful Stars payment

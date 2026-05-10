@@ -7,13 +7,14 @@ from pywa.types import Message
 from pywa_async import WhatsApp
 
 from src import const
-from src.account_linking import confirm_link, get_linked_telegram_id
+from src.account_linking import get_linked_telegram_id
 from src.config import settings
 from src.credits import get_user_tier
 from src.dto import UserTier
 from src.mongo import (
     get_chat_language,
 )
+from src.services.account_linking_service import LinkOutcome, process_link_command
 from src.services.voice_pipeline import process_voice
 from src.whatsapp.client import WHATSAPP_CHAT_PREFIX
 
@@ -32,30 +33,19 @@ def register_handlers(wa: WhatsApp) -> None:
             await handle_voice_message(client, message)
 
 
+_LINK_REPLIES: dict[LinkOutcome, str] = {
+    LinkOutcome.USAGE: "Usage: link <code>",
+    LinkOutcome.SUCCESS: "Account linked successfully!",
+    LinkOutcome.RATE_LIMITED: "Too many attempts. Please wait 5 minutes and try again.",
+    LinkOutcome.INVALID: "Invalid or expired code. Try /link_whatsapp in Telegram.",
+}
+
+
 async def handle_link_command(wa: WhatsApp, message: Message) -> None:
-    """Handle account linking command from WhatsApp."""
+    """Handle account linking command from WhatsApp — thin adapter."""
     phone = message.from_user.wa_id
-    text = message.text or ""
-    parts = text.strip().split(maxsplit=1)
-    code = parts[1] if len(parts) > 1 else ""
-
-    if not code:
-        await wa.send_message(to=phone, text="Usage: link <code>")
-        return
-
-    result = await confirm_link(code, phone)
-    if result == "success":
-        await wa.send_message(to=phone, text="Account linked successfully!")
-    elif result == "rate_limited":
-        await wa.send_message(
-            to=phone,
-            text="Too many attempts. Please wait 5 minutes and try again.",
-        )
-    else:
-        await wa.send_message(
-            to=phone,
-            text="Invalid or expired code. Try /link_whatsapp in Telegram.",
-        )
+    outcome = await process_link_command(message.text or "", phone)
+    await wa.send_message(to=phone, text=_LINK_REPLIES[outcome])
 
 
 async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
