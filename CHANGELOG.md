@@ -1,3 +1,10 @@
+## [0.9.1] — 2026-06-05
+
+### Fixed
+
+- Deploy: image name unified to `evlampiy_notes` across compose and CI (was mismatched, broke `docker compose up` with
+  pull-access-denied)
+
 ## [0.9.0] — 2026-04-13
 
 ### Added

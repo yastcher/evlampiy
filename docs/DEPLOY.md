@@ -69,7 +69,7 @@ uv run python -m src.main
 #### Build and Run
 
 ```bash
-docker build -t evlampiy_notes_tgbot:latest .
+docker build -t evlampiy_notes:latest .
 docker compose up -d
 ```
 
@@ -209,7 +209,7 @@ uv run python -m src.main
 #### Сборка и запуск
 
 ```bash
-docker build -t evlampiy_notes_tgbot:latest .
+docker build -t evlampiy_notes:latest .
 docker compose up -d
 ```
 
