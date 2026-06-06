@@ -99,13 +99,19 @@ class TestBuildBot:
     """build_bot wires the optional Telegram API reverse proxy."""
 
     def test_uses_custom_api_base_when_set(self):
-        with patch.object(bot_setup.settings, "telegram_api_base", "https://proxy.workers.dev"):
+        with (
+            patch.object(bot_setup.settings, "telegram_bot_token", "123:ABC"),
+            patch.object(bot_setup.settings, "telegram_api_base", "https://proxy.workers.dev"),
+        ):
             bot = bot_setup.build_bot()
 
         assert "proxy.workers.dev" in bot.session.api.api_url(token="123", method="getMe")
 
     def test_uses_official_api_by_default(self):
-        with patch.object(bot_setup.settings, "telegram_api_base", ""):
+        with (
+            patch.object(bot_setup.settings, "telegram_bot_token", "123:ABC"),
+            patch.object(bot_setup.settings, "telegram_api_base", ""),
+        ):
             bot = bot_setup.build_bot()
 
         assert "api.telegram.org" in bot.session.api.api_url(token="123", method="getMe")
