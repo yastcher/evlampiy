@@ -1,6 +1,8 @@
 """Tests for startup self-test module."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from aiogram.exceptions import TelegramNetworkError
 
 from src import const
 from src.selftest import _test_config, _test_localization, run_selftest
@@ -13,9 +15,7 @@ ADMIN_ID = "12345"
 # --- Transcription provider tests ---
 
 
-async def test_sends_voice_and_transcription_to_admin(
-    mock_bot, _patch_settings, mock_selftest_cleanup
-):
+async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
         patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
@@ -48,9 +48,7 @@ async def test_sends_error_on_empty_transcription(mock_bot, _patch_settings, moc
     assert "\u274c Wit.ai \u2014 returned empty" in message_text
 
 
-async def test_sends_error_on_transcription_exception(
-    mock_bot, _patch_settings, mock_selftest_cleanup
-):
+async def test_sends_error_on_transcription_exception(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
         patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
@@ -75,9 +73,7 @@ async def test_uses_russian_language(mock_bot, _patch_settings, mock_selftest_cl
     assert "Self-test (ru)" in message_text
 
 
-async def test_does_not_crash_on_send_failure(
-    mock_bot, _patch_settings, mock_selftest_cleanup, caplog
-):
+async def test_does_not_crash_on_send_failure(mock_bot, _patch_settings, mock_selftest_cleanup, caplog):
     mock_bot.send_message.side_effect = RuntimeError("chat not found")
     with (
         patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
@@ -87,6 +83,18 @@ async def test_does_not_crash_on_send_failure(
         await run_selftest(mock_bot)
 
     assert "Self-test failed for admin" in caplog.text
+
+
+async def test_voice_upload_failure_still_sends_report(mock_bot, _patch_settings, mock_selftest_cleanup):
+    mock_bot.send_voice.side_effect = TelegramNetworkError(method=MagicMock(), message="timeout")
+    with (
+        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        mock_selftest_cleanup(),
+    ):
+        mock_transcribe.return_value = ("text", 2, 1)
+        await run_selftest(mock_bot)
+
+    mock_bot.send_message.assert_called_once()
 
 
 async def test_skips_when_no_admins(mock_bot):

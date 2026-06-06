@@ -8,6 +8,9 @@
   exit 255)
 - OpenRouter default model → `google/gemma-4-31b-it:free` (old `gemma-3-27b-it:free` now returns 404, leaving cleanup
   silently uncleaned)
+- Startup: a `TelegramNetworkError` from `set_my_commands` no longer crashes the whole app (shared TaskGroup) — command
+  registration is now best-effort, polling starts regardless
+- Self-test: voice upload is now best-effort, so a timed-out upload no longer swallows the text report
 
 ## [0.9.0] — 2026-04-13
 

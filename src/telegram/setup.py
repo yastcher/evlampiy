@@ -6,6 +6,7 @@ import typing
 
 from aiogram import BaseMiddleware, Bot, Dispatcher, F, Router
 from aiogram.client.default import DefaultBotProperties
+from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command
 from aiogram.types import (
     BotCommand,
@@ -123,9 +124,7 @@ class BotSenderRejectMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: typing.Callable[
-            [TelegramObject, dict[str, typing.Any]], typing.Awaitable[typing.Any]
-        ],
+        handler: typing.Callable[[TelegramObject, dict[str, typing.Any]], typing.Awaitable[typing.Any]],
         event: TelegramObject,
         data: dict[str, typing.Any],
     ) -> typing.Any:
@@ -163,13 +162,9 @@ def build_router() -> Router:
         router.message.register(command_handler, Command(command_name))
 
     router.callback_query.register(settings_handlers.lang_buttons, F.data.startswith("set_lang_"))
-    router.callback_query.register(
-        settings_handlers.provider_buttons, F.data.startswith("set_prov_")
-    )
+    router.callback_query.register(settings_handlers.provider_buttons, F.data.startswith("set_prov_"))
     # Conversation entry point for /enter_your_command via hub button
-    router.callback_query.register(
-        handlers.enter_your_command_from_hub, F.data == "hub_gpt_command"
-    )
+    router.callback_query.register(handlers.enter_your_command_from_hub, F.data == "hub_gpt_command")
     router.callback_query.register(handlers.hub_callback_router, F.data.startswith("hub_"))
     router.callback_query.register(admin.admin_callback_router, F.data.startswith("adm_"))
     router.callback_query.register(buy_package_callback, F.data.startswith("buy_pkg_"))
@@ -214,7 +209,12 @@ async def run_bot() -> None:
     dp = build_dispatcher()
     selftest_task: asyncio.Task[None] | None = None
     try:
-        await setup_bot_commands(bot)
+        try:
+            await setup_bot_commands(bot)
+        except TelegramNetworkError:
+            # Command-menu registration is cosmetic; a startup network blip to Telegram
+            # must not crash the whole app (run_bot shares a TaskGroup with FastAPI).
+            logger.warning("Could not register bot commands at startup, continuing to polling")
         # Selftest runs as a background task so a hanging provider never blocks polling.
         selftest_task = asyncio.create_task(run_selftest(bot), name="selftest")
         await dp.start_polling(bot)

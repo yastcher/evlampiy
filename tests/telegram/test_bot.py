@@ -1,8 +1,10 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import InlineKeyboardMarkup
 
+from src.telegram import setup as bot_setup
 from src.telegram.bot import MAX_TELEGRAM_MESSAGE_LENGTH, send_response
 
 
@@ -36,9 +38,7 @@ class TestSendResponse:
         long_text = "B" * (MAX_TELEGRAM_MESSAGE_LENGTH * 2 + 50)
         keyboard = MagicMock(spec=InlineKeyboardMarkup)
 
-        await send_response(
-            mock_private_update, mock_context, response=long_text, keyboard=keyboard
-        )
+        await send_response(mock_private_update, mock_context, response=long_text, keyboard=keyboard)
 
         assert mock_context.send_message.call_count == 3
         first_call = mock_context.send_message.call_args_list[0]
@@ -74,3 +74,22 @@ class TestSendResponse:
         await send_response(mock_private_update, mock_context, response=exact_text)
 
         mock_context.send_message.assert_called_once()
+
+
+class TestRunBotResilience:
+    """run_bot must not crash when non-critical startup steps fail."""
+
+    async def test_command_registration_network_error_does_not_block_polling(self):
+        """A TelegramNetworkError from set_my_commands must not stop polling."""
+        bot = AsyncMock()
+        dp = AsyncMock()
+        boom = TelegramNetworkError(method=MagicMock(), message="timeout")
+        with (
+            patch.object(bot_setup, "build_bot", return_value=bot),
+            patch.object(bot_setup, "build_dispatcher", return_value=dp),
+            patch.object(bot_setup, "setup_bot_commands", AsyncMock(side_effect=boom)),
+            patch.object(bot_setup, "run_selftest", AsyncMock()),
+        ):
+            await bot_setup.run_bot()
+
+        dp.start_polling.assert_awaited_once_with(bot)

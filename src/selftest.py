@@ -7,6 +7,7 @@ import pathlib
 import tomllib
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import BufferedInputFile
 
 from src import const
@@ -166,9 +167,7 @@ async def _run_selftest_inner(bot: Bot) -> None:
             logger.exception("Self-test failed for admin %s", admin_id)
 
 
-async def _selftest_for_admin(
-    bot: Bot, admin_id: str, audio_bytes: bytes, duration: int, version: str
-) -> None:
+async def _selftest_for_admin(bot: Bot, admin_id: str, audio_bytes: bytes, duration: int, version: str) -> None:
     language = RUSSIAN
     # todo =Y change it later
     # language = await get_chat_language(f"u_{admin_id}")
@@ -176,15 +175,11 @@ async def _selftest_for_admin(
     # --- Transcription providers ---
     transcription_results: _ResultList = []
 
-    wit_text, wit_error = await _test_provider(
-        audio_bytes, "ogg", language, provider=const.PROVIDER_WIT
-    )
+    wit_text, wit_error = await _test_provider(audio_bytes, "ogg", language, provider=const.PROVIDER_WIT)
     transcription_results.append((_WIT_LABEL, wit_text, wit_error))
 
     if settings.groq_api_key:
-        groq_text, groq_error = await _test_provider(
-            audio_bytes, "ogg", language, provider=const.PROVIDER_GROQ
-        )
+        groq_text, groq_error = await _test_provider(audio_bytes, "ogg", language, provider=const.PROVIDER_GROQ)
         transcription_results.append((_GROQ_LABEL, groq_text, groq_error))
     else:
         transcription_results.append((_GROQ_LABEL, "", "skipped (not configured)"))
@@ -211,5 +206,10 @@ async def _selftest_for_admin(
     message = _build_message(version, sections)
     chat_id = int(admin_id)
     voice_file = BufferedInputFile(audio_bytes, filename="selftest.ogg")
-    await bot.send_voice(chat_id=chat_id, voice=voice_file, duration=duration)
+    try:
+        await bot.send_voice(chat_id=chat_id, voice=voice_file, duration=duration)
+    except TelegramNetworkError:
+        # Voice upload is the heaviest call; on a slow link it may time out. The text
+        # report carries the actual results, so deliver it even if the voice fails.
+        logger.warning("Self-test voice upload failed for admin %s, sending report anyway", admin_id)
     await bot.send_message(chat_id=chat_id, text=message)
