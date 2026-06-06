@@ -1,7 +1,14 @@
 ## [0.9.1] — 2026-06-05
 
+### Added
+
+- Optional `TELEGRAM_API_BASE` to route the Bot API through a reverse proxy where `api.telegram.org` is blocked;
+  Cloudflare Worker under `cloudflare/telegram-proxy/`
+
 ### Fixed
 
+- `Settings` now ignores unknown env vars (`extra="ignore"`) so a `.env` shared with deploy tooling (`CLOUDFLARE_*`)
+  no longer crashes startup
 - Deploy: image name unified to `evlampiy_notes` across compose and CI (was mismatched, broke `docker compose up` with
   pull-access-denied)
 - Deploy: SSH keepalive + `--remove-orphans` so the session survives the mongodb healthcheck wait (was `Broken pipe`,

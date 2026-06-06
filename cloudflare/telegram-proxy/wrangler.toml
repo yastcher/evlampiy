@@ -1,0 +1,6 @@
+name = "telegram-proxy"
+main = "worker.js"
+compatibility_date = "2026-06-06"
+
+# account_id, CLOUDFLARE_API_TOKEN are read from the environment
+# (CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN) at deploy time.

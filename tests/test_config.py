@@ -1,4 +1,12 @@
-from src.config import _parse_comma_separated_ids
+from src.config import Settings, _parse_comma_separated_ids
+
+
+class TestSettingsExtraEnv:
+    def test_unknown_env_vars_are_ignored(self):
+        """.env is shared with deploy tooling (CLOUDFLARE_*); unknown vars must not crash."""
+        settings = Settings(_env_file=None, CLOUDFLARE_ACCOUNT_ID="x", CLOUDFLARE_API_TOKEN="y")
+
+        assert not hasattr(settings, "cloudflare_account_id")
 
 
 class TestParseCommaSeparatedIds:

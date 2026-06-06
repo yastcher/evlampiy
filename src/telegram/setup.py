@@ -6,6 +6,8 @@ import typing
 
 from aiogram import BaseMiddleware, Bot, Dispatcher, F, Router
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command
 from aiogram.types import (
@@ -196,9 +198,15 @@ def build_dispatcher() -> Dispatcher:
 
 
 def build_bot() -> Bot:
-    """Build aiogram Bot with default HTML parse mode for compatibility."""
+    """Build aiogram Bot, optionally routing the API through a reverse proxy."""
+    session = (
+        AiohttpSession(api=TelegramAPIServer.from_base(settings.telegram_api_base))
+        if settings.telegram_api_base
+        else None
+    )
     return Bot(
         token=settings.telegram_bot_token,
+        session=session,
         default=DefaultBotProperties(parse_mode=None),
     )
 

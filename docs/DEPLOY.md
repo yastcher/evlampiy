@@ -81,6 +81,12 @@ The `docker-compose.yml` includes:
 
 For WhatsApp integration, port 8000 is exposed for webhook callbacks.
 
+#### Telegram blocked on the host
+
+If `api.telegram.org` is unreachable from the host (e.g. a Russian VPS), deploy the Cloudflare
+Worker in `cloudflare/telegram-proxy/` and set `TELEGRAM_API_BASE` to its URL. Empty = official
+endpoint.
+
 ### WhatsApp Webhook Setup
 
 If using WhatsApp integration:
@@ -220,6 +226,12 @@ docker compose up -d
 - Сервис бота с авто-перезапуском
 
 Для интеграции с WhatsApp порт 8000 открыт для webhook-колбэков.
+
+#### Telegram заблокирован на хосте
+
+Если `api.telegram.org` недоступен с хоста (например, российский VPS), задеплойте Cloudflare
+Worker из `cloudflare/telegram-proxy/` и укажите `TELEGRAM_API_BASE` с его URL. Пусто = официальный
+endpoint.
 
 ### Настройка Webhook для WhatsApp
 

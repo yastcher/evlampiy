@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=False,
         env_file=".env",
+        # .env is shared with deploy tooling (e.g. wrangler reads CLOUDFLARE_*);
+        # ignore env vars the app does not declare instead of crashing on them.
+        extra="ignore",
     )
 
     debug: bool = True
@@ -30,6 +33,9 @@ class Settings(BaseSettings):
     default_language: str = RUSSIAN
     telegram_bot_command: str = "евлампий"
     telegram_bot_token: str = ""
+    # Optional reverse-proxy base for the Telegram Bot API (e.g. a Cloudflare Worker)
+    # for hosts where api.telegram.org is blocked. Empty = official endpoint.
+    telegram_api_base: str = ""
 
     mongo_uri: str = "mongodb://mongodb:27017/"
 
