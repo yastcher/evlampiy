@@ -211,6 +211,28 @@ def build_bot() -> Bot:
     )
 
 
+_POLLING_RETRY_DELAY_SECONDS = 5.0
+_POLLING_RETRY_MAX_DELAY_SECONDS = 60.0
+
+
+async def _run_polling_with_retry(dp: Dispatcher, bot: Bot) -> None:
+    """Run polling, retrying on network errors with backoff.
+
+    A transient `TelegramNetworkError` (e.g. a blip reaching Telegram) must not
+    propagate out of run_bot and tear down the shared TaskGroup (FastAPI/WhatsApp).
+    Cancellation propagates for clean shutdown.
+    """
+    delay = _POLLING_RETRY_DELAY_SECONDS
+    while True:
+        try:
+            await dp.start_polling(bot)
+            return
+        except TelegramNetworkError:
+            logger.warning("Polling stopped with a network error, retrying in %.0fs", delay)
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, _POLLING_RETRY_MAX_DELAY_SECONDS)
+
+
 async def run_bot() -> None:
     """Initialize bot, register commands, run self-test, and start polling."""
     bot = build_bot()
@@ -225,7 +247,7 @@ async def run_bot() -> None:
             logger.warning("Could not register bot commands at startup, continuing to polling")
         # Selftest runs as a background task so a hanging provider never blocks polling.
         selftest_task = asyncio.create_task(run_selftest(bot), name="selftest")
-        await dp.start_polling(bot)
+        await _run_polling_with_retry(dp, bot)
     finally:
         if selftest_task is not None and not selftest_task.done():
             selftest_task.cancel()

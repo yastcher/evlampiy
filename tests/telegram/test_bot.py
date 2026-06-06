@@ -1,5 +1,7 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import InlineKeyboardMarkup
@@ -93,6 +95,27 @@ class TestRunBotResilience:
             await bot_setup.run_bot()
 
         dp.start_polling.assert_awaited_once_with(bot)
+
+    async def test_polling_retries_on_network_error(self):
+        """A TelegramNetworkError from polling is retried, not propagated."""
+        dp = AsyncMock()
+        bot = AsyncMock()
+        boom = TelegramNetworkError(method=MagicMock(), message="timeout")
+        dp.start_polling = AsyncMock(side_effect=[boom, None])
+
+        with patch.object(bot_setup.asyncio, "sleep", AsyncMock()):
+            await bot_setup._run_polling_with_retry(dp, bot)
+
+        assert dp.start_polling.await_count == 2
+
+    async def test_polling_propagates_cancellation(self):
+        """Cancellation must propagate so shutdown is not swallowed by the retry loop."""
+        dp = AsyncMock()
+        bot = AsyncMock()
+        dp.start_polling = AsyncMock(side_effect=asyncio.CancelledError())
+
+        with pytest.raises(asyncio.CancelledError):
+            await bot_setup._run_polling_with_retry(dp, bot)
 
 
 class TestBuildBot:

@@ -1,3 +1,10 @@
+## [0.9.2] — 2026-06-06
+
+### Fixed
+
+- Polling: `start_polling` retries on `TelegramNetworkError` with backoff instead of crashing the shared TaskGroup (and
+  taking FastAPI/WhatsApp down with it)
+
 ## [0.9.1] — 2026-06-05
 
 ### Added
