@@ -74,10 +74,9 @@ class Settings(BaseSettings):
 
     # OpenRouter
     openrouter_api_key: str = ""
-    openrouter_model: str = "google/gemma-3-27b-it:free"
-    # openrouter_model: str = "arcee-ai/trinity-large-preview:free"  # OK, 2.5s
-    # openrouter_model: str = "deepseek/deepseek-r1-0528:free"  # reasoning, slow + empty content
-    # openrouter_model: str = "qwen/qwen3-4b:free"                   # 429: rate limited
+    openrouter_model: str = "google/gemma-4-31b-it:free"  # OK, ~1.6s, cleans RU well
+    # openrouter_model: str = "openai/gpt-oss-20b:free"  # OK but ~15s
+    # Many older :free models now return 404 "No endpoints found"; verify via /api/v1/models.
 
     # AI provider selection
     categorization_provider: str = "deepseek"

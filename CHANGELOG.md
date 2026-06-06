@@ -4,6 +4,10 @@
 
 - Deploy: image name unified to `evlampiy_notes` across compose and CI (was mismatched, broke `docker compose up` with
   pull-access-denied)
+- Deploy: SSH keepalive + `--remove-orphans` so the session survives the mongodb healthcheck wait (was `Broken pipe`,
+  exit 255)
+- OpenRouter default model → `google/gemma-4-31b-it:free` (old `gemma-3-27b-it:free` now returns 404, leaving cleanup
+  silently uncleaned)
 
 ## [0.9.0] — 2026-04-13
 

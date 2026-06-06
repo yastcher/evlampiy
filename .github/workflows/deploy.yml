@@ -93,13 +93,13 @@ jobs:
           chmod 600 private_key
           scp -i private_key -o StrictHostKeyChecking=no evlampiy_notes.tar.gz $SERVER_USER@$SERVER_IP:~/evlampiy/evlampiy_notes.tar.gz
           scp -i private_key -o StrictHostKeyChecking=no docker-compose.yml $SERVER_USER@$SERVER_IP:~/evlampiy/docker-compose.yml
-          ssh -i private_key -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP << EOF
+          ssh -i private_key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10 $SERVER_USER@$SERVER_IP << EOF
             cd evlampiy
-            docker compose down || true
+            docker compose down --remove-orphans || true
             gunzip -c ~/evlampiy/evlampiy_notes.tar.gz | docker load
             rm ~/evlampiy/evlampiy_notes.tar.gz
             docker image prune -f
             docker volume prune -f
-            docker compose up -d
+            docker compose up -d --remove-orphans
           EOF
           rm private_key
