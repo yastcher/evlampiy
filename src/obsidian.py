@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 async def add_short_note_to_obsidian(chat_id: ChatId, text: str) -> bool:
     """
-    Creates a short note in the GitHub repository's `income` folder.
+    Creates a short note in the GitHub repository's inbox folder.
     """
     if not text:
         return False

@@ -687,7 +687,7 @@ class TestCategorizeAll:
     """Test /categorize command with real DB for settings."""
 
     async def test_categorizes_files(self, mock_private_update, mock_context):
-        """Categorizes all files in income folder."""
+        """Categorizes all files in inbox folder."""
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
