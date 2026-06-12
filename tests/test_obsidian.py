@@ -21,7 +21,7 @@ class TestAddShortNoteToObsidian:
         assert call_kwargs["repo_info"].token == "ghp_testtoken"
         assert call_kwargs["repo_info"].owner == "testowner"
         assert call_kwargs["repo_info"].repo == "testrepo"
-        assert call_kwargs["path"].startswith("income/")
+        assert call_kwargs["path"].startswith("evlampiy/inbox/")
         assert call_kwargs["content"] == "Test note content"
 
     async def test_handles_github_error(self):
@@ -76,9 +76,7 @@ class TestSaveTranscriptionToObsidian:
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
         with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
-            success, filename = await save_transcription_to_obsidian(
-                chat_id, "Hello world", "telegram", "en"
-            )
+            success, filename = await save_transcription_to_obsidian(chat_id, "Hello world", "telegram", "en")
 
         assert success is True
         assert filename is not None
@@ -88,7 +86,7 @@ class TestSaveTranscriptionToObsidian:
         assert call_kwargs["repo_info"].token == "ghp_abc"
         assert call_kwargs["repo_info"].owner == "user"
         assert call_kwargs["repo_info"].repo == "notes"
-        assert call_kwargs["path"].startswith("income/")
+        assert call_kwargs["path"].startswith("evlampiy/inbox/")
         assert call_kwargs["path"].endswith(".md")
 
         content = call_kwargs["content"]
@@ -105,9 +103,7 @@ class TestSaveTranscriptionToObsidian:
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
         with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
-            success, filename = await save_transcription_to_obsidian(
-                chat_id, "Привет", "whatsapp", "ru"
-            )
+            success, filename = await save_transcription_to_obsidian(chat_id, "Привет", "whatsapp", "ru")
 
         assert success is True
         assert filename is not None
@@ -153,9 +149,7 @@ class TestSaveTranscriptionToObsidian:
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
         with patch("src.obsidian.put_github_file", AsyncMock(return_value=False)):
-            success, filename = await save_transcription_to_obsidian(
-                chat_id, "text", "telegram", "ru"
-            )
+            success, filename = await save_transcription_to_obsidian(chat_id, "text", "telegram", "ru")
 
         assert success is False
         assert filename is None
@@ -190,9 +184,7 @@ class TestSaveTranscriptionToObsidian:
         text = "Текст без изменений."
 
         with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
-            await save_transcription_to_obsidian(
-                chat_id, text, "telegram", "ru", original_text=text
-            )
+            await save_transcription_to_obsidian(chat_id, text, "telegram", "ru", original_text=text)
 
         content = mock_put.call_args.kwargs["content"]
         assert "<!-- original" not in content
@@ -204,9 +196,7 @@ class TestSaveTranscriptionToObsidian:
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
         with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
-            await save_transcription_to_obsidian(
-                chat_id, "Some text", "telegram", "ru", original_text=None
-            )
+            await save_transcription_to_obsidian(chat_id, "Some text", "telegram", "ru", original_text=None)
 
         content = mock_put.call_args.kwargs["content"]
         assert "<!-- original" not in content

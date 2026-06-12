@@ -49,6 +49,8 @@ class Settings(BaseSettings):
 
     # GitHub OAuth
     github_client_id: str = ""
+    # Bot's working subdirectory inside the connected vault repo
+    obsidian_base_dir: str = "evlampiy"
 
     # WhatsApp (Meta Cloud API)
     whatsapp_token: str = ""

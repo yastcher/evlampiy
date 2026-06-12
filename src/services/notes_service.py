@@ -1,6 +1,6 @@
 """Notes / Obsidian use-case service. Framework-agnostic — no aiogram/pywa."""
 
-from src.categorization import categorize_all_income
+from src.categorization import categorize_all_inbox
 from src.mongo import (
     get_auto_categorize,
     get_github_settings,
@@ -30,10 +30,10 @@ async def categorize_all_for_chat(chat_id: ChatId) -> tuple[bool, int]:
 
     Returns ``(has_repo, count)``. ``has_repo=False`` means the chat hasn't connected
     GitHub yet — caller decides what to tell the user. ``count=0`` is a successful run
-    where there were no income files to categorize.
+    where there were no inbox files to categorize.
     """
     repo_info = await get_github_settings(chat_id)
     if not repo_info:
         return False, 0
-    count = await categorize_all_income(repo_info)
+    count = await categorize_all_inbox(repo_info)
     return True, count

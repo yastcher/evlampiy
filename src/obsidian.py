@@ -1,7 +1,8 @@
 import datetime
 import logging
 
-from src.github_api import OBSIDIAN_NOTES_FOLDER, put_github_file
+from src import obsidian_layout
+from src.github_api import put_github_file
 from src.mongo import get_github_settings, get_save_to_obsidian
 from src.types import ChatId, Language
 
@@ -21,7 +22,7 @@ async def add_short_note_to_obsidian(chat_id: ChatId, text: str) -> bool:
         return False
 
     now_str = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"income/{now_str}.md"
+    filename = f"{obsidian_layout.inbox_dir()}/{now_str}.md"
     commit_message = f"Add short note {now_str}"
 
     result = await put_github_file(
@@ -67,16 +68,9 @@ async def save_transcription_to_obsidian(
     now = datetime.datetime.now(datetime.UTC)
     now_str = now.strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"{now_str}.md"
-    filepath = f"{OBSIDIAN_NOTES_FOLDER}/{filename}"
+    filepath = f"{obsidian_layout.inbox_dir()}/{filename}"
 
-    frontmatter = (
-        "---\n"
-        f"date: {now.isoformat()}Z\n"
-        f"source: {source}\n"
-        f"language: {language}\n"
-        f"chat_id: {chat_id}\n"
-        "---\n\n"
-    )
+    frontmatter = f"---\ndate: {now.isoformat()}Z\nsource: {source}\nlanguage: {language}\nchat_id: {chat_id}\n---\n\n"
     content = frontmatter + text
     if original_text and original_text != text:
         content += f"\n\n<!-- original\n{original_text}\n-->"

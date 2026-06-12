@@ -152,7 +152,7 @@ class TestProcessVoiceTranscription:
             ),
             patch(
                 "src.services.voice_pipeline.save_transcription_to_obsidian",
-                AsyncMock(return_value=(True, "income/note.md")),
+                AsyncMock(return_value=(True, "note.md")),
             ),
             patch("src.services.voice_pipeline.categorize_note", AsyncMock()) as mock_categorize,
         ):

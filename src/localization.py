@@ -111,16 +111,14 @@ translates = {
     },
     "credits_exhausted_warning": {
         ENGLISH: (
-            "Your token balance is exhausted. "
-            "The transcription was still processed. Use /buy to purchase more tokens."
+            "Your token balance is exhausted. The transcription was still processed. Use /buy to purchase more tokens."
         ),
         GERMAN: (
             "Ihr Token-Guthaben ist erschöpft. "
             "Die Transkription wurde trotzdem verarbeitet. Verwenden Sie /buy für mehr Tokens."
         ),
         RUSSIAN: (
-            "Ваш баланс токенов исчерпан. "
-            "Транскрипция всё равно была обработана. Используйте /buy для покупки токенов."
+            "Ваш баланс токенов исчерпан. Транскрипция всё равно была обработана. Используйте /buy для покупки токенов."
         ),
         SPANISH: (
             "Tu saldo de tokens se ha agotado. "
@@ -135,14 +133,9 @@ translates = {
     },
     "service_unavailable": {
         ENGLISH: "Transcription service is temporarily unavailable. Please try again later.",
-        GERMAN: (
-            "Transkriptionsdienst ist vorübergehend nicht verfügbar."
-            " Bitte versuchen Sie es später erneut."
-        ),
+        GERMAN: ("Transkriptionsdienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut."),
         RUSSIAN: "Сервис транскрипции временно недоступен. Попробуйте позже.",
-        SPANISH: (
-            "El servicio de transcripción no está disponible temporalmente. Inténtalo más tarde."
-        ),
+        SPANISH: ("El servicio de transcripción no está disponible temporalmente. Inténtalo más tarde."),
     },
     "categorize_enabled": {
         ENGLISH: "Auto-categorization enabled.",
@@ -175,9 +168,9 @@ translates = {
         SPANISH: "{count} notas categorizadas.",
     },
     "categorize_no_files": {
-        ENGLISH: "No files to categorize in income folder.",
+        ENGLISH: "No files to categorize in inbox folder.",
         GERMAN: "Keine Dateien zum Kategorisieren im Eingangsordner.",
-        RUSSIAN: "Нет файлов для категоризации в папке income.",
+        RUSSIAN: "Нет файлов для категоризации в папке inbox.",
         SPANISH: "No hay archivos para categorizar en la carpeta de entrada.",
     },
     "mystats_message": {
@@ -239,7 +232,7 @@ translates = {
             "2. Clone as a new vault:\n"
             "   <code>https://github.com/{owner}/{repo}</code>\n"
             "3. Enable auto-pull in plugin settings\n"
-            "4. New notes appear in <code>income/</code>\n\n"
+            "4. New notes appear in <code>{inbox_dir}/</code>\n\n"
             "Open vault (tap to copy, paste in browser):\n"
             "<code>obsidian://open?vault={repo}</code>\n\n"
             "Use <b>Setup Obsidian</b> below to pre-configure obsidian-git in the repo."
@@ -251,7 +244,7 @@ translates = {
             "2. Als neues Vault klonen:\n"
             "   <code>https://github.com/{owner}/{repo}</code>\n"
             "3. Repo als Vault öffnen — Plugin ist bereits konfiguriert\n"
-            "4. Neue Notizen erscheinen in <code>income/</code>\n\n"
+            "4. Neue Notizen erscheinen in <code>{inbox_dir}/</code>\n\n"
             "Vault öffnen (tippen zum Kopieren, im Browser einfügen):\n"
             "<code>obsidian://open?vault={repo}</code>\n\n"
             "<b>Obsidian einrichten</b> unten konfiguriert obsidian-git automatisch."
@@ -263,7 +256,7 @@ translates = {
             "2. Клонировать как новый vault:\n"
             "   <code>https://github.com/{owner}/{repo}</code>\n"
             "3. Открыть как vault — плагин уже настроен\n"
-            "4. Новые заметки в папке <code>income/</code>\n\n"
+            "4. Новые заметки в папке <code>{inbox_dir}/</code>\n\n"
             "Открыть vault (нажми для копирования, вставь в браузер):\n"
             "<code>obsidian://open?vault={repo}</code>\n\n"
             "Кнопка <b>Настроить Obsidian</b> создаёт конфиг плагина в репозитории."
@@ -275,7 +268,7 @@ translates = {
             "2. Clonar como nuevo vault:\n"
             "   <code>https://github.com/{owner}/{repo}</code>\n"
             "3. Abrir como vault — el plugin ya está configurado\n"
-            "4. Las nuevas notas aparecen en <code>income/</code>\n\n"
+            "4. Las nuevas notas aparecen en <code>{inbox_dir}/</code>\n\n"
             "Abrir vault (toca para copiar, pega en el navegador):\n"
             "<code>obsidian://open?vault={repo}</code>\n\n"
             "El botón <b>Configurar Obsidian</b> crea el config del plugin en el repo."
@@ -362,14 +355,9 @@ translates = {
     },
     "obsidian_git_setup_done": {
         ENGLISH: ("Config created! Clone the repo, open as vault, enable obsidian-git — done."),
-        GERMAN: (
-            "Konfiguration erstellt! Repo klonen, als Vault öffnen,"
-            " obsidian-git aktivieren — fertig."
-        ),
+        GERMAN: ("Konfiguration erstellt! Repo klonen, als Vault öffnen, obsidian-git aktivieren — fertig."),
         RUSSIAN: ("Конфиг создан! Клонируй репо, открой как vault, включи obsidian-git — готово."),
-        SPANISH: (
-            "¡Configuración creada! Clona el repo, ábrelo como vault, activa obsidian-git — listo."
-        ),
+        SPANISH: ("¡Configuración creada! Clona el repo, ábrelo como vault, activa obsidian-git — listo."),
     },
     "obsidian_git_setup_failed": {
         ENGLISH: "Failed to create config. Check GitHub connection.",
@@ -498,13 +486,8 @@ translates = {
     },
     "github_auth_timeout": {
         ENGLISH: ("GitHub authorization failed or timed out. Try /connect_github again."),
-        GERMAN: (
-            "GitHub-Autorisierung fehlgeschlagen oder abgelaufen."
-            " Versuchen Sie /connect_github erneut."
-        ),
-        RUSSIAN: (
-            "Авторизация GitHub не удалась или истекло время. Попробуйте /connect_github снова."
-        ),
+        GERMAN: ("GitHub-Autorisierung fehlgeschlagen oder abgelaufen. Versuchen Sie /connect_github erneut."),
+        RUSSIAN: ("Авторизация GitHub не удалась или истекло время. Попробуйте /connect_github снова."),
         SPANISH: ("Autorización de GitHub fallida o expirada. Intenta /connect_github de nuevo."),
     },
     "github_repo_failed": {
@@ -515,33 +498,15 @@ translates = {
     },
     "github_connected": {
         ENGLISH: ("GitHub connected! Repository: {owner}/{repo}\nObsidian sync is now enabled."),
-        GERMAN: (
-            "GitHub verbunden! Repository: {owner}/{repo}\nObsidian-Sync ist jetzt aktiviert."
-        ),
-        RUSSIAN: (
-            "GitHub подключён! Репозиторий: {owner}/{repo}\nСинхронизация с Obsidian включена."
-        ),
-        SPANISH: (
-            "¡GitHub conectado! Repositorio: {owner}/{repo}\nSincronización con Obsidian activada."
-        ),
+        GERMAN: ("GitHub verbunden! Repository: {owner}/{repo}\nObsidian-Sync ist jetzt aktiviert."),
+        RUSSIAN: ("GitHub подключён! Репозиторий: {owner}/{repo}\nСинхронизация с Obsidian включена."),
+        SPANISH: ("¡GitHub conectado! Repositorio: {owner}/{repo}\nSincronización con Obsidian activada."),
     },
     "whatsapp_link_prompt": {
-        ENGLISH: (
-            "Send this message to the bot on WhatsApp:\n\nlink {code}\n\nCode expires in 5 minutes."
-        ),
-        GERMAN: (
-            "Senden Sie diese Nachricht an den Bot auf WhatsApp:\n\n"
-            "link {code}\n\n"
-            "Code läuft in 5 Minuten ab."
-        ),
-        RUSSIAN: (
-            "Отправьте это сообщение боту в WhatsApp:\n\nlink {code}\n\nКод действителен 5 минут."
-        ),
-        SPANISH: (
-            "Envía este mensaje al bot en WhatsApp:\n\n"
-            "link {code}\n\n"
-            "El código expira en 5 minutos."
-        ),
+        ENGLISH: ("Send this message to the bot on WhatsApp:\n\nlink {code}\n\nCode expires in 5 minutes."),
+        GERMAN: ("Senden Sie diese Nachricht an den Bot auf WhatsApp:\n\nlink {code}\n\nCode läuft in 5 Minuten ab."),
+        RUSSIAN: ("Отправьте это сообщение боту в WhatsApp:\n\nlink {code}\n\nКод действителен 5 минут."),
+        SPANISH: ("Envía este mensaje al bot en WhatsApp:\n\nlink {code}\n\nEl código expira en 5 minutos."),
     },
     "whatsapp_unlinked": {
         ENGLISH: "WhatsApp account unlinked.",
@@ -635,58 +600,30 @@ translates = {
         SPANISH: "💰 Añadir créditos",
     },
     "admin_vip_list": {
-        ENGLISH: (
-            "<b>VIP users:</b>\n{users}\n\n"
-            "Use /add_vip &lt;user_id&gt; or /remove_vip &lt;user_id&gt;"
-        ),
-        GERMAN: (
-            "<b>VIP-Benutzer:</b>\n{users}\n\n"
-            "Verwende /add_vip &lt;user_id&gt; oder /remove_vip &lt;user_id&gt;"
-        ),
+        ENGLISH: ("<b>VIP users:</b>\n{users}\n\nUse /add_vip &lt;user_id&gt; or /remove_vip &lt;user_id&gt;"),
+        GERMAN: ("<b>VIP-Benutzer:</b>\n{users}\n\nVerwende /add_vip &lt;user_id&gt; oder /remove_vip &lt;user_id&gt;"),
         RUSSIAN: (
-            "<b>VIP пользователи:</b>\n{users}\n\n"
-            "Используйте /add_vip &lt;user_id&gt; или /remove_vip &lt;user_id&gt;"
+            "<b>VIP пользователи:</b>\n{users}\n\nИспользуйте /add_vip &lt;user_id&gt; или /remove_vip &lt;user_id&gt;"
         ),
-        SPANISH: (
-            "<b>Usuarios VIP:</b>\n{users}\n\n"
-            "Usa /add_vip &lt;user_id&gt; o /remove_vip &lt;user_id&gt;"
-        ),
+        SPANISH: ("<b>Usuarios VIP:</b>\n{users}\n\nUsa /add_vip &lt;user_id&gt; o /remove_vip &lt;user_id&gt;"),
     },
     "admin_tester_list": {
-        ENGLISH: (
-            "<b>Testers:</b>\n{users}\n\n"
-            "Use /add_tester &lt;user_id&gt; or /remove_tester &lt;user_id&gt;"
-        ),
-        GERMAN: (
-            "<b>Tester:</b>\n{users}\n\n"
-            "Verwende /add_tester &lt;user_id&gt; oder /remove_tester &lt;user_id&gt;"
-        ),
+        ENGLISH: ("<b>Testers:</b>\n{users}\n\nUse /add_tester &lt;user_id&gt; or /remove_tester &lt;user_id&gt;"),
+        GERMAN: ("<b>Tester:</b>\n{users}\n\nVerwende /add_tester &lt;user_id&gt; oder /remove_tester &lt;user_id&gt;"),
         RUSSIAN: (
-            "<b>Тестеры:</b>\n{users}\n\n"
-            "Используйте /add_tester &lt;user_id&gt; или /remove_tester &lt;user_id&gt;"
+            "<b>Тестеры:</b>\n{users}\n\nИспользуйте /add_tester &lt;user_id&gt; или /remove_tester &lt;user_id&gt;"
         ),
-        SPANISH: (
-            "<b>Testers:</b>\n{users}\n\n"
-            "Usa /add_tester &lt;user_id&gt; o /remove_tester &lt;user_id&gt;"
-        ),
+        SPANISH: ("<b>Testers:</b>\n{users}\n\nUsa /add_tester &lt;user_id&gt; o /remove_tester &lt;user_id&gt;"),
     },
     "admin_blocked_list": {
-        ENGLISH: (
-            "<b>Blocked users:</b>\n{users}\n\n"
-            "Use /block &lt;user_id&gt; or /unblock &lt;user_id&gt;"
-        ),
+        ENGLISH: ("<b>Blocked users:</b>\n{users}\n\nUse /block &lt;user_id&gt; or /unblock &lt;user_id&gt;"),
         GERMAN: (
-            "<b>Gesperrte Benutzer:</b>\n{users}\n\n"
-            "Verwende /block &lt;user_id&gt; oder /unblock &lt;user_id&gt;"
+            "<b>Gesperrte Benutzer:</b>\n{users}\n\nVerwende /block &lt;user_id&gt; oder /unblock &lt;user_id&gt;"
         ),
         RUSSIAN: (
-            "<b>Заблокированные:</b>\n{users}\n\n"
-            "Используйте /block &lt;user_id&gt; или /unblock &lt;user_id&gt;"
+            "<b>Заблокированные:</b>\n{users}\n\nИспользуйте /block &lt;user_id&gt; или /unblock &lt;user_id&gt;"
         ),
-        SPANISH: (
-            "<b>Usuarios bloqueados:</b>\n{users}\n\n"
-            "Usa /block &lt;user_id&gt; o /unblock &lt;user_id&gt;"
-        ),
+        SPANISH: ("<b>Usuarios bloqueados:</b>\n{users}\n\nUsa /block &lt;user_id&gt; o /unblock &lt;user_id&gt;"),
     },
     "admin_user_blocked": {
         ENGLISH: "User {user_id} has been blocked.",

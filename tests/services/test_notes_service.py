@@ -54,7 +54,7 @@ class TestCategorizeAllForChat:
         chat_id = "u_notes_6"
         await set_github_settings(chat_id, "owner", "repo", "tok")
         with patch(
-            "src.services.notes_service.categorize_all_income",
+            "src.services.notes_service.categorize_all_inbox",
             AsyncMock(return_value=7),
         ) as mock_cat:
             has_repo, count = await categorize_all_for_chat(chat_id)

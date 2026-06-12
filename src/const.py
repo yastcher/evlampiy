@@ -23,7 +23,12 @@ OPENROUTER_API_BASE = "https://openrouter.ai"
 QWEN_API_BASE = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 DEEPSEEK_API_BASE = "https://api.deepseek.com/v1"
 GITHUB_API_BASE = "https://api.github.com"
-EXCLUDED_CATEGORIES = ("income", "trash")
+
+# Vault layout (folders relative to settings.obsidian_base_dir)
+OBSIDIAN_INBOX_FOLDER = "inbox"
+OBSIDIAN_TRASH_FOLDER = "trash"
+# Folders that are never treated as note categories
+EXCLUDED_CATEGORIES = (OBSIDIAN_INBOX_FOLDER, OBSIDIAN_TRASH_FOLDER)
 
 # AI generation parameters
 CLASSIFY_MAX_TOKENS = 50

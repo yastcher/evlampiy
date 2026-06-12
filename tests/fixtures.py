@@ -267,7 +267,7 @@ def whatsapp_voice_external_mocks(mock_httpx_download_response):
         ) as mock_transcribe,
         patch(
             "src.services.voice_pipeline.save_transcription_to_obsidian",
-            AsyncMock(return_value=(True, "income/note.md")),
+            AsyncMock(return_value=(True, "note.md")),
         ) as mock_save,
         patch("src.services.voice_pipeline.categorize_note", AsyncMock()) as mock_categorize,
         patch(

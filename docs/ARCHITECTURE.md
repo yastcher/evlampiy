@@ -56,6 +56,7 @@ src/
 ├── github_api.py           - GitHub API client for Obsidian vault operations
 ├── github_oauth.py         - GitHub OAuth Device Flow authentication
 ├── obsidian.py             - Save transcriptions as markdown to GitHub repo
+├── obsidian_layout.py      - Vault folder layout (base dir, inbox, trash, categories)
 ├── gpt_commands.py         - GPT chat command handler with tool calling
 ├── main.py                 - Application entry point (Telegram + FastAPI startup)
 └── selftest.py             - Health check and self-test endpoints

@@ -1,5 +1,11 @@
 ## [0.9.2] — 2026-06-06
 
+### Changed
+
+- Notes now live under a configurable base dir (`OBSIDIAN_BASE_DIR`, default `evlampiy`): new notes land in
+  `<base>/inbox`, categories under `<base>/`, never in the repo root
+- Categorization strongly prefers existing categories and routes obvious garbage to `<base>/trash` (seeded on repo init)
+
 ### Fixed
 
 - Polling: `start_polling` retries on `TelegramNetworkError` with backoff instead of crashing the shared TaskGroup (and

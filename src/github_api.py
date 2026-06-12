@@ -7,12 +7,11 @@ import typing
 
 import httpx
 
-from src import const
+from src import const, obsidian_layout
 
 logger = logging.getLogger(__name__)
 
 OBSIDIAN_DEFAULT_REPO_NAME = "obsidian-notes"
-OBSIDIAN_NOTES_FOLDER = "income"
 MAX_RETRIES = 3
 
 
@@ -41,9 +40,7 @@ async def get_github_username(token: str) -> str | None:
         return None
 
 
-async def get_or_create_obsidian_repo(
-    token: str, repo_name: str = OBSIDIAN_DEFAULT_REPO_NAME
-) -> GitHubRepo | None:
+async def get_or_create_obsidian_repo(token: str, repo_name: str = OBSIDIAN_DEFAULT_REPO_NAME) -> GitHubRepo | None:
     username = await get_github_username(token)
     if not username:
         return None
@@ -79,20 +76,19 @@ async def get_or_create_obsidian_repo(
 
         logger.info("Created repo %s/%s", username, repo_name)
 
-        # Create income/ folder via .gitkeep
+        # Seed the bot's working folders (inbox + trash) so they always exist
         gitkeep_content = base64.b64encode(b"").decode("utf-8")
-        await client.put(
-            f"{const.GITHUB_API_BASE}/repos/{username}/{repo_name}/contents/{OBSIDIAN_NOTES_FOLDER}/.gitkeep",
-            headers=headers,
-            json={"message": "Init income folder", "content": gitkeep_content},
-        )
+        for folder in (obsidian_layout.inbox_dir(), obsidian_layout.trash_dir()):
+            await client.put(
+                f"{const.GITHUB_API_BASE}/repos/{username}/{repo_name}/contents/{folder}/.gitkeep",
+                headers=headers,
+                json={"message": f"Init {folder} folder", "content": gitkeep_content},
+            )
 
     return GitHubRepo(token=token, owner=username, repo=repo_name)
 
 
-async def put_github_file(
-    repo_info: GitHubRepo, path: str, content: str, commit_message: str
-) -> bool:
+async def put_github_file(repo_info: GitHubRepo, path: str, content: str, commit_message: str) -> bool:
     content_base64 = base64.b64encode(content.encode("utf-8")).decode("utf-8")
     url = f"{const.GITHUB_API_BASE}/repos/{repo_info.owner}/{repo_info.repo}/contents/{path}"
     payload: dict[str, typing.Any] = {"message": commit_message, "content": content_base64}
@@ -100,9 +96,7 @@ async def put_github_file(
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.put(
-                    url, headers=_github_headers(repo_info.token), json=payload
-                )
+                response = await client.put(url, headers=_github_headers(repo_info.token), json=payload)
             if response.status_code in (http.HTTPStatus.OK, http.HTTPStatus.CREATED):
                 return True
             if response.status_code == http.HTTPStatus.UNAUTHORIZED:
@@ -177,9 +171,7 @@ async def create_obsidian_git_config(repo_info: GitHubRepo) -> bool:
     )
 
 
-async def delete_github_file(
-    repo_info: GitHubRepo, path: str, sha: str, commit_message: str
-) -> bool:
+async def delete_github_file(repo_info: GitHubRepo, path: str, sha: str, commit_message: str) -> bool:
     """Delete a file from GitHub repository."""
     url = f"{const.GITHUB_API_BASE}/repos/{repo_info.owner}/{repo_info.repo}/contents/{path}"
     async with httpx.AsyncClient() as client:

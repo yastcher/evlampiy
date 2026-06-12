@@ -73,9 +73,7 @@ class TestStartCommand:
         await set_chat_language(chat_id, "ru")
         await set_gpt_command(chat_id, "евлампий")
 
-        mock_context.get_chat_member.return_value = MagicMock(
-            status=ChatMemberStatus.ADMINISTRATOR
-        )
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.ADMINISTRATOR)
 
         await start(mock_group_update, mock_context)
 
@@ -160,9 +158,7 @@ class TestLanguageButtons:
         mock_callback_query.answer.assert_called_once()
         mock_callback_query.message.edit_text.assert_called_once()
 
-    async def test_group_chat_language_button(
-        self, mock_group_update, mock_context, mock_callback_query
-    ):
+    async def test_group_chat_language_button(self, mock_group_update, mock_context, mock_callback_query):
         """Admin clicks language button in group chat."""
         chat_id = "g_-100123456"
         mock_callback_query.data = "set_lang_en"
@@ -170,9 +166,7 @@ class TestLanguageButtons:
         mock_callback_query.message.chat.id = -100123456
         mock_callback_query.message.chat.type = "group"
         mock_group_update.callback_query = mock_callback_query
-        mock_context.get_chat_member.return_value = MagicMock(
-            status=ChatMemberStatus.ADMINISTRATOR
-        )
+        mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.ADMINISTRATOR)
 
         await lang_buttons(mock_callback_query, mock_context)
 
@@ -194,9 +188,7 @@ class TestVoiceMessageFlow:
         # No errors, no responses
         mock_private_update.answer.assert_not_called()
 
-    async def test_no_effective_user_returns_early(
-        self, mock_private_update, mock_context, mock_telegram_voice
-    ):
+    async def test_no_effective_user_returns_early(self, mock_private_update, mock_context, mock_telegram_voice):
         """Handler returns early when message.from_user is None (channel forward)."""
         mock_private_update.voice = mock_telegram_voice
         mock_private_update.from_user = None
@@ -204,9 +196,7 @@ class TestVoiceMessageFlow:
         await from_voice_to_text(mock_private_update, mock_context)
         mock_private_update.answer.assert_not_called()
 
-    async def test_blocked_user_rejected(
-        self, mock_private_update, mock_context, mock_telegram_voice
-    ):
+    async def test_blocked_user_rejected(self, mock_private_update, mock_context, mock_telegram_voice):
         """Blocked user gets rejected with blocked message."""
         user_id = "12360"
         chat_id = "u_12360"
@@ -702,9 +692,7 @@ class TestCategorizeAll:
         await set_chat_language(chat_id, "en")
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
-        with patch(
-            "src.services.notes_service.categorize_all_income", AsyncMock(return_value=5)
-        ):
+        with patch("src.services.notes_service.categorize_all_inbox", AsyncMock(return_value=5)):
             await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.answer.call_args[0][0]
@@ -716,9 +704,7 @@ class TestCategorizeAll:
         await set_chat_language(chat_id, "en")
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
-        with patch(
-            "src.services.notes_service.categorize_all_income", AsyncMock(return_value=0)
-        ):
+        with patch("src.services.notes_service.categorize_all_inbox", AsyncMock(return_value=0)):
             await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.answer.call_args[0][0]
@@ -759,9 +745,7 @@ class TestHubCommands:
         assert "hub_language" in keyboard[0][0].callback_data
         assert "hub_gpt_command" in keyboard[1][0].callback_data
 
-    async def test_settings_hub_blocked_for_non_admin_in_group(
-        self, mock_group_update, mock_context
-    ):
+    async def test_settings_hub_blocked_for_non_admin_in_group(self, mock_group_update, mock_context):
         """Non-admin in group chat cannot use settings hub."""
 
         mock_context.get_chat_member.return_value = MagicMock(status=ChatMemberStatus.MEMBER)
@@ -874,9 +858,7 @@ class TestHubCommands:
 
         mock_group_update.answer.assert_not_called()
 
-    async def test_hub_callback_triggers_language(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_hub_callback_triggers_language(self, mock_private_update, mock_context, mock_callback_query):
         """Clicking language button in hub opens language selection."""
         mock_callback_query.data = "hub_language"
         mock_callback_query.from_user.id = 12345
@@ -895,9 +877,7 @@ class TestHubCommands:
 class TestHubCallbackRouting:
     """Test hub inline button callbacks route to actual handlers."""
 
-    async def test_account_balance_callback(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_account_balance_callback(self, mock_private_update, mock_context, mock_callback_query):
         """Clicking Balance button in account hub shows balance."""
         user_id = "12345"
         await add_credits(user_id, 75)
@@ -915,9 +895,7 @@ class TestHubCallbackRouting:
         message_text = mock_context.send_message.call_args[1]["text"]
         assert "75" in message_text
 
-    async def test_account_buy_callback(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_account_buy_callback(self, mock_private_update, mock_context, mock_callback_query):
         """Clicking Buy button in account hub shows package keyboard."""
         mock_callback_query.data = "hub_buy"
         mock_callback_query.from_user.id = 12345
@@ -931,9 +909,7 @@ class TestHubCallbackRouting:
         mock_callback_query.answer.assert_called_once()
         mock_callback_query.answer.assert_called_once()
 
-    async def test_account_mystats_callback(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_account_mystats_callback(self, mock_private_update, mock_context, mock_callback_query):
         """Clicking MyStats button in account hub shows stats."""
         mock_callback_query.data = "hub_mystats"
         mock_callback_query.from_user.id = 12345
@@ -946,9 +922,7 @@ class TestHubCallbackRouting:
         mock_callback_query.answer.assert_called_once()
         mock_callback_query.answer.assert_called_once()
 
-    async def test_obsidian_toggle_callback(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_obsidian_toggle_callback(self, mock_private_update, mock_context, mock_callback_query):
         """Clicking toggle sync in obsidian hub toggles obsidian sync."""
         chat_id = "u_12345"
         await set_save_to_obsidian(chat_id, False)
@@ -963,9 +937,7 @@ class TestHubCallbackRouting:
 
         assert await get_save_to_obsidian(chat_id) is True
 
-    async def test_unlink_whatsapp_callback(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_unlink_whatsapp_callback(self, mock_private_update, mock_context, mock_callback_query):
         """Clicking unlink WhatsApp in account hub unlinks account."""
         mock_callback_query.data = "hub_unlink_whatsapp"
         mock_callback_query.from_user.id = 12345
@@ -982,9 +954,7 @@ class TestHubCallbackRouting:
 class TestSettingsHubTierDependentUI:
     """Test settings hub shows different buttons based on user tier."""
 
-    async def test_paid_user_sees_provider_and_cleanup_buttons(
-        self, mock_private_update, mock_context
-    ):
+    async def test_paid_user_sees_provider_and_cleanup_buttons(self, mock_private_update, mock_context):
         """Paid user sees provider + cleanup buttons in addition to base buttons."""
         user_id = "12345"
         chat_id = "u_12345"
@@ -1009,9 +979,7 @@ class TestSettingsHubTierDependentUI:
         # Total: 4 buttons
         assert len(keyboard) == 4
 
-    async def test_free_user_does_not_see_provider_or_cleanup(
-        self, mock_private_update, mock_context
-    ):
+    async def test_free_user_does_not_see_provider_or_cleanup(self, mock_private_update, mock_context):
         """Free user only sees base 2 buttons, no provider or cleanup."""
         chat_id = "u_55555"
         mock_private_update.from_user.id = 55555
@@ -1036,9 +1004,7 @@ class TestSettingsHubTierDependentUI:
 class TestProviderSelectionFlow:
     """Test full provider selection: menu → select → persist → verify."""
 
-    async def test_select_groq_provider_persists_to_db(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_select_groq_provider_persists_to_db(self, mock_private_update, mock_context, mock_callback_query):
         """User selects Groq provider → choice persisted in DB."""
 
         user_id = 12345
@@ -1061,9 +1027,7 @@ class TestProviderSelectionFlow:
         # Verify confirmation message shown
         mock_callback_query.message.edit_text.assert_called_once()
 
-    async def test_select_auto_provider_sets_none(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_select_auto_provider_sets_none(self, mock_private_update, mock_context, mock_callback_query):
         """Selecting 'Auto' sets provider to None in DB."""
 
         user_id = 12345
@@ -1087,9 +1051,7 @@ class TestProviderSelectionFlow:
         saved = await get_preferred_provider(chat_id)
         assert saved is None
 
-    async def test_provider_selection_in_group_chat(
-        self, mock_group_update, mock_context, mock_callback_query
-    ):
+    async def test_provider_selection_in_group_chat(self, mock_group_update, mock_context, mock_callback_query):
         """Provider selection in group uses group chat_id prefix."""
 
         group_chat_id = -100123456

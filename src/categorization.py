@@ -4,10 +4,9 @@ import json
 import logging
 from collections.abc import Mapping, Sequence
 
-from src import const
+from src import const, obsidian_layout
 from src.ai_client import classify_text
 from src.github_api import (
-    OBSIDIAN_NOTES_FOLDER,
     GitHubRepo,
     delete_github_file,
     get_github_file,
@@ -23,8 +22,8 @@ _VOCABULARY_MAX_KEYWORDS_PER_CATEGORY = 50
 
 
 async def get_existing_categories(repo_info: GitHubRepo) -> list[str]:
-    """Get list of existing category folders, excluding system folders."""
-    contents = await get_repo_contents(repo_info)
+    """Get list of existing category folders under the base dir, excluding system folders."""
+    contents = await get_repo_contents(repo_info, obsidian_layout.base_dir())
     categories = []
     for item in contents:
         if item.get("type") == "dir" and item["name"] not in const.EXCLUDED_CATEGORIES:
@@ -46,9 +45,7 @@ async def get_vocabulary_from_repo(repo_info: GitHubRepo) -> dict[str, list[str]
         return {}
 
 
-async def update_vocabulary_in_repo(
-    repo_info: GitHubRepo, category: str, keywords: Sequence[str]
-) -> None:
+async def update_vocabulary_in_repo(repo_info: GitHubRepo, category: str, keywords: Sequence[str]) -> None:
     """Merge new keywords into vocabulary.json, deduplicating and capping at 50 per category."""
     vocabulary = await get_vocabulary_from_repo(repo_info)
     existing = vocabulary.get(category, [])
@@ -143,13 +140,14 @@ async def categorize_note(
     if not category:
         return None
 
-    old_path = f"{OBSIDIAN_NOTES_FOLDER}/{filename}"
-    new_path = f"{category}/{filename}"
+    old_path = f"{obsidian_layout.inbox_dir()}/{filename}"
+    new_path = f"{obsidian_layout.category_dir(category)}/{filename}"
 
     success = await move_github_file(repo_info, old_path, new_path)
     if success:
         logger.info("Categorized %s to %s", filename, category)
-        if keywords:
+        # Trash is a sink for garbage; its keywords would pollute the vocabulary.
+        if keywords and category != const.OBSIDIAN_TRASH_FOLDER:
             await update_vocabulary_in_repo(repo_info, category, keywords)
         return category
 
@@ -157,11 +155,12 @@ async def categorize_note(
     return None
 
 
-async def categorize_all_income(repo_info: GitHubRepo) -> int:
-    """Categorize all files in the income folder. Returns count of processed files."""
+async def categorize_all_inbox(repo_info: GitHubRepo) -> int:
+    """Categorize all files in the inbox folder. Returns count of processed files."""
     existing_categories = await get_existing_categories(repo_info)
     vocabulary = await get_vocabulary_from_repo(repo_info)
-    contents = await get_repo_contents(repo_info, OBSIDIAN_NOTES_FOLDER)
+    inbox = obsidian_layout.inbox_dir()
+    contents = await get_repo_contents(repo_info, inbox)
     processed = 0
 
     for item in contents:
@@ -170,14 +169,12 @@ async def categorize_all_income(repo_info: GitHubRepo) -> int:
         if item["name"] == ".gitkeep":
             continue
 
-        file_data = await get_github_file(repo_info, f"{OBSIDIAN_NOTES_FOLDER}/{item['name']}")
+        file_data = await get_github_file(repo_info, f"{inbox}/{item['name']}")
         if not file_data:
             continue
 
         content, _ = file_data
-        result = await categorize_note(
-            repo_info, item["name"], content, existing_categories, vocabulary
-        )
+        result = await categorize_note(repo_info, item["name"], content, existing_categories, vocabulary)
         if result:
             processed += 1
 

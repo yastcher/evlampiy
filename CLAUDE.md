@@ -23,6 +23,14 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - When renaming or refactoring across the project, grep for ALL old names (module, package, repo, env prefix, URLs)
   across the entire tree before considering the task done. Don't skip files that seem unimportant (.env.example,
   docker-compose.yml, docs/, etc.).
+- 152-ФЗ: голосовые сообщения и текст пользователя содержат ФИО, телефоны, email.
+  Перед LLM cleanup / категоризацией (DeepSeek / Groq / Gemini / OpenRouter / Anthropic) —
+  маска `<PHONE_N>`/`<EMAIL_N>`/`<NAME_N>`. Применяется в едином месте на границе LLM-клиента
+  (модуль `src/ai/_mask.py`), а не в каждом провайдере. Map хранится в памяти,
+  размаскирование — перед записью в БД / отправкой обратно в чат.
+- Vocabulary.json (per-category keyword list) — НЕ хранить туда токены маски: keyword
+  должен быть осмысленным словом, не `<NAME_1>`. Маскировать только outgoing payload,
+  не учёт.
 
 ## Architecture
 
@@ -79,6 +87,9 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 ## Testing
 
 - Trophy testing: fast integration tests, real DB (mongomock), minimal mocks
+- Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление.
+  Round-trip: `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`,
+  нет `@`, нет двух подряд capitalized слов.
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
 - **All fixtures in tests/fixtures.py** — every @pytest.fixture must be declared there,
   not in test files. Test files should have zero fixture definitions and minimal inline mocks.
@@ -129,6 +140,8 @@ Before finishing any task, check for:
 
 - Secrets/tokens в коде, логах, ответах или ошибках
 - Injection: NoSQL, command injection, template injection
+- ПД (телефоны, email, ФИО) не уходят к внешним LLM в plaintext. Проверка: structured
+  лог исходящего запроса (DEBUG, gated за env), assert отсутствия `@`/`+7` в payload.
 - Эндпоинты без проверки авторизации
 
 **P1 (исправить до merge):**

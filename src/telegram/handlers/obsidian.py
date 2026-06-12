@@ -6,6 +6,7 @@ import logging
 from aiogram import Bot
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from src import obsidian_layout
 from src.github_api import create_obsidian_git_config, get_or_create_obsidian_repo
 from src.github_oauth import get_github_device_code, poll_github_for_token
 from src.localization import translates
@@ -51,9 +52,7 @@ async def connect_github(event: EventLike, bot: Bot) -> None:
 
     device_info = await get_github_device_code()
     if "error" in device_info:
-        text = translates["github_auth_failed"].get(
-            language, translates["github_auth_failed"]["en"]
-        )
+        text = translates["github_auth_failed"].get(language, translates["github_auth_failed"]["en"])
         await reply_text(event, text)
         logger.error("GitHub device code error: %s", device_info)
         return
@@ -81,17 +80,13 @@ async def connect_github(event: EventLike, bot: Bot) -> None:
             expires_in=int(expires_in),
         )
         if not token:
-            text = translates["github_auth_timeout"].get(
-                language, translates["github_auth_timeout"]["en"]
-            )
+            text = translates["github_auth_timeout"].get(language, translates["github_auth_timeout"]["en"])
             await bot.send_message(chat_id=effective_chat_id, text=text)
             return
 
         repo_info = await get_or_create_obsidian_repo(token)
         if not repo_info:
-            text = translates["github_repo_failed"].get(
-                language, translates["github_repo_failed"]["en"]
-            )
+            text = translates["github_repo_failed"].get(language, translates["github_repo_failed"]["en"])
             await bot.send_message(chat_id=effective_chat_id, text=text)
             return
 
@@ -157,9 +152,7 @@ async def categorize_all(event: EventLike, bot: Bot) -> None:
     has_repo, count = await categorize_all_for_chat(chat_id)
 
     if not has_repo:
-        text = translates["github_not_connected"].get(
-            language, translates["github_not_connected"]["en"]
-        )
+        text = translates["github_not_connected"].get(language, translates["github_not_connected"]["en"])
         await reply_text(event, text)
         return
 
@@ -167,9 +160,7 @@ async def categorize_all(event: EventLike, bot: Bot) -> None:
         text = translates["categorize_done"].get(language, translates["categorize_done"]["en"])
         await reply_text(event, text.format(count=count))
     else:
-        text = translates["categorize_no_files"].get(
-            language, translates["categorize_no_files"]["en"]
-        )
+        text = translates["categorize_no_files"].get(language, translates["categorize_no_files"]["en"])
         await reply_text(event, text)
 
 
@@ -195,12 +186,8 @@ async def obsidian_hub(message: Message, bot: Bot) -> None:
         sync_on = await get_save_to_obsidian(chat_id)
         sort_on = await get_auto_categorize(chat_id)
 
-        sync_label = translates["btn_toggle_sync_on" if sync_on else "btn_toggle_sync_off"][
-            language
-        ]
-        sort_label = translates["btn_toggle_sort_on" if sort_on else "btn_toggle_sort_off"][
-            language
-        ]
+        sync_label = translates["btn_toggle_sync_on" if sync_on else "btn_toggle_sync_off"][language]
+        sort_label = translates["btn_toggle_sort_on" if sort_on else "btn_toggle_sort_off"][language]
 
         keyboard = [
             [InlineKeyboardButton(text=sync_label, callback_data="hub_toggle_obsidian")],
@@ -228,7 +215,7 @@ async def obsidian_hub(message: Message, bot: Bot) -> None:
     reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
     if repo_info:
         title = translates["obsidian_hub_connected"][language].format(
-            owner=repo_info.owner, repo=repo_info.repo
+            owner=repo_info.owner, repo=repo_info.repo, inbox_dir=obsidian_layout.inbox_dir()
         )
     else:
         title = translates["obsidian_hub_title"][language]
