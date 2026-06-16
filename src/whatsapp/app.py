@@ -29,7 +29,7 @@ def create_fastapi_app() -> FastAPI:
 
 
 async def serve_fastapi() -> None:
-    """Serve FastAPI inside the current asyncio loop."""
+    """Serve the HTTP app (always-on /health, plus the WhatsApp webhook when configured)."""
     app = create_fastapi_app()
     config = uvicorn.Config(
         app,
@@ -38,4 +38,9 @@ async def serve_fastapi() -> None:
         log_level="warning",
     )
     server = uvicorn.Server(config)
+    logger.info(
+        "HTTP server listening on %s:%s (/health always on)",
+        settings.fastapi_host,
+        settings.fastapi_port,
+    )
     await server.serve()

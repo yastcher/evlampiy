@@ -31,9 +31,9 @@ async def _async_main() -> None:
 
     async with asyncio.TaskGroup() as task_group:
         task_group.create_task(run_bot())
-        if settings.whatsapp_token and settings.whatsapp_phone_id:
-            task_group.create_task(serve_fastapi())
-            logger.info("FastAPI server enabled for WhatsApp webhook")
+        # Always serve the HTTP app: /health must answer liveness probes even when
+        # WhatsApp is unconfigured (its webhook routes are registered conditionally).
+        task_group.create_task(serve_fastapi())
 
 
 def main() -> None:

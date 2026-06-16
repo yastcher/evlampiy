@@ -1,5 +1,9 @@
 ## [0.9.3] — 2026-06-16
 
+### Added
+
+- Always-on `/health` endpoint (served even without WhatsApp) plus a docker-compose healthcheck for the app container
+
 ### Fixed
 
 - Transcription offloads ffmpeg decode + synchronous Wit.ai calls to a worker thread, so one voice note no longer

@@ -131,7 +131,12 @@ itself instead of fail-fast tearing down the group; document "single instance" a
 
 ---
 
-## P1 — health/readiness practically absent  `[ ]`
+## P1 — health/readiness practically absent  `[x]`
+
+**Done:** `serve_fastapi` now always starts (`main.py` no longer gates it on WhatsApp config),
+so `/health` answers regardless; `docker-compose.yml` has a `curl`-based healthcheck on the app
+container. Caveat documented in `docs/DEPLOY.md`: plain Compose reports health but doesn't
+restart unhealthy containers (needs an orchestrator/autoheal sidecar).
 
 **Where:** `src/whatsapp/app.py:24-26` — `/health` exists only when WhatsApp is configured
 (FastAPI starts only then, `main.py:34`). `docker-compose.yml` has no healthcheck on the app
@@ -180,6 +185,6 @@ chokepoint: the request builder in `ai_client._ai_complete`.
 1. `asyncio.to_thread` around ffmpeg+wit — biggest impact, smallest diff. **(P0, done)**
 2. Indexes + unique in Beanie models — kills full scans and duplicate-doc race. **(P0, done)**
 3. Atomic `$inc` for balances + payment idempotency by `charge_id` — money correctness. **(P1, done)**
-4. Always-on `/health` + compose healthcheck. (P1)
+4. Always-on `/health` + compose healthcheck. **(P1, done)**
 5. PII masking in `ai_client`. (P1)
 6. Token encryption; supervised subsystems; split Settings. (P1/P2)

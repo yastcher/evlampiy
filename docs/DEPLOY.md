@@ -115,12 +115,16 @@ server {
 
 ### Health Check
 
-The bot exposes a health endpoint:
+The bot always exposes a liveness endpoint (served even when WhatsApp is not configured):
 
 ```bash
 curl http://localhost:8000/health
 # {"status": "ok"}
 ```
+
+`docker-compose.yml` wires a container healthcheck to it (status shows in `docker ps`). Plain
+Compose reports health but does not restart unhealthy containers — pair it with an orchestrator
+or an autoheal sidecar if you want automatic restart on failure.
 
 ### Development
 
