@@ -1,3 +1,5 @@
+import asyncio
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src import const
@@ -114,9 +116,7 @@ class TestTranscribeAudio:
             patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
             patch("src.transcription.service.transcribe_with_groq", mock_groq),
         ):
-            text, duration, _ = await transcribe_audio(
-                b"audio_data", "ogg", "en", provider=const.PROVIDER_GROQ
-            )
+            text, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en", provider=const.PROVIDER_GROQ)
 
             assert text == "Groq result"
             assert duration == 10
@@ -136,3 +136,54 @@ class TestTranscribeAudio:
             _, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
             assert duration == 15
+
+
+class TestTranscribeAudioConcurrency:
+    """Transcription must not block the shared event loop.
+
+    `get_audio_duration_seconds` (ffmpeg decode) and `_transcribe_with_wit`
+    (ffmpeg decode + chunk export + synchronous wit.ai HTTP) are blocking. They
+    share the event loop with Telegram polling and the WhatsApp FastAPI webhook,
+    so they must be offloaded to a worker thread.
+    """
+
+    async def test_wit_path_does_not_block_event_loop(self):
+        """A blocking transcription must not freeze concurrent loop work."""
+        block_half = 0.1
+
+        def blocking_duration(audio_bytes, audio_format):
+            time.sleep(block_half)
+            return 5
+
+        def blocking_wit(audio_bytes, audio_format, language):
+            time.sleep(block_half)
+            return "hello", 1
+
+        ticks = 0
+
+        async def ticker():
+            nonlocal ticks
+            while True:
+                ticks += 1
+                await asyncio.sleep(0.01)
+
+        ticker_task = asyncio.create_task(ticker())
+        try:
+            with (
+                patch(
+                    "src.transcription.service.get_audio_duration_seconds",
+                    blocking_duration,
+                ),
+                patch("src.transcription.service._transcribe_with_wit", blocking_wit),
+            ):
+                await asyncio.sleep(0)  # let the ticker reach its first await
+                text, duration, wit_requests = await transcribe_audio(b"audio", "ogg", "en")
+        finally:
+            ticker_task.cancel()
+
+        assert text == "hello"
+        assert duration == 5
+        assert wit_requests == 1
+        # 0.2s of blocking work on the loop would freeze the 10ms ticker (~1 tick).
+        # Offloaded to a thread, it advances ~20 times. Floor well below that.
+        assert ticks >= 5

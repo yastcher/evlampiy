@@ -8,6 +8,8 @@
 
 ### Fixed
 
+- Transcription offloads ffmpeg decode + synchronous Wit.ai calls to a worker thread, so one voice note no longer
+  freezes the event loop shared by all users and the WhatsApp webhook
 - Polling: `start_polling` retries on `TelegramNetworkError` with backoff instead of crashing the shared TaskGroup (and
   taking FastAPI/WhatsApp down with it)
 

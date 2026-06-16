@@ -1,5 +1,6 @@
 """Voice transcription service — platform-agnostic."""
 
+import asyncio
 import logging
 from io import BytesIO
 
@@ -42,13 +43,16 @@ async def transcribe_audio(
         wit_requests_count is the number of Wit.ai API calls made (>1 for chunked audio),
         or 0 for non-Wit providers.
     """
-    duration = get_audio_duration_seconds(audio_bytes, audio_format)
+    # ffmpeg decode + (for Wit) per-chunk export and synchronous wit.ai HTTP are blocking;
+    # offload to a worker thread so the shared event loop (Telegram polling + WhatsApp
+    # FastAPI webhook) stays responsive while a transcription is in flight.
+    duration = await asyncio.to_thread(get_audio_duration_seconds, audio_bytes, audio_format)
 
     if provider == const.PROVIDER_GROQ:
         text = await transcribe_with_groq(audio_bytes, language, audio_format)
         wit_requests = 0
     else:
-        text, wit_requests = _transcribe_with_wit(audio_bytes, audio_format, language)
+        text, wit_requests = await asyncio.to_thread(_transcribe_with_wit, audio_bytes, audio_format, language)
 
     logger.debug("Transcription result (%s): %s", provider, text)
     return text, duration, wit_requests
@@ -69,9 +73,7 @@ def _transcribe_with_wit(audio_bytes: bytes, audio_format: str, language: str) -
         chunk.export(converted_stream, format="mp3")
         converted_stream.seek(0)
 
-        response = translator.speech(
-            audio_file=converted_stream, headers={"Content-Type": "audio/mpeg3"}
-        )
+        response = translator.speech(audio_file=converted_stream, headers={"Content-Type": "audio/mpeg3"})
         full_text += response.get("text", "")
 
     return full_text, len(chunks)
