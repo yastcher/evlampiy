@@ -70,7 +70,17 @@ No unique index ⇒ the check-then-act `get_or_create_user` (`src/mongo.py:50-56
 
 ---
 
-## P1 — money: non-atomic balance mutations (lost update)  `[ ]`
+## P1 — money: non-atomic balance mutations (lost update)  `[x]`
+
+**Done:** balance/counter mutations are now atomic. `deduct_credits` uses a single
+aggregation-pipeline `update_one` (free-first, floored at 0, monthly reset inline);
+`add_credits`/`admin_add_credits`/stat counters use `find_one(...).upsert(Inc(...),
+on_insert=...)`. `get_credits` is a pure read (effective free computed, persisted lazily on
+next spend), so reads can't clobber a deduction; `_ensure_fresh_free_credits` removed. Note:
+mongomock serializes ops so the race itself isn't unit-testable — atomicity is validated by
+design + functional tests; the deduct return split is derived from the pre-snapshot (balance
+stays exact, split is stats-only). The cost-preauthorization gap (`voice.py:134` hardcoded
+cost=1) is NOT addressed here.
 
 **Where:** `src/credits.py:171-195` (`deduct_credits`), `:133-151` (`add_credits`), all
 `increment_*`/`record_*`. All read-modify-write via Beanie `.save()` (full-doc write). No
@@ -88,7 +98,13 @@ split, conditional update or a short Mongo transaction.
 
 ---
 
-## P1 — payment not idempotent  `[ ]`
+## P1 — payment not idempotent  `[x]`
+
+**Done:** new `ProcessedPayment` doc (unique index on `charge_id`). `award_tokens` claims the
+charge id first (insert; `DuplicateKeyError` ⇒ already processed → returns `None`), so a
+redelivered `successful_payment` never double-credits; the handler skips re-credit/re-notify
+on `None`. Claim-first is deliberate: prefer a rare recoverable claimed-but-uncredited crash
+window over silently granting paid tokens twice.
 
 **Where:** `src/telegram/handlers/payments.py:79-92` → `src/services/payments_service.py:57-74`.
 `award_tokens` credits with no dedup on `successful_payment.telegram_payment_charge_id`.
@@ -163,7 +179,7 @@ chokepoint: the request builder in `ai_client._ai_complete`.
 
 1. `asyncio.to_thread` around ffmpeg+wit — biggest impact, smallest diff. **(P0, done)**
 2. Indexes + unique in Beanie models — kills full scans and duplicate-doc race. **(P0, done)**
-3. Atomic `$inc` for balances + payment idempotency by `charge_id` — money correctness. (P1)
+3. Atomic `$inc` for balances + payment idempotency by `charge_id` — money correctness. **(P1, done)**
 4. Always-on `/health` + compose healthcheck. (P1)
 5. PII masking in `ai_client`. (P1)
 6. Token encryption; supervised subsystems; split Settings. (P1/P2)

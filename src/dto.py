@@ -214,3 +214,17 @@ class RecentTranscription(Document):
             ),
             IndexModel([("chat_id", ASCENDING), ("created_at", ASCENDING)]),
         ]
+
+
+class ProcessedPayment(Document):
+    """Idempotency guard: one record per Telegram payment charge to dedupe redeliveries."""
+
+    charge_id: str
+    user_id: UserId
+    processed_at: datetime.datetime = Field(default_factory=_utc_now)
+
+    class Settings:
+        name = "processed_payments"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("charge_id", ASCENDING)], unique=True),
+        ]

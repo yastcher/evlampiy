@@ -83,7 +83,15 @@ async def handle_successful_payment(message: Message, bot: Bot) -> None:
     user_id = str(message.from_user.id)
     payment = message.successful_payment
 
-    result = await award_tokens(user_id, payment.invoice_payload, payment.total_amount)
+    result = await award_tokens(
+        user_id,
+        payment.invoice_payload,
+        payment.total_amount,
+        payment.telegram_payment_charge_id,
+    )
+    if result is None:
+        # Telegram redelivered an already-processed payment — don't re-credit or re-notify.
+        return
     await check_and_send_alerts(bot, credits_just_sold=result.tokens_added)
 
     await bot.send_message(

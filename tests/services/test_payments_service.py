@@ -42,7 +42,7 @@ class TestAwardTokens:
         user_id = "pay_1"
         before = await get_total_credits(user_id)
 
-        result = await award_tokens(user_id, "buy_tokens_2", total_amount=50)
+        result = await award_tokens(user_id, "buy_tokens_2", total_amount=50, charge_id="ch_1")
 
         assert isinstance(result, AwardResult)
         # Large package = 65 tokens
@@ -54,15 +54,30 @@ class TestAwardTokens:
         user_id = "pay_2"
         before = await get_total_credits(user_id)
 
-        result = await award_tokens(user_id, "buy_credits", total_amount=10)
+        result = await award_tokens(user_id, "buy_credits", total_amount=10, charge_id="ch_2")
 
+        assert result is not None
         assert result.tokens_added == 10
         assert result.new_total_balance == before + 10
 
     async def test_returned_total_reflects_new_balance(self):
         user_id = "pay_3"
         # First purchase
-        first = await award_tokens(user_id, "buy_tokens_0", total_amount=10)
-        # Second purchase — balance accumulates
-        second = await award_tokens(user_id, "buy_tokens_0", total_amount=10)
+        first = await award_tokens(user_id, "buy_tokens_0", total_amount=10, charge_id="ch_3a")
+        # Second purchase (distinct charge) — balance accumulates
+        second = await award_tokens(user_id, "buy_tokens_0", total_amount=10, charge_id="ch_3b")
+        assert first is not None
+        assert second is not None
         assert second.new_total_balance == first.new_total_balance + 10
+
+    async def test_duplicate_charge_id_is_ignored(self):
+        """Telegram can redeliver a successful_payment — the same charge credits only once."""
+        user_id = "pay_dup"
+        first = await award_tokens(user_id, "buy_tokens_0", total_amount=10, charge_id="ch_dup")
+        assert first is not None
+        assert first.tokens_added == 10
+        balance_after_first = await get_total_credits(user_id)
+
+        second = await award_tokens(user_id, "buy_tokens_0", total_amount=10, charge_id="ch_dup")
+        assert second is None
+        assert await get_total_credits(user_id) == balance_after_first

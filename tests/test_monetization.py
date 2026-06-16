@@ -1,6 +1,6 @@
 """Tests for monetization: credits, tokens, billing, blocked, wit tracking."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from src.credits import (
     DeductResult,
@@ -13,12 +13,13 @@ from src.credits import (
     get_credits,
     get_total_credits,
     get_user_tier,
+    grant_initial_credits_if_eligible,
     hash_user_id,
     is_blocked_user,
     is_vip_user,
     record_user_usage,
 )
-from src.dto import UserCredits, UserMonthlyUsage, UserTier
+from src.dto import UsedTrial, UserCredits, UserMonthlyUsage, UserTier
 from src.mongo import add_user_role, remove_user_role
 from src.wit_tracking import get_wit_usage_this_month, increment_wit_usage, is_wit_available
 
@@ -230,6 +231,20 @@ class TestLazyReset:
         free, _ = await get_credits(user_id)
         assert free == 5  # not reset
 
+    async def test_deduct_resets_free_on_month_rollover(self):
+        """Deducting in a new month resets free credits inline before deducting (atomic)."""
+        user_id = "rollover_deduct_user"
+        await deduct_credits(user_id, 10)  # current month: free 10 -> 0
+
+        with patch("src.credits.current_month_key", return_value="2099-07"):
+            result = await deduct_credits(user_id, 3)
+            assert result.free_used == 3
+            assert result.purchased_used == 0
+            assert result.overdraft is False
+
+            free, _ = await get_credits(user_id)
+            assert free == 7  # reset to 10, then 3 deducted
+
 
 class TestBlockedUser:
     """Test blocked user functionality."""
@@ -305,3 +320,41 @@ class TestWitUsageLimits:
 
         await increment_wit_usage(language="ru")
         assert await is_wit_available("ru") is False
+
+
+class TestGrantInitialCredits:
+    """The one-time trial grant is idempotent — sequentially and under a concurrent race."""
+
+    async def test_first_grant_credits_and_marks_trial(self):
+        user_id = "trial_first"
+
+        granted = await grant_initial_credits_if_eligible(user_id)
+
+        assert granted is True
+        _, purchased = await get_credits(user_id)
+        assert purchased == 3
+        assert await UsedTrial.find_one(UsedTrial.user_hash == hash_user_id(user_id)) is not None
+
+    async def test_repeat_grant_is_idempotent(self):
+        user_id = "trial_repeat"
+
+        assert await grant_initial_credits_if_eligible(user_id) is True
+        assert await grant_initial_credits_if_eligible(user_id) is False
+
+        _, purchased = await get_credits(user_id)
+        assert purchased == 3  # granted once, not 6
+
+    async def test_concurrent_grant_race_is_idempotent(self):
+        """A racing grant whose read missed the marker still grants only once: the
+        duplicate insert hits the unique index and is caught, awarding nothing."""
+        user_id = "trial_race"
+        # A concurrent grant already claimed the trial marker.
+        await UsedTrial(user_hash=hash_user_id(user_id)).insert()
+
+        # Force our trial lookup to miss it, so we attempt our own insert -> DuplicateKeyError.
+        with patch("src.credits.UsedTrial.find_one", AsyncMock(return_value=None)):
+            granted = await grant_initial_credits_if_eligible(user_id)
+
+        assert granted is False
+        _, purchased = await get_credits(user_id)
+        assert purchased == 0  # the losing racer granted nothing

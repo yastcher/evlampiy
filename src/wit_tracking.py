@@ -1,24 +1,27 @@
 """Wit.ai monthly usage tracking."""
 
+from beanie.odm.operators.update.general import Inc
+
 from src.config import settings
 from src.credits import current_month_key
 from src.dto import WitUsageStats
-from src.mongo import get_or_create
 from src.types import Language
 
 
 async def increment_wit_usage(count: int = 1, language: Language = "ru") -> int:
     month_key = current_month_key()
-    record = await get_or_create(
-        lambda: WitUsageStats.find_one(
-            WitUsageStats.month_key == month_key,
-            WitUsageStats.language == language,
-        ),
-        lambda: WitUsageStats(month_key=month_key, language=language),
+    await WitUsageStats.find_one(
+        WitUsageStats.month_key == month_key,
+        WitUsageStats.language == language,
+    ).upsert(
+        Inc({WitUsageStats.request_count: count}),
+        on_insert=WitUsageStats(month_key=month_key, language=language, request_count=count),
     )
-    record.request_count += count
-    await record.save()
-    return record.request_count
+    record = await WitUsageStats.find_one(
+        WitUsageStats.month_key == month_key,
+        WitUsageStats.language == language,
+    )
+    return record.request_count if record else count
 
 
 async def get_wit_usage_this_month(language: Language) -> int:

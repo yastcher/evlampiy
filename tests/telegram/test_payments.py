@@ -20,9 +20,7 @@ from src.telegram.handlers.settings import settings_hub
 class TestPaymentFlow:
     """Integration test for complete payment flow with real DB."""
 
-    async def test_complete_payment_flow(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_complete_payment_flow(self, mock_private_update, mock_context, mock_callback_query):
         """Complete flow: buy → select package → pre_checkout → payment → balance."""
         user_id = "222"
         mock_private_update.from_user.id = 222
@@ -56,6 +54,7 @@ class TestPaymentFlow:
         mock_private_update.successful_payment = MagicMock()
         mock_private_update.successful_payment.total_amount = 25
         mock_private_update.successful_payment.invoice_payload = "buy_tokens_1"
+        mock_private_update.successful_payment.telegram_payment_charge_id = "charge_flow_1"
 
         initial_balance = await get_total_credits(user_id)
         await handle_successful_payment(mock_private_update, mock_context)
@@ -93,9 +92,7 @@ class TestBuyCommand:
 class TestBuyPackageCallback:
     """Test package selection callback."""
 
-    async def test_sends_invoice_for_selected_package(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_sends_invoice_for_selected_package(self, mock_private_update, mock_context, mock_callback_query):
         """Selecting a package sends the correct invoice."""
         mock_callback_query.data = "buy_pkg_2"  # Large package
         mock_private_update.callback_query = mock_callback_query
@@ -167,9 +164,7 @@ class TestMilestoneAlerts:
 class TestPaymentTierTransition:
     """Test that payment changes user tier and unlocks UI features."""
 
-    async def test_payment_upgrades_tier_and_unlocks_settings(
-        self, mock_private_update, mock_context
-    ):
+    async def test_payment_upgrades_tier_and_unlocks_settings(self, mock_private_update, mock_context):
         """Full flow: FREE → payment → PAID → settings hub shows extra buttons."""
 
         mock_private_update.from_user.id = 55500
@@ -193,6 +188,7 @@ class TestPaymentTierTransition:
         mock_private_update.successful_payment = MagicMock()
         mock_private_update.successful_payment.total_amount = 25
         mock_private_update.successful_payment.invoice_payload = "buy_tokens_0"
+        mock_private_update.successful_payment.telegram_payment_charge_id = "charge_flow_2"
 
         await handle_successful_payment(mock_private_update, mock_context)
 

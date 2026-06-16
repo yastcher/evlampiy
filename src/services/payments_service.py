@@ -4,7 +4,10 @@ import dataclasses
 import logging
 import typing
 
+import pymongo.errors
+
 from src.credits import add_credits, get_total_credits, increment_payment_stats
+from src.dto import ProcessedPayment
 from src.types import UserId
 
 logger = logging.getLogger(__name__)
@@ -54,13 +57,32 @@ def tokens_for_payload(payload: str, total_amount: int) -> int:
     return total_amount
 
 
-async def award_tokens(user_id: UserId, payload: str, total_amount: int) -> AwardResult:
-    """Credit tokens for a successful Telegram-Stars payment.
+async def _claim_charge(user_id: UserId, charge_id: str) -> bool:
+    """Claim a payment charge as an idempotency key. Returns False if already claimed.
 
-    Returns the tokens awarded and the user's new total balance. The caller (adapter)
-    is responsible for sending the confirmation message and admin alerts, which need a
-    framework-specific Bot handle.
+    Claim-first (before crediting): a Telegram redelivery is rejected, so we never
+    double-credit. The tiny window where a crash leaves a charge claimed-but-uncredited is
+    recoverable via an admin top-up — preferable to silently granting paid tokens twice.
     """
+    try:
+        await ProcessedPayment(charge_id=charge_id, user_id=user_id).insert()
+        return True
+    except pymongo.errors.DuplicateKeyError:
+        return False
+
+
+async def award_tokens(user_id: UserId, payload: str, total_amount: int, charge_id: str) -> AwardResult | None:
+    """Credit tokens for a successful Telegram-Stars payment, exactly once.
+
+    Returns ``None`` when ``charge_id`` was already processed — Telegram can redeliver the
+    ``successful_payment`` update, and the caller must not re-credit or re-notify. Otherwise
+    returns the tokens awarded and the user's new total balance; the caller (adapter) sends
+    the confirmation message and admin alerts, which need a framework-specific Bot handle.
+    """
+    if not await _claim_charge(user_id, charge_id):
+        logger.info("Duplicate payment %s for user %s ignored", charge_id, user_id)
+        return None
+
     tokens_to_add = tokens_for_payload(payload, total_amount)
     new_purchased = await add_credits(user_id, tokens_to_add)
     await increment_payment_stats(tokens_to_add)

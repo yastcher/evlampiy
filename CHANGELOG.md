@@ -1,3 +1,16 @@
+## [0.9.3] — 2026-06-16
+
+### Fixed
+
+- Transcription offloads ffmpeg decode + synchronous Wit.ai calls to a worker thread, so one voice note no longer
+  freezes the event loop shared by all users and the WhatsApp webhook
+- Concurrent first-touch no longer creates duplicate user/credit/stats documents — creation goes through a race-safe
+  `get_or_create` backed by the unique indexes
+- Credit balances and usage counters mutate via atomic `$inc`/pipeline updates instead of read-modify-write, so
+  concurrent voice messages no longer lose deductions
+- Telegram-Stars payments are idempotent (deduped by charge id) — a redelivered `successful_payment` no longer
+  double-credits
+
 ## [0.9.2] — 2026-06-06
 
 ### Changed
@@ -10,10 +23,6 @@
 
 ### Fixed
 
-- Transcription offloads ffmpeg decode + synchronous Wit.ai calls to a worker thread, so one voice note no longer
-  freezes the event loop shared by all users and the WhatsApp webhook
-- Concurrent first-touch no longer creates duplicate user/credit/stats documents — creation goes through a race-safe
-  `get_or_create` backed by the unique indexes
 - Polling: `start_polling` retries on `TelegramNetworkError` with backoff instead of crashing the shared TaskGroup (and
   taking FastAPI/WhatsApp down with it)
 

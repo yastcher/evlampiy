@@ -4,8 +4,10 @@ import dataclasses
 import datetime
 import hashlib
 import math
+import typing
 
 import pymongo.errors
+from beanie.odm.operators.update.general import Inc, Set
 
 from src import const
 from src.config import settings
@@ -77,17 +79,9 @@ def current_month_key() -> str:
     return datetime.datetime.now(datetime.UTC).strftime("%Y-%m")
 
 
-# --- Lazy reset ---
-
-
-async def _ensure_fresh_free_credits(record: UserCredits) -> UserCredits:
-    """Lazy reset: if month is not current, refresh free_credits."""
-    current = current_month_key()
-    if record.free_credits_month != current:
-        record.free_credits = settings.free_monthly_tokens
-        record.free_credits_month = current
-        await record.save()
-    return record
+def _effective_free(record: UserCredits, month: str) -> int:
+    """Free credits after the lazy monthly reset, without persisting it."""
+    return record.free_credits if record.free_credits_month == month else settings.free_monthly_tokens
 
 
 async def _get_or_create_user_credits(user_id: UserId) -> UserCredits:
@@ -105,12 +99,15 @@ async def _get_or_create_user_credits(user_id: UserId) -> UserCredits:
 
 
 async def get_credits(user_id: UserId) -> tuple[int, int]:
-    """Return (free_credits, purchased_credits) with lazy reset."""
+    """Return (free_credits, purchased_credits).
+
+    Pure read: the monthly free reset is reflected in the returned value but persisted
+    lazily on the next spend (`deduct_credits`), so a read never clobbers a deduction.
+    """
     record = await UserCredits.find_one(UserCredits.user_id == user_id)
     if not record:
         return (settings.free_monthly_tokens, 0)
-    record = await _ensure_fresh_free_credits(record)
-    return (record.free_credits, record.purchased_credits)
+    return (_effective_free(record, current_month_key()), record.purchased_credits)
 
 
 async def get_total_credits(user_id: UserId) -> int:
@@ -132,60 +129,81 @@ async def can_perform_operation(user_id: UserId, cost: int) -> tuple[bool, str]:
 
 
 async def add_credits(user_id: UserId, amount: int) -> int:
-    """Add purchased credits. Returns new purchased balance."""
-    record = await get_or_create(
-        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
-        lambda: UserCredits(
+    """Add purchased credits (atomic). Returns new purchased balance."""
+    await UserCredits.find_one(UserCredits.user_id == user_id).upsert(
+        Inc({UserCredits.purchased_credits: amount, UserCredits.total_credits_purchased: amount}),
+        Set({UserCredits.tier: UserTier.PAID}),
+        on_insert=UserCredits(
             user_id=user_id,
+            purchased_credits=amount,
+            total_credits_purchased=amount,
+            tier=UserTier.PAID,
             free_credits=settings.free_monthly_tokens,
             free_credits_month=current_month_key(),
         ),
     )
-    record.purchased_credits += amount
-    record.tier = UserTier.PAID
-    record.total_credits_purchased += amount
-    await record.save()
-    return record.purchased_credits
+    record = await UserCredits.find_one(UserCredits.user_id == user_id)
+    return record.purchased_credits if record else amount
 
 
 async def admin_add_credits(user_id: UserId, amount: int) -> int:
-    """Add credits without changing tier (for admin top-ups)."""
-    record = await get_or_create(
-        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
-        lambda: UserCredits(
+    """Add credits without changing tier, for admin top-ups (atomic)."""
+    await UserCredits.find_one(UserCredits.user_id == user_id).upsert(
+        Inc({UserCredits.purchased_credits: amount}),
+        on_insert=UserCredits(
             user_id=user_id,
+            purchased_credits=amount,
             free_credits=settings.free_monthly_tokens,
             free_credits_month=current_month_key(),
         ),
     )
-    record.purchased_credits += amount
-    await record.save()
-    return record.purchased_credits
+    record = await UserCredits.find_one(UserCredits.user_id == user_id)
+    return record.purchased_credits if record else amount
+
+
+def _deduct_pipeline(cost: int, month: str, monthly: int) -> list[dict[str, typing.Any]]:
+    """Aggregation pipeline: deduct ``cost`` (free first, then purchased, floored at 0),
+    applying the monthly free reset inline so the whole deduction is one atomic update."""
+    effective_free = {"$cond": [{"$eq": ["$free_credits_month", month]}, "$free_credits", monthly]}
+    actual_cost = {"$min": [cost, {"$add": [effective_free, "$purchased_credits"]}]}
+    free_used = {"$min": [effective_free, actual_cost]}
+    return [
+        {
+            "$set": {
+                "free_credits": {"$subtract": [effective_free, free_used]},
+                "purchased_credits": {"$subtract": ["$purchased_credits", {"$subtract": [actual_cost, free_used]}]},
+                "free_credits_month": month,
+                "total_tokens_used": {"$add": ["$total_tokens_used", actual_cost]},
+                "total_credits_spent": {"$add": ["$total_credits_spent", actual_cost]},
+            }
+        }
+    ]
 
 
 async def deduct_credits(user_id: UserId, cost: int) -> DeductResult:
-    """Deduct tokens: free first, then purchased.
+    """Deduct tokens: free first, then purchased. Never below 0; over-spend is capped.
 
-    Never goes below 0. If not enough — deducts what's available (overdraft).
+    The balance mutation is a single atomic server-side update (no lost updates). The
+    returned free/purchased split is derived from the pre-deduction snapshot; under real
+    concurrency the split may differ slightly from what was atomically deducted, but the
+    balance itself stays correct (the split only feeds usage stats, not the balance).
     """
     record = await _get_or_create_user_credits(user_id)
-    record = await _ensure_fresh_free_credits(record)
+    month = current_month_key()
 
-    total_available = record.free_credits + record.purchased_credits
+    effective_free = _effective_free(record, month)
+    total_available = effective_free + record.purchased_credits
     actual_cost = min(cost, total_available)
+    free_used = min(effective_free, actual_cost)
 
-    free_used = min(record.free_credits, actual_cost)
-    purchased_used = actual_cost - free_used
-
-    record.free_credits -= free_used
-    record.purchased_credits -= purchased_used
-    record.total_tokens_used += actual_cost
-    record.total_credits_spent += actual_cost
-    await record.save()
+    await UserCredits.get_pymongo_collection().update_one(
+        {"user_id": user_id},
+        _deduct_pipeline(cost, month, settings.free_monthly_tokens),
+    )
 
     return DeductResult(
         free_used=free_used,
-        purchased_used=purchased_used,
+        purchased_used=actual_cost - free_used,
         overdraft=total_available < cost,
     )
 
@@ -205,12 +223,10 @@ async def grant_initial_credits_if_eligible(user_id: UserId) -> bool:
         # A concurrent grant already claimed the trial for this user.
         return False
 
-    record = await get_or_create(
-        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
-        lambda: UserCredits(user_id=user_id),
+    await UserCredits.find_one(UserCredits.user_id == user_id).upsert(
+        Inc({UserCredits.purchased_credits: 3}),
+        on_insert=UserCredits(user_id=user_id, purchased_credits=3),
     )
-    record.purchased_credits += 3
-    await record.save()
     return True
 
 
@@ -218,17 +234,16 @@ async def grant_initial_credits_if_eligible(user_id: UserId) -> bool:
 
 
 async def increment_user_stats(user_id: UserId, audio_seconds: int = 0) -> None:
-    record = await get_or_create(
-        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
-        lambda: UserCredits(
+    await UserCredits.find_one(UserCredits.user_id == user_id).upsert(
+        Inc({UserCredits.total_transcriptions: 1, UserCredits.total_audio_seconds: audio_seconds}),
+        on_insert=UserCredits(
             user_id=user_id,
+            total_transcriptions=1,
+            total_audio_seconds=audio_seconds,
             free_credits=settings.free_monthly_tokens,
             free_credits_month=current_month_key(),
         ),
     )
-    record.total_transcriptions += 1
-    record.total_audio_seconds += audio_seconds
-    await record.save()
 
 
 async def record_user_usage(
@@ -238,52 +253,58 @@ async def record_user_usage(
     free_used: int,
     purchased_used: int,
 ) -> None:
-    """Record per-user monthly usage."""
+    """Record per-user monthly usage (atomic accumulation)."""
     month = current_month_key()
-    record = await get_or_create(
-        lambda: UserMonthlyUsage.find_one(
-            UserMonthlyUsage.user_id == user_id,
-            UserMonthlyUsage.month_key == month,
+    await UserMonthlyUsage.find_one(
+        UserMonthlyUsage.user_id == user_id,
+        UserMonthlyUsage.month_key == month,
+    ).upsert(
+        Inc(
+            {
+                UserMonthlyUsage.transcriptions: 1,
+                UserMonthlyUsage.audio_seconds: audio_seconds,
+                UserMonthlyUsage.tokens_used: tokens,
+                UserMonthlyUsage.free_tokens_used: free_used,
+                UserMonthlyUsage.purchased_tokens_used: purchased_used,
+            }
         ),
-        lambda: UserMonthlyUsage(user_id=user_id, month_key=month),
+        on_insert=UserMonthlyUsage(
+            user_id=user_id,
+            month_key=month,
+            transcriptions=1,
+            audio_seconds=audio_seconds,
+            tokens_used=tokens,
+            free_tokens_used=free_used,
+            purchased_tokens_used=purchased_used,
+        ),
     )
-
-    record.transcriptions += 1
-    record.audio_seconds += audio_seconds
-    record.tokens_used += tokens
-    record.free_tokens_used += free_used
-    record.purchased_tokens_used += purchased_used
-    await record.save()
 
 
 # --- System stats ---
 
 
-async def _get_or_create_monthly_stats() -> MonthlyStats:
-    month_key = current_month_key()
-    return await get_or_create(
-        lambda: MonthlyStats.find_one(MonthlyStats.month_key == month_key),
-        lambda: MonthlyStats(month_key=month_key),
+async def increment_transcription_stats() -> None:
+    month = current_month_key()
+    await MonthlyStats.find_one(MonthlyStats.month_key == month).upsert(
+        Inc({MonthlyStats.total_transcriptions: 1}),
+        on_insert=MonthlyStats(month_key=month, total_transcriptions=1),
     )
 
 
-async def increment_transcription_stats() -> None:
-    record = await _get_or_create_monthly_stats()
-    record.total_transcriptions += 1
-    await record.save()
-
-
 async def record_groq_usage(duration_seconds: int) -> None:
-    record = await _get_or_create_monthly_stats()
-    record.groq_audio_seconds += duration_seconds
-    await record.save()
+    month = current_month_key()
+    await MonthlyStats.find_one(MonthlyStats.month_key == month).upsert(
+        Inc({MonthlyStats.groq_audio_seconds: duration_seconds}),
+        on_insert=MonthlyStats(month_key=month, groq_audio_seconds=duration_seconds),
+    )
 
 
 async def increment_payment_stats(credits_sold: int) -> None:
-    record = await _get_or_create_monthly_stats()
-    record.total_payments += 1
-    record.total_credits_sold += credits_sold
-    await record.save()
+    month = current_month_key()
+    await MonthlyStats.find_one(MonthlyStats.month_key == month).upsert(
+        Inc({MonthlyStats.total_payments: 1, MonthlyStats.total_credits_sold: credits_sold}),
+        on_insert=MonthlyStats(month_key=month, total_payments=1, total_credits_sold=credits_sold),
+    )
 
 
 async def get_monthly_stats(month: str) -> MonthlyStats | None:
