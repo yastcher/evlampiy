@@ -36,6 +36,8 @@ src/
 │   ├── settings_service.py - Toggle auto-cleanup, persist transcription provider choice
 │   ├── stats_service.py    - Admin /stats text builder
 │   └── voice_pipeline.py   - Transcription → cleanup → Obsidian → categorize pipeline
+├── ai/                     # LLM-client cross-cutting helpers
+│   └── _mask.py            - PII masking (<PHONE_N>/<EMAIL_N>/<NAME_N>) at the LLM boundary (152-ФЗ)
 ├── ai_client.py            - Multi-provider LLM client with token bucket rate limiter
 ├── ai_chat.py              - Messages-based chat completion with tool calling support
 ├── tools.py                - Tool definitions and implementations for GPT tool calling

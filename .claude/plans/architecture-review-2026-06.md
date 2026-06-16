@@ -157,12 +157,18 @@ consider fine-grained PAT flow.
 
 ---
 
-## P1 — PII to third-party LLMs unmasked (cross-cutting)  `[ ]`
+## P1 — PII to third-party LLMs unmasked (cross-cutting)  `[~]`
 
-The mandated `src/ai/_mask.py` does not exist; raw transcripts (names/phones/emails) reach
-DeepSeek/Qwen/Gemini/… in plaintext (`src/transcript_cleanup.py`, `src/categorization.py`,
-`src/ai_chat.py`). Data-governance gap (152-ФЗ is a self-declared requirement). Fix at one
-chokepoint: the request builder in `ai_client._ai_complete`.
+**Done (cleanup + categorization):** `src/ai/_mask.py` masks phones/emails/names to
+`<PHONE_N>`/`<EMAIL_N>`/`<NAME_N>` at the single chokepoint `ai_client._ai_complete` (covers
+`cleanup_text`, `classify_text`, `gpt_chat`) and unmasks the response; in-memory per-request
+map. Optional `LOG_LLM_PAYLOADS` logs the masked payload at DEBUG. Tests: round-trip + smoke
+(`tests/test_ai_mask.py`) + boundary integration (`TestPiiMaskingBoundary`).
+
+**Remaining:** `src/ai_chat.py` (the tool-calling `/evlampiy` path) makes its own `client.post`
+calls bypassing `_ai_complete`, so its message arrays + tool results (note text fetched by
+`get_recent_notes`) are still sent in plaintext. Masking it needs message-level mask/unmask
+with a mapping that persists across the multi-turn tool loop — a separate, larger change.
 
 ---
 
@@ -186,5 +192,5 @@ chokepoint: the request builder in `ai_client._ai_complete`.
 2. Indexes + unique in Beanie models — kills full scans and duplicate-doc race. **(P0, done)**
 3. Atomic `$inc` for balances + payment idempotency by `charge_id` — money correctness. **(P1, done)**
 4. Always-on `/health` + compose healthcheck. **(P1, done)**
-5. PII masking in `ai_client`. (P1)
+5. PII masking in `ai_client`. **(P1, done for cleanup/categorization; `ai_chat` tool-calling path remaining)**
 6. Token encryption; supervised subsystems; split Settings. (P1/P2)

@@ -3,6 +3,8 @@
 ### Added
 
 - Always-on `/health` endpoint (served even without WhatsApp) plus a docker-compose healthcheck for the app container
+- PII (phones/emails/names) is masked before cleanup/categorization prompts reach external LLMs and restored in the
+  response, so personal data no longer leaves in plaintext (152-ФЗ); optional `LOG_LLM_PAYLOADS` logs the masked payload
 
 ### Fixed
 

@@ -8,6 +8,7 @@ import typing
 import httpx
 
 from src import const
+from src.ai import _mask
 from src.config import settings
 from src.mongo import get_bot_config
 
@@ -104,9 +105,7 @@ _http_holder = _HttpClientHolder()
 async def get_http_client() -> httpx.AsyncClient:
     if _http_holder.client is None or _http_holder.client.is_closed:
         # read=45 to allow reasoning models to think, but not stall the chain forever
-        _http_holder.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(connect=10.0, read=45.0, write=10.0, pool=5.0)
-        )
+        _http_holder.client = httpx.AsyncClient(timeout=httpx.Timeout(connect=10.0, read=45.0, write=10.0, pool=5.0))
     return _http_holder.client
 
 
@@ -328,9 +327,7 @@ async def _openrouter_complete(prompt: str, max_tokens: int, temperature: float)
 
 _HTTP_5XX_MIN = http.HTTPStatus.INTERNAL_SERVER_ERROR  # >= 500 means server error
 
-_ProviderFn = typing.Callable[
-    [str, int, float], typing.Coroutine[typing.Any, typing.Any, str | None]
-]
+_ProviderFn = typing.Callable[[str, int, float], typing.Coroutine[typing.Any, typing.Any, str | None]]
 
 
 class OpenAIEndpoint(typing.NamedTuple):
@@ -452,10 +449,16 @@ async def _call_with_retry(
     return None
 
 
-async def _ai_complete(
-    chain: list[str], prompt: str, max_tokens: int, temperature: float
-) -> str | None:
-    """Try each provider in chain, falling back on rate limit exhaustion."""
+async def _ai_complete(chain: list[str], prompt: str, max_tokens: int, temperature: float) -> str | None:
+    """Try each provider in chain, falling back on rate limit exhaustion.
+
+    PII is masked out of the prompt before it leaves for any provider (152-ФЗ) and restored
+    in the result, so providers only ever see placeholder tokens.
+    """
+    masked_prompt, pii_map = _mask.mask(prompt)
+    if settings.log_llm_payloads:
+        logger.debug("LLM outgoing payload (masked): %s", masked_prompt)
+
     for provider in chain:
         handler = _PROVIDERS.get(provider)
         if not handler:
@@ -465,7 +468,7 @@ async def _ai_complete(
         try:
             await rate_limiter.acquire(provider)
             logger.debug("Using provider %s", provider)
-            raw = await _call_with_retry(provider, handler, prompt, max_tokens, temperature)
+            raw = await _call_with_retry(provider, handler, masked_prompt, max_tokens, temperature)
         except RateLimitError:
             logger.warning("Provider %s exhausted, falling back to next", provider)
             continue
@@ -473,7 +476,7 @@ async def _ai_complete(
         if raw is not None:
             result = _strip_backticks(raw)
             if result:
-                return result
+                return _mask.unmask(result, pii_map)
             logger.warning("Provider %s returned empty response, trying next", provider)
 
     logger.error("All providers in chain exhausted or failed")

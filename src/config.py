@@ -30,6 +30,8 @@ class Settings(BaseSettings):
 
     debug: bool = True
     environment: str = "dev"
+    # Log the (PII-masked) outgoing LLM payload at DEBUG — to verify masking in prod.
+    log_llm_payloads: bool = False
     default_language: str = RUSSIAN
     telegram_bot_command: str = "евлампий"
     telegram_bot_token: str = ""
