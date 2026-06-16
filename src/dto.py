@@ -25,6 +25,9 @@ class UserSettings(Document):
 
     class Settings:
         name = "users"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("chat_id", ASCENDING)], unique=True),
+        ]
 
 
 class UserTier(enum.StrEnum):
@@ -54,6 +57,9 @@ class UserCredits(Document):
 
     class Settings:
         name = "user_credits"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("user_id", ASCENDING)], unique=True),
+        ]
 
 
 class UserMonthlyUsage(Document):
@@ -68,6 +74,9 @@ class UserMonthlyUsage(Document):
 
     class Settings:
         name = "user_monthly_usage"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("user_id", ASCENDING), ("month_key", ASCENDING)], unique=True),
+        ]
 
 
 class UsedTrial(Document):
@@ -75,6 +84,9 @@ class UsedTrial(Document):
 
     class Settings:
         name = "used_trials"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("user_hash", ASCENDING)], unique=True),
+        ]
 
 
 class BotConfig(Document):
@@ -85,6 +97,9 @@ class BotConfig(Document):
 
     class Settings:
         name = "bot_config"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("key", ASCENDING)], unique=True),
+        ]
 
 
 class WitUsageStats(Document):
@@ -94,6 +109,9 @@ class WitUsageStats(Document):
 
     class Settings:
         name = "wit_usage_stats"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("month_key", ASCENDING), ("language", ASCENDING)], unique=True),
+        ]
 
 
 class MonthlyStats(Document):
@@ -105,6 +123,9 @@ class MonthlyStats(Document):
 
     class Settings:
         name = "monthly_stats"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("month_key", ASCENDING)], unique=True),
+        ]
 
 
 def _utc_now() -> datetime.datetime:
@@ -118,6 +139,9 @@ class AlertState(Document):
 
     class Settings:
         name = "alert_state"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("alert_type", ASCENDING), ("month_key", ASCENDING)], unique=True),
+        ]
 
 
 class UserRole(Document):
@@ -128,6 +152,9 @@ class UserRole(Document):
 
     class Settings:
         name = "user_roles"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("role", ASCENDING), ("user_id", ASCENDING)], unique=True),
+        ]
 
 
 class AccountLink(Document):
@@ -136,6 +163,10 @@ class AccountLink(Document):
 
     class Settings:
         name = "account_links"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("telegram_user_id", ASCENDING)]),
+            IndexModel([("whatsapp_phone", ASCENDING)]),
+        ]
 
 
 class LinkCode(Document):
@@ -145,6 +176,10 @@ class LinkCode(Document):
 
     class Settings:
         name = "link_codes"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("code", ASCENDING)]),
+            IndexModel([("telegram_user_id", ASCENDING)]),
+        ]
 
 
 class LinkAttempt(Document):
@@ -155,6 +190,9 @@ class LinkAttempt(Document):
 
     class Settings:
         name = "link_attempts"
+        indexes: typing.ClassVar[list[IndexModel]] = [
+            IndexModel([("whatsapp_phone", ASCENDING)], unique=True),
+        ]
 
 
 _RECENT_TRANSCRIPTION_TTL_SECONDS = 7200  # 2 hours
@@ -174,4 +212,5 @@ class RecentTranscription(Document):
                 [("created_at", ASCENDING)],
                 expireAfterSeconds=_RECENT_TRANSCRIPTION_TTL_SECONDS,
             ),
+            IndexModel([("chat_id", ASCENDING), ("created_at", ASCENDING)]),
         ]

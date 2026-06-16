@@ -1,7 +1,9 @@
 """Admin alert service."""
 
+import contextlib
 import logging
 
+import pymongo.errors
 from aiogram import Bot
 
 from src import const
@@ -32,7 +34,9 @@ async def _should_send_alert(alert_type: str, month: str) -> bool:
 
 
 async def _mark_alert_sent(alert_type: str, month: str) -> None:
-    await AlertState(alert_type=alert_type, month_key=month).insert()
+    # Concurrent alert may already be marked — the unique index makes this a no-op.
+    with contextlib.suppress(pymongo.errors.DuplicateKeyError):
+        await AlertState(alert_type=alert_type, month_key=month).insert()
 
 
 async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1) -> None:
@@ -57,9 +61,7 @@ async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1) -> None:
             if prev_revenue < milestone <= revenue:
                 alert_type = f"revenue_{milestone}"
                 if await _should_send_alert(alert_type, month):
-                    await send_admin_alert(
-                        bot, f"🎉 <b>Revenue milestone!</b>\n\nReached ${milestone}!"
-                    )
+                    await send_admin_alert(bot, f"🎉 <b>Revenue milestone!</b>\n\nReached ${milestone}!")
                     await _mark_alert_sent(alert_type, month)
 
     wit_limit = settings.wit_free_monthly_limit

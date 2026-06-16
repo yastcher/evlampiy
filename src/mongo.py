@@ -1,6 +1,8 @@
+import contextlib
 import typing
 
-from beanie import init_beanie
+import pymongo.errors
+from beanie import Document, init_beanie
 from motor import motor_asyncio
 
 from src.config import settings
@@ -47,13 +49,36 @@ async def init_beanie_models() -> None:
     await init_beanie(database=mongo_client["user_settings"], document_models=ALL_DOCUMENT_MODELS)  # ty: ignore[invalid-argument-type]
 
 
+async def get_or_create[DocT: Document](
+    finder: typing.Callable[[], typing.Awaitable[DocT | None]],
+    factory: typing.Callable[[], DocT],
+) -> DocT:
+    """Return an existing document or create it, surviving a concurrent-insert race.
+
+    With a unique index on the natural key, two requests creating the same document
+    concurrently have one insert win; the loser's insert raises DuplicateKeyError, which
+    we swallow and re-fetch the winner — so callers never observe duplicates or the race.
+    """
+    existing = await finder()
+    if existing is not None:
+        return existing
+    try:
+        doc = factory()
+        await doc.insert()
+        return doc
+    except pymongo.errors.DuplicateKeyError:
+        winner = await finder()
+        if winner is None:
+            raise
+        return winner
+
+
 async def get_or_create_user(chat_id: ChatId) -> UserSettings:
     """Get existing user or create new one with defaults."""
-    user = await UserSettings.find_one(UserSettings.chat_id == chat_id)
-    if not user:
-        user = UserSettings(chat_id=chat_id)
-        await user.insert()
-    return user
+    return await get_or_create(
+        lambda: UserSettings.find_one(UserSettings.chat_id == chat_id),
+        lambda: UserSettings(chat_id=chat_id),
+    )
 
 
 async def set_chat_language(chat_id: ChatId, language: Language) -> None:
@@ -166,11 +191,13 @@ async def get_preferred_provider(chat_id: ChatId) -> str | None:
 
 
 async def add_user_role(user_id: UserId, role: str, added_by: str) -> None:
-    """Add a role to a user (upsert)."""
+    """Add a role to a user (idempotent)."""
     existing = await UserRole.find_one(UserRole.user_id == user_id, UserRole.role == role)
     if existing:
         return
-    await UserRole(user_id=user_id, role=role, added_by=added_by).insert()
+    # Concurrent add of the same role may win the race — already present, ignore.
+    with contextlib.suppress(pymongo.errors.DuplicateKeyError):
+        await UserRole(user_id=user_id, role=role, added_by=added_by).insert()
 
 
 async def remove_user_role(user_id: UserId, role: str) -> bool:
@@ -201,11 +228,7 @@ async def save_recent_transcription(chat_id: ChatId, text: str) -> None:
     """Save cleaned transcription for cleanup context; keep only the last 5 per chat."""
     await RecentTranscription(chat_id=chat_id, text=text).insert()
     # Trim to keep only the most recent entries
-    all_docs = (
-        await RecentTranscription.find(RecentTranscription.chat_id == chat_id)
-        .sort("-created_at")
-        .to_list()
-    )
+    all_docs = await RecentTranscription.find(RecentTranscription.chat_id == chat_id).sort("-created_at").to_list()
     for doc in all_docs[_RECENT_TRANSCRIPTION_KEEP:]:
         await doc.delete()
 
@@ -229,9 +252,10 @@ async def get_bot_config(key: str, default: str = "") -> str:
 
 async def set_bot_config(key: str, value: str) -> None:
     """Set a runtime bot config value (upsert)."""
-    doc = await BotConfig.find_one(BotConfig.key == key)
-    if doc:
+    doc = await get_or_create(
+        lambda: BotConfig.find_one(BotConfig.key == key),
+        lambda: BotConfig(key=key, value=value),
+    )
+    if doc.value != value:
         doc.value = value
         await doc.save()
-    else:
-        await BotConfig(key=key, value=value).insert()

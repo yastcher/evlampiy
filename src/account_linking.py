@@ -6,6 +6,7 @@ import secrets
 import typing
 
 from src.dto import AccountLink, LinkAttempt, LinkCode
+from src.mongo import get_or_create
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +41,10 @@ async def _check_rate_limit(whatsapp_phone: str) -> LinkAttempt | None:
     attempt = await LinkAttempt.find_one(LinkAttempt.whatsapp_phone == whatsapp_phone)
 
     if not attempt:
-        attempt = LinkAttempt(whatsapp_phone=whatsapp_phone)
-        await attempt.insert()
-        return attempt
+        return await get_or_create(
+            lambda: LinkAttempt.find_one(LinkAttempt.whatsapp_phone == whatsapp_phone),
+            lambda: LinkAttempt(whatsapp_phone=whatsapp_phone),
+        )
 
     if attempt.locked_until:
         locked_until = _to_aware(attempt.locked_until)
@@ -65,9 +67,7 @@ async def _record_failed_attempt(attempt: LinkAttempt) -> None:
     """Record failed attempt and lock if limit exceeded."""
     attempt.attempt_count += 1
     if attempt.attempt_count >= LINK_MAX_ATTEMPTS:
-        attempt.locked_until = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-            seconds=LINK_LOCKOUT_SECONDS
-        )
+        attempt.locked_until = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=LINK_LOCKOUT_SECONDS)
         logger.warning(
             "Phone %s locked after %d failed attempts",
             attempt.whatsapp_phone,

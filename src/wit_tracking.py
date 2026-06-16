@@ -3,21 +3,21 @@
 from src.config import settings
 from src.credits import current_month_key
 from src.dto import WitUsageStats
+from src.mongo import get_or_create
 from src.types import Language
 
 
 async def increment_wit_usage(count: int = 1, language: Language = "ru") -> int:
     month_key = current_month_key()
-    record = await WitUsageStats.find_one(
-        WitUsageStats.month_key == month_key,
-        WitUsageStats.language == language,
+    record = await get_or_create(
+        lambda: WitUsageStats.find_one(
+            WitUsageStats.month_key == month_key,
+            WitUsageStats.language == language,
+        ),
+        lambda: WitUsageStats(month_key=month_key, language=language),
     )
-    if not record:
-        record = WitUsageStats(month_key=month_key, language=language, request_count=count)
-        await record.insert()
-    else:
-        record.request_count += count
-        await record.save()
+    record.request_count += count
+    await record.save()
     return record.request_count
 
 

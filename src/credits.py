@@ -5,10 +5,12 @@ import datetime
 import hashlib
 import math
 
+import pymongo.errors
+
 from src import const
 from src.config import settings
 from src.dto import MonthlyStats, UsedTrial, UserCredits, UserMonthlyUsage, UserTier
-from src.mongo import has_role
+from src.mongo import get_or_create, has_role
 from src.types import UserId
 
 
@@ -89,15 +91,14 @@ async def _ensure_fresh_free_credits(record: UserCredits) -> UserCredits:
 
 
 async def _get_or_create_user_credits(user_id: UserId) -> UserCredits:
-    record = await UserCredits.find_one(UserCredits.user_id == user_id)
-    if not record:
-        record = UserCredits(
+    return await get_or_create(
+        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
+        lambda: UserCredits(
             user_id=user_id,
             free_credits=settings.free_monthly_tokens,
             free_credits_month=current_month_key(),
-        )
-        await record.insert()
-    return record
+        ),
+    )
 
 
 # --- Credit queries ---
@@ -132,39 +133,33 @@ async def can_perform_operation(user_id: UserId, cost: int) -> tuple[bool, str]:
 
 async def add_credits(user_id: UserId, amount: int) -> int:
     """Add purchased credits. Returns new purchased balance."""
-    record = await UserCredits.find_one(UserCredits.user_id == user_id)
-    if not record:
-        record = UserCredits(
+    record = await get_or_create(
+        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
+        lambda: UserCredits(
             user_id=user_id,
-            purchased_credits=amount,
-            tier=UserTier.PAID,
-            total_credits_purchased=amount,
             free_credits=settings.free_monthly_tokens,
             free_credits_month=current_month_key(),
-        )
-        await record.insert()
-    else:
-        record.purchased_credits += amount
-        record.tier = UserTier.PAID
-        record.total_credits_purchased += amount
-        await record.save()
+        ),
+    )
+    record.purchased_credits += amount
+    record.tier = UserTier.PAID
+    record.total_credits_purchased += amount
+    await record.save()
     return record.purchased_credits
 
 
 async def admin_add_credits(user_id: UserId, amount: int) -> int:
     """Add credits without changing tier (for admin top-ups)."""
-    record = await UserCredits.find_one(UserCredits.user_id == user_id)
-    if not record:
-        record = UserCredits(
+    record = await get_or_create(
+        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
+        lambda: UserCredits(
             user_id=user_id,
-            purchased_credits=amount,
             free_credits=settings.free_monthly_tokens,
             free_credits_month=current_month_key(),
-        )
-        await record.insert()
-    else:
-        record.purchased_credits += amount
-        await record.save()
+        ),
+    )
+    record.purchased_credits += amount
+    await record.save()
     return record.purchased_credits
 
 
@@ -204,15 +199,18 @@ async def grant_initial_credits_if_eligible(user_id: UserId) -> bool:
     if existing:
         return False
 
-    await UsedTrial(user_hash=user_hash).insert()
+    try:
+        await UsedTrial(user_hash=user_hash).insert()
+    except pymongo.errors.DuplicateKeyError:
+        # A concurrent grant already claimed the trial for this user.
+        return False
 
-    record = await UserCredits.find_one(UserCredits.user_id == user_id)
-    if not record:
-        record = UserCredits(user_id=user_id, purchased_credits=3)
-        await record.insert()
-    else:
-        record.purchased_credits += 3
-        await record.save()
+    record = await get_or_create(
+        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
+        lambda: UserCredits(user_id=user_id),
+    )
+    record.purchased_credits += 3
+    await record.save()
     return True
 
 
@@ -220,20 +218,17 @@ async def grant_initial_credits_if_eligible(user_id: UserId) -> bool:
 
 
 async def increment_user_stats(user_id: UserId, audio_seconds: int = 0) -> None:
-    record = await UserCredits.find_one(UserCredits.user_id == user_id)
-    if not record:
-        record = UserCredits(
+    record = await get_or_create(
+        lambda: UserCredits.find_one(UserCredits.user_id == user_id),
+        lambda: UserCredits(
             user_id=user_id,
-            total_transcriptions=1,
-            total_audio_seconds=audio_seconds,
             free_credits=settings.free_monthly_tokens,
             free_credits_month=current_month_key(),
-        )
-        await record.insert()
-    else:
-        record.total_transcriptions += 1
-        record.total_audio_seconds += audio_seconds
-        await record.save()
+        ),
+    )
+    record.total_transcriptions += 1
+    record.total_audio_seconds += audio_seconds
+    await record.save()
 
 
 async def record_user_usage(
@@ -245,13 +240,13 @@ async def record_user_usage(
 ) -> None:
     """Record per-user monthly usage."""
     month = current_month_key()
-    record = await UserMonthlyUsage.find_one(
-        UserMonthlyUsage.user_id == user_id,
-        UserMonthlyUsage.month_key == month,
+    record = await get_or_create(
+        lambda: UserMonthlyUsage.find_one(
+            UserMonthlyUsage.user_id == user_id,
+            UserMonthlyUsage.month_key == month,
+        ),
+        lambda: UserMonthlyUsage(user_id=user_id, month_key=month),
     )
-    if not record:
-        record = UserMonthlyUsage(user_id=user_id, month_key=month)
-        await record.insert()
 
     record.transcriptions += 1
     record.audio_seconds += audio_seconds
@@ -266,11 +261,10 @@ async def record_user_usage(
 
 async def _get_or_create_monthly_stats() -> MonthlyStats:
     month_key = current_month_key()
-    record = await MonthlyStats.find_one(MonthlyStats.month_key == month_key)
-    if not record:
-        record = MonthlyStats(month_key=month_key)
-        await record.insert()
-    return record
+    return await get_or_create(
+        lambda: MonthlyStats.find_one(MonthlyStats.month_key == month_key),
+        lambda: MonthlyStats(month_key=month_key),
+    )
 
 
 async def increment_transcription_stats() -> None:

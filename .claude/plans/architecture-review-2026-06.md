@@ -13,12 +13,13 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 
 ---
 
-## P0 — blocking work in the shared event loop  `[~]`
+## P0 — blocking work in the shared event loop  `[x]`
 
 **Where:** `src/transcription/service.py:18-22` (`get_audio_duration_seconds`),
 `:57-77` (`_transcribe_with_wit`); `src/transcription/wit_client.py` (sync `wit.Wit`).
 
 `transcribe_audio` is `async` but synchronously calls:
+
 - `AudioSegment.from_file(...)` / `chunk.export(format="mp3")` — blocking ffmpeg subprocess
   (decode + per-chunk conversion);
 - `translator.speech(...)` — the `wit` library is synchronous (requests), one blocking HTTP
@@ -41,7 +42,16 @@ and retry (dupes), polling stalls. Effective throughput under concurrency ≈ 1.
 
 ---
 
-## P0 — no MongoDB indexes on hot query fields  `[ ]`
+## P0 — no MongoDB indexes on hot query fields  `[x]`
+
+**Done:** added `indexes` to every model in `src/dto.py` (unique on natural keys: `chat_id`,
+`user_id`, `(user_id, month_key)`, `(role, user_id)`, `(month_key, language)`, `key`,
+`user_hash`, `month_key`, `(alert_type, month_key)`, `whatsapp_phone`; non-unique lookup
+indexes on `LinkCode`/`AccountLink`/`RecentTranscription`). Added a race-safe `get_or_create`
+helper in `src/mongo.py` (catches `DuplicateKeyError` on the lost insert, re-fetches the
+winner) and routed all find-then-insert sites through it (mongo/credits/wit_tracking/alerts/
+account_linking). Note: this prevents duplicate *documents*; atomic `$inc` against lost
+*updates* is still P1.
 
 **Where:** `src/dto.py` — only `RecentTranscription:172` has an index (TTL). `UserSettings`,
 `UserCredits`, `UserRole`, `UserMonthlyUsage`, `LinkCode`, `AccountLink`, `WitUsageStats`,
@@ -151,8 +161,8 @@ chokepoint: the request builder in `ai_client._ai_complete`.
 
 ## Recommended order
 
-1. `asyncio.to_thread` around ffmpeg+wit — biggest impact, smallest diff. **(P0, in progress)**
-2. Indexes + unique in Beanie models — kills full scans and duplicate-doc race. (P0)
+1. `asyncio.to_thread` around ffmpeg+wit — biggest impact, smallest diff. **(P0, done)**
+2. Indexes + unique in Beanie models — kills full scans and duplicate-doc race. **(P0, done)**
 3. Atomic `$inc` for balances + payment idempotency by `charge_id` — money correctness. (P1)
 4. Always-on `/health` + compose healthcheck. (P1)
 5. PII masking in `ai_client`. (P1)
