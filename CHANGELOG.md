@@ -6,6 +6,11 @@
 - PII (phones/emails/names) is masked before cleanup/categorization prompts reach external LLMs and restored in the
   response, so personal data no longer leaves in plaintext (152-ФЗ); optional `LOG_LLM_PAYLOADS` logs the masked payload
 
+### Changed
+
+- All MongoDB collections are now indexed on their query keys, with unique constraints on natural keys (was full
+  collection scans on every message)
+
 ### Fixed
 
 - Transcription offloads ffmpeg decode + synchronous Wit.ai calls to a worker thread, so one voice note no longer
@@ -26,8 +31,6 @@
 - Notes now live under a configurable base dir (`OBSIDIAN_BASE_DIR`, default `evlampiy`): new notes land in
   `<base>/inbox`, categories under `<base>/`, never in the repo root
 - Categorization strongly prefers existing categories and routes obvious garbage to `<base>/trash` (seeded on repo init)
-- All MongoDB collections are now indexed on their query keys, with unique constraints on natural keys (was full
-  collection scans on every message)
 
 ### Fixed
 
