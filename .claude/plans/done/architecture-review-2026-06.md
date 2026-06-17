@@ -115,7 +115,13 @@ key ⇒ already processed, return. Idempotency key.
 
 ---
 
-## P1 — single process: shared fate + scaling ceiling  `[ ]`
+## P1 — single process: shared fate + scaling ceiling  `[~]`
+
+**Done (shared fate):** `main.py::_supervise` runs each subsystem (Telegram polling, HTTP
+server) in a restart-on-crash loop with backoff, so one crashing no longer cancels the other
+via the TaskGroup; cancellation still propagates for clean shutdown. **Remaining (inherent):**
+no horizontal scaling — long-polling is single-consumer and the rate limiter / httpx client
+are per-process; "single instance" stays a documented constraint, not a fix.
 
 **Where:** `src/main.py:32-36` — Telegram polling + uvicorn/FastAPI + WhatsApp in one asyncio
 process via `TaskGroup`.
@@ -146,7 +152,7 @@ container (only mongodb). `restart: always` catches process exit, not a wedged l
 
 ---
 
-## P1 — GitHub token at rest + over-broad scope  `[ ]`
+## P1 — GitHub token at rest + over-broad scope  `[deferred]`
 
 **Where:** `src/mongo.py:85-92` stores the OAuth token as plaintext `github_settings.token`;
 `src/github_oauth.py:13` requests scope `repo` (full r/w to all repos). One DB read = full
@@ -154,6 +160,11 @@ GitHub control for every connected user.
 
 **Fix:** encrypt the token at rest with an app key (envelope); minimize requested scope /
 consider fine-grained PAT flow.
+
+**Decision (2026-06): deferred.** Encryption needs the `cryptography` dep, and the key lives
+in `.env` on the same host as Mongo (docker-compose), so it only helps against a DB-only leak
+(dump/backup exfiltrated without env) — marginal at ~0 users. Revisit if backups go offsite or
+the deploy goes multi-host. Scope can't shrink: private vault repos require `repo`.
 
 ---
 
@@ -175,7 +186,10 @@ with a mapping that persists across the multi-turn tool loop — a separate, lar
 ## P2 — structural  `[ ]`
 
 - God-object `Settings` (`src/config.py:22`, 40+ fields) contradicts the project's own
-  "split BaseSettings per module".
+  "split BaseSettings per module". **Decision (2026-06): won't do.** 121 `settings.X` refs across
+  23 files; any split (per-domain classes or nested models) rewrites every access — high-churn,
+  regression-prone, purely organizational. The flat object works; per "if a flat approach does
+  the job, use it", splitting would be over-engineering.
 - Repeated `UserSettings` reads (6-8 queries of one doc per message) — fetch once, pass down;
   compounds the missing indexes.
 - No migration strategy: deprecated fields, "empty for legacy records" — schema drift on a
@@ -193,4 +207,5 @@ with a mapping that persists across the multi-turn tool loop — a separate, lar
 3. Atomic `$inc` for balances + payment idempotency by `charge_id` — money correctness. **(P1, done)**
 4. Always-on `/health` + compose healthcheck. **(P1, done)**
 5. PII masking in `ai_client`. **(P1, done for cleanup/categorization; `ai_chat` tool-calling path remaining)**
-6. Token encryption; supervised subsystems; split Settings. (P1/P2)
+6. Supervised subsystems **(done)**; token encryption **(deferred — dep + marginal benefit)**;
+   split Settings **(won't do — 121-ref reorg, over-engineering)**. (P1/P2)

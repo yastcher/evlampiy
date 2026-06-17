@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import typing
 
 from src.config import settings
 from src.mongo import init_beanie_models
@@ -25,15 +26,38 @@ for logger_name in trash_loggers:
 
 logger = logging.getLogger(__name__)
 
+_SUPERVISOR_INITIAL_BACKOFF_SECONDS = 1.0
+_SUPERVISOR_MAX_BACKOFF_SECONDS = 60.0
+
+
+async def _supervise(name: str, factory: typing.Callable[[], typing.Awaitable[None]]) -> None:
+    """Keep a subsystem running: restart it on crash with exponential backoff.
+
+    Telegram polling and the HTTP server are independent — one crashing must not tear the
+    other down (a plain TaskGroup would cancel the siblings and kill the process). A clean
+    return is not restarted; cancellation propagates for an orderly shutdown.
+    """
+    backoff = _SUPERVISOR_INITIAL_BACKOFF_SECONDS
+    while True:
+        try:
+            await factory()
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Subsystem %s crashed; restarting in %.0fs", name, backoff)
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, _SUPERVISOR_MAX_BACKOFF_SECONDS)
+
 
 async def _async_main() -> None:
     await init_beanie_models()
 
+    # Each subsystem is supervised independently so one failing surface (Telegram or the
+    # HTTP/WhatsApp server) restarts on its own instead of taking the whole process down.
     async with asyncio.TaskGroup() as task_group:
-        task_group.create_task(run_bot())
-        # Always serve the HTTP app: /health must answer liveness probes even when
-        # WhatsApp is unconfigured (its webhook routes are registered conditionally).
-        task_group.create_task(serve_fastapi())
+        task_group.create_task(_supervise("telegram", run_bot))
+        task_group.create_task(_supervise("http", serve_fastapi))
 
 
 def main() -> None:

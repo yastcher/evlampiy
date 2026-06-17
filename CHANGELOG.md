@@ -16,6 +16,8 @@
   concurrent voice messages no longer lose deductions
 - Telegram-Stars payments are idempotent (deduped by charge id) — a redelivered `successful_payment` no longer
   double-credits
+- A crash in one subsystem (Telegram polling or the HTTP/WhatsApp server) now restarts just that subsystem with
+  backoff instead of tearing down the whole process
 
 ## [0.9.2] — 2026-06-06
 
