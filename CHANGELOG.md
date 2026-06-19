@@ -1,8 +1,16 @@
+## [0.9.5] — 2026-06-19
+
+### Fixed
+
+- Sanitize AI-suggested category names before using them as a repo path, so a stray newline or path separator no longer
+  crashes categorization and strands the note in inbox
+
 ## [0.9.4] — 2026-06-17
 
 ### Added
 
-- Connecting GitHub now lets you pick an existing repository or create a new one with a custom name (was always `obsidian-notes`)
+- Connecting GitHub now lets you pick an existing repository or create a new one with a custom name (was always
+  `obsidian-notes`)
 
 ## [0.9.3] — 2026-06-16
 

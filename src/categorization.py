@@ -61,6 +61,21 @@ async def update_vocabulary_in_repo(repo_info: GitHubRepo, category: str, keywor
     )
 
 
+def _normalize_category(raw: str) -> str | None:
+    """Normalize an LLM-produced category into a safe path segment.
+
+    WARNING (security): the category becomes part of the GitHub Contents API URL path,
+    and the LLM input is partly derived from user speech. A stray control character (e.g.
+    a newline) crashes httpx with InvalidURL, and path separators / leading dots would let
+    a note escape the base dir. Strip both; keep Unicode letters so non-English categories
+    (e.g. Cyrillic) still work.
+    """
+    slug = raw.strip().lower().replace(" ", "_")
+    slug = "".join(ch for ch in slug if ch.isprintable() and ch not in "/\\")
+    slug = slug.strip("._-")
+    return slug or None
+
+
 async def classify_note(
     text: str,
     existing_categories: Sequence[str],
@@ -88,13 +103,12 @@ async def classify_note(
 
     try:
         data = json.loads(result.strip())
-        raw_category = data.get("category", "").strip().lower().replace(" ", "_")
+        category = _normalize_category(data.get("category", ""))
         keywords = [str(k) for k in data.get("keywords", [])[:5]]
-        return raw_category or None, keywords
+        return category, keywords
     except json.JSONDecodeError, TypeError, AttributeError:
         # Fallback: treat as plain category name (old-style LLM response)
-        category = result.strip().lower().replace(" ", "_")
-        return category or None, []
+        return _normalize_category(result), []
 
 
 async def move_github_file(repo_info: GitHubRepo, old_path: str, new_path: str) -> bool:

@@ -228,6 +228,37 @@ class TestClassifyNote:
 
         assert len(keywords) == 5
 
+    async def test_strips_control_chars_from_category(self):
+        """A newline inside the category is removed (would crash httpx with InvalidURL in the path)."""
+        response = json.dumps({"category": "work\nnotes", "keywords": []})
+        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+            category, _keywords = await classify_note("Some note", [])
+
+        assert category == "worknotes"
+
+    async def test_rejects_path_traversal_in_category(self):
+        """Path separators and leading dots are stripped so the category cannot escape the base dir."""
+        response = json.dumps({"category": "../../secret", "keywords": []})
+        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+            category, _keywords = await classify_note("Some note", [])
+
+        assert category == "secret"
+
+    async def test_fallback_strips_control_chars(self):
+        """The plain-text fallback branch also sanitizes control characters."""
+        with patch("src.categorization.classify_text", AsyncMock(return_value="work\nnotes")):
+            category, _keywords = await classify_note("Some note", [])
+
+        assert category == "worknotes"
+
+    async def test_preserves_cyrillic_category(self):
+        """Non-ASCII category names (e.g. Russian) survive normalization (GitHub paths are UTF-8)."""
+        response = json.dumps({"category": "Работа", "keywords": []})
+        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+            category, _keywords = await classify_note("Заметка", [])
+
+        assert category == "работа"
+
 
 class TestMoveGithubFile:
     """Test file move operation in GitHub."""
@@ -317,6 +348,38 @@ class TestCategorizeNote:
         assert "project" in updated_vocab["work"]
         # Deduplication: "project" appears only once
         assert updated_vocab["work"].count("project") == 1
+
+    async def test_sanitizes_newline_category_before_github_path(self):
+        """Regression: a newline in the LLM category must never reach the GitHub path (httpx InvalidURL crash)."""
+
+        async def fake_get_repo_contents(repo_info, path=""):
+            return [{"name": "work", "type": "dir"}]
+
+        async def fake_get_github_file(repo_info, path):
+            if path.startswith("evlampiy/inbox/"):
+                return ("Some content", "sha_note")
+            return None
+
+        put_paths = []
+
+        async def fake_put(repo_info, path, content, commit_message):
+            put_paths.append(path)
+            return True
+
+        with (
+            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("src.categorization.put_github_file", side_effect=fake_put),
+            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch(
+                "src.categorization.classify_text",
+                AsyncMock(return_value=json.dumps({"category": "work\nnotes", "keywords": []})),
+            ),
+        ):
+            result = await categorize_note(_TEST_REPO, "note.md", "Some content")
+
+        assert result == "worknotes"
+        assert put_paths == ["evlampiy/worknotes/note.md"]
 
     async def test_skips_vocabulary_update_when_no_keywords(self):
         """No vocabulary write when classify_text returns empty keywords."""
