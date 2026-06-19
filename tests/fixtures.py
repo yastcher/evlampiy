@@ -4,6 +4,7 @@ import pytest
 from aiogram.types import CallbackQuery, Chat, Message, User
 
 import src.ai_client
+import src.telegram.handlers.obsidian as obsidian_handlers
 import src.whatsapp.client
 from src.whatsapp.app import create_fastapi_app
 
@@ -105,6 +106,14 @@ def mock_telegram_audio():
     audio.file_unique_id = "audio_unique"
     audio.duration = 30
     return audio
+
+
+@pytest.fixture
+def reset_pending_connects():
+    """Clear the in-memory GitHub connect store so pending tokens don't leak between tests."""
+    obsidian_handlers._pending_connects.clear()
+    yield
+    obsidian_handlers._pending_connects.clear()
 
 
 @pytest.fixture

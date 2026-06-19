@@ -32,6 +32,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 ### Obsidian-Integration
 - **GitHub-Synchronisierung** — Automatisches Speichern von Transkriptionen in Ihrem Vault über GitHub API
 - **OAuth Device Flow** — Sichere Authentifizierung ohne Token-Offenlegung
+- **Repository-Auswahl** — Beim Verbinden ein vorhandenes GitHub-Repository wählen oder ein neues erstellen (beliebiger Name)
 - **Auto-Kategorisierung** — KI-gestützte Notizklassifizierung (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Duales Speichern** — Notizen enthalten bereinigten Text; die rohe Transkription wird in einem HTML-Kommentar aufbewahrt
 - **vocabulary.json** — Automatisch aufgebaute Stichwortliste je Kategorie; verbessert die Korrektur von Transkriptionsfehlern

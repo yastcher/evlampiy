@@ -25,7 +25,13 @@ from src.telegram.handlers.common import (
     enter_your_command_from_hub,
     hub_callback_router,
 )
-from src.telegram.handlers.obsidian import connect_github, setup_obsidian_git
+from src.telegram.handlers.obsidian import (
+    GithubRepoStates,
+    connect_github,
+    handle_repo_name_input,
+    pick_repo_callback,
+    setup_obsidian_git,
+)
 from src.telegram.handlers.settings import lang_buttons, toggle_cleanup
 
 
@@ -55,120 +61,164 @@ class TestToggleCleanup:
         assert "disabled" in reply_text.lower()
 
 
+_DEVICE_INFO = {
+    "verification_uri": "https://github.com/login/device",
+    "user_code": "ABCD-1234",
+    "device_code": "dc_test",
+    "expires_in": 900,
+    "interval": 5,
+}
+
+
+async def _offer_repos(update, bot, repos):
+    """Drive connect_github through OAuth so the repo-selection store is populated."""
+    with (
+        patch("src.telegram.handlers.obsidian.get_github_device_code", AsyncMock(return_value=_DEVICE_INFO)),
+        patch("src.telegram.handlers.obsidian.poll_github_for_token", AsyncMock(return_value="ghp_test")),
+        patch("src.telegram.handlers.obsidian.list_user_repos", AsyncMock(return_value=repos)),
+    ):
+        await connect_github(update, bot)
+        await asyncio.sleep(0.1)  # wait for the background poll/offer task
+
+
 class TestConnectGithubOAuthFlow:
-    """Test connect_github background task _poll_and_setup with real DB."""
+    """Test the connect_github → repo-selection → finalize flow with real DB."""
 
-    async def test_successful_oauth_saves_settings(self, mock_private_update, mock_context):
-        """Successful OAuth flow: poll returns token, repo created, settings saved."""
+    async def test_oauth_offers_repo_selection(self, mock_private_update, mock_context, reset_pending_connects):
+        """After OAuth the user is offered their repos + a create-new button; nothing saved yet."""
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
 
-        device_info = {
-            "verification_uri": "https://github.com/login/device",
-            "user_code": "ABCD-1234",
-            "device_code": "dc_test",
-            "expires_in": 900,
-            "interval": 5,
-        }
-        repo = GitHubRepo(token="ghp_test", owner="testowner", repo="testrepo")
+        await _offer_repos(mock_private_update, mock_context, ["alpha", "beta"])
 
-        with (
-            patch(
-                "src.telegram.handlers.obsidian.get_github_device_code",
-                AsyncMock(return_value=device_info),
-            ),
-            patch(
-                "src.telegram.handlers.obsidian.poll_github_for_token",
-                AsyncMock(return_value="ghp_test"),
-            ),
-            patch(
-                "src.telegram.handlers.obsidian.get_or_create_obsidian_repo",
-                AsyncMock(return_value=repo),
-            ),
-        ):
-            await connect_github(mock_private_update, mock_context)
+        # No settings persisted until a repo is actually picked
+        assert await get_github_settings(chat_id) is None
 
-            await asyncio.sleep(0.1)  # wait for background task
-
-        # Verify settings persisted in real DB
-        saved = await get_github_settings(chat_id)
-        assert saved is not None
-        assert saved.owner == "testowner"
-        assert saved.repo == "testrepo"
-        assert await get_save_to_obsidian(chat_id) is True
-
-        # Verify confirmation sent
         mock_context.send_message.assert_called()
-        msg = mock_context.send_message.call_args[1]["text"]
-        assert "testowner" in msg
+        keyboard = mock_context.send_message.call_args[1]["reply_markup"].inline_keyboard
+        button_texts = [button.text for row in keyboard for button in row]
+        assert "alpha" in button_texts
+        assert "beta" in button_texts
+        callback_datas = [button.callback_data for row in keyboard for button in row]
+        assert "ghrepo_0" in callback_datas
+        assert "ghrepo_new" in callback_datas
 
-    async def test_oauth_timeout_sends_message(self, mock_private_update, mock_context):
-        """Poll returns None (timeout) — user gets timeout message."""
+    async def test_oauth_timeout_sends_message(self, mock_private_update, mock_context, reset_pending_connects):
+        """Poll returns None (timeout) — user gets timeout message, no repo offer."""
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
 
-        device_info = {
-            "verification_uri": "https://github.com/login/device",
-            "user_code": "ABCD-1234",
-            "device_code": "dc_test",
-            "expires_in": 900,
-            "interval": 5,
-        }
-
         with (
-            patch(
-                "src.telegram.handlers.obsidian.get_github_device_code",
-                AsyncMock(return_value=device_info),
-            ),
-            patch(
-                "src.telegram.handlers.obsidian.poll_github_for_token",
-                AsyncMock(return_value=None),
-            ),
+            patch("src.telegram.handlers.obsidian.get_github_device_code", AsyncMock(return_value=_DEVICE_INFO)),
+            patch("src.telegram.handlers.obsidian.poll_github_for_token", AsyncMock(return_value=None)),
         ):
             await connect_github(mock_private_update, mock_context)
-
             await asyncio.sleep(0.1)  # wait for background task
 
-        # Verify timeout message sent
         mock_context.send_message.assert_called()
         msg = mock_context.send_message.call_args[1]["text"]
         assert "expired" in msg.lower() or "timeout" in msg.lower() or "timed" in msg.lower()
 
-    async def test_oauth_repo_creation_failure(self, mock_private_update, mock_context):
-        """Token received but repo creation fails — error message sent."""
+    async def test_pick_existing_repo_saves_settings(
+        self, mock_private_update, mock_context, mock_callback_query, mock_state, reset_pending_connects
+    ):
+        """Picking an existing repo from the list connects to it (no new repo created)."""
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
+        await _offer_repos(mock_private_update, mock_context, ["alpha", "beta"])
 
-        device_info = {
-            "verification_uri": "https://github.com/login/device",
-            "user_code": "ABCD-1234",
-            "device_code": "dc_test",
-            "expires_in": 900,
-            "interval": 5,
-        }
+        mock_callback_query.data = "ghrepo_1"  # pick "beta"
+        repo = GitHubRepo(token="ghp_test", owner="testowner", repo="beta")
+        with patch(
+            "src.telegram.handlers.obsidian.get_or_create_obsidian_repo",
+            AsyncMock(return_value=repo),
+        ) as mock_get_or_create:
+            await pick_repo_callback(mock_callback_query, mock_context, mock_state)
 
-        with (
-            patch(
-                "src.telegram.handlers.obsidian.get_github_device_code",
-                AsyncMock(return_value=device_info),
-            ),
-            patch(
-                "src.telegram.handlers.obsidian.poll_github_for_token",
-                AsyncMock(return_value="ghp_test"),
-            ),
-            patch(
-                "src.telegram.handlers.obsidian.get_or_create_obsidian_repo",
-                AsyncMock(return_value=None),
-            ),
+        mock_get_or_create.assert_awaited_once_with("ghp_test", "beta")
+        saved = await get_github_settings(chat_id)
+        assert saved is not None
+        assert saved.repo == "beta"
+        assert await get_save_to_obsidian(chat_id) is True
+
+    async def test_create_new_repo_via_name_input(
+        self, mock_private_update, mock_context, mock_callback_query, mock_state, reset_pending_connects
+    ):
+        """The create-new button asks for a name; the typed name creates and connects the repo."""
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await _offer_repos(mock_private_update, mock_context, ["alpha"])
+
+        mock_callback_query.data = "ghrepo_new"
+        await pick_repo_callback(mock_callback_query, mock_context, mock_state)
+        mock_state.set_state.assert_awaited_once_with(GithubRepoStates.waiting_for_name)
+        assert await get_github_settings(chat_id) is None  # not yet connected
+
+        mock_private_update.text = "my-new-notes"
+        repo = GitHubRepo(token="ghp_test", owner="testowner", repo="my-new-notes")
+        with patch(
+            "src.telegram.handlers.obsidian.get_or_create_obsidian_repo",
+            AsyncMock(return_value=repo),
+        ) as mock_get_or_create:
+            await handle_repo_name_input(mock_private_update, mock_state, mock_context)
+
+        mock_get_or_create.assert_awaited_once_with("ghp_test", "my-new-notes")
+        saved = await get_github_settings(chat_id)
+        assert saved is not None
+        assert saved.repo == "my-new-notes"
+        mock_state.clear.assert_awaited_once()
+
+    async def test_invalid_repo_name_reprompts(
+        self, mock_private_update, mock_context, mock_state, reset_pending_connects
+    ):
+        """An invalid repo name is rejected, the state is kept, and nothing is saved."""
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await _offer_repos(mock_private_update, mock_context, ["alpha"])
+
+        mock_private_update.text = "bad name!!"  # space + '!' are not allowed
+        with patch(
+            "src.telegram.handlers.obsidian.get_or_create_obsidian_repo",
+            AsyncMock(return_value=None),
+        ) as mock_get_or_create:
+            await handle_repo_name_input(mock_private_update, mock_state, mock_context)
+
+        mock_get_or_create.assert_not_called()
+        assert await get_github_settings(chat_id) is None
+        mock_state.clear.assert_not_called()
+        mock_private_update.answer.assert_called()
+
+    async def test_repo_creation_failure_at_finalize(
+        self, mock_private_update, mock_context, mock_callback_query, mock_state, reset_pending_connects
+    ):
+        """When repo create/access fails after a pick, an error is sent and nothing saved."""
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await _offer_repos(mock_private_update, mock_context, ["alpha"])
+
+        mock_callback_query.data = "ghrepo_0"
+        with patch(
+            "src.telegram.handlers.obsidian.get_or_create_obsidian_repo",
+            AsyncMock(return_value=None),
         ):
-            await connect_github(mock_private_update, mock_context)
+            await pick_repo_callback(mock_callback_query, mock_context, mock_state)
 
-            await asyncio.sleep(0.1)  # wait for background task
-
-        # Verify error message sent
-        mock_context.send_message.assert_called()
+        assert await get_github_settings(chat_id) is None
         msg = mock_context.send_message.call_args[1]["text"]
         assert "failed" in msg.lower() or "error" in msg.lower()
+
+    async def test_pick_repo_without_pending_session(
+        self, mock_callback_query, mock_context, mock_state, reset_pending_connects
+    ):
+        """A stale repo button (no pending token) tells the user the session expired."""
+        await set_chat_language("u_12345", "en")
+
+        mock_callback_query.data = "ghrepo_0"
+        await pick_repo_callback(mock_callback_query, mock_context, mock_state)
+
+        mock_callback_query.message.answer.assert_called()
+        text = mock_callback_query.message.answer.call_args[0][0]
+        assert "expired" in text.lower()
 
 
 class TestSetupObsidianGit:
@@ -214,9 +264,7 @@ class TestSetupObsidianGit:
 
         mock_callback_query.answer.assert_called_once()
 
-    async def test_no_github_connected(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_no_github_connected(self, mock_private_update, mock_context, mock_callback_query):
         """Shows error when GitHub not connected."""
         chat_id = "u_77777"
         mock_private_update.chat.id = 77777
@@ -236,9 +284,7 @@ class TestSetupObsidianGit:
 class TestProviderMenuViaHub:
     """Test _show_provider_menu called via hub_callback_router."""
 
-    async def test_hub_provider_shows_menu(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_hub_provider_shows_menu(self, mock_private_update, mock_context, mock_callback_query):
         """Clicking provider button in settings hub shows provider selection menu."""
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
@@ -262,9 +308,7 @@ class TestProviderMenuViaHub:
         assert "set_prov_wit" in callback_datas
         assert "set_prov_groq" in callback_datas
 
-    async def test_hub_provider_menu_without_groq(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_hub_provider_menu_without_groq(self, mock_private_update, mock_context, mock_callback_query):
         """Provider menu without Groq key shows only Auto and Wit.ai."""
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
@@ -285,9 +329,7 @@ class TestProviderMenuViaHub:
         assert "set_prov_wit" in callback_datas
         assert "set_prov_groq" not in callback_datas
 
-    async def test_provider_menu_marks_current(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_provider_menu_marks_current(self, mock_private_update, mock_context, mock_callback_query):
         """Currently selected provider has checkmark."""
         chat_id = "u_12345"
         await set_chat_language(chat_id, "en")
@@ -360,9 +402,7 @@ class TestLangButtonsGroupChat:
 class TestHubCallbackUnknownAction:
     """Test hub_callback_router with unknown action — no-op."""
 
-    async def test_unknown_action_does_nothing(
-        self, mock_private_update, mock_context, mock_callback_query
-    ):
+    async def test_unknown_action_does_nothing(self, mock_private_update, mock_context, mock_callback_query):
         """Unknown hub_ action is silently ignored."""
         mock_callback_query.data = "hub_nonexistent_action"
         mock_callback_query.from_user.id = 12345

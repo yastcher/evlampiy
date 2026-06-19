@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 OBSIDIAN_DEFAULT_REPO_NAME = "obsidian-notes"
 MAX_RETRIES = 3
+# How many of the user's repos to offer as inline buttons during the connect flow.
+REPO_LIST_LIMIT = 20
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -38,6 +40,20 @@ async def get_github_username(token: str) -> str | None:
             return str(response.json()["login"])
         logger.error("Failed to get GitHub username, status: %s", response.status_code)
         return None
+
+
+async def list_user_repos(token: str, limit: int = REPO_LIST_LIMIT) -> list[str]:
+    """Return the user's own repo names, most-recently-updated first (capped at `limit`)."""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{const.GITHUB_API_BASE}/user/repos",
+            headers=_github_headers(token),
+            params={"per_page": limit, "sort": "updated", "affiliation": "owner"},
+        )
+    if response.status_code != http.HTTPStatus.OK:
+        logger.error("Failed to list repos, status: %s", response.status_code)
+        return []
+    return [str(item["name"]) for item in response.json()]
 
 
 async def get_or_create_obsidian_repo(token: str, repo_name: str = OBSIDIAN_DEFAULT_REPO_NAME) -> GitHubRepo | None:

@@ -502,6 +502,36 @@ translates = {
         RUSSIAN: ("GitHub подключён! Репозиторий: {owner}/{repo}\nСинхронизация с Obsidian включена."),
         SPANISH: ("¡GitHub conectado! Repositorio: {owner}/{repo}\nSincronización con Obsidian activada."),
     },
+    "github_choose_repo": {
+        ENGLISH: "Choose a repository for your notes, or create a new one:",
+        GERMAN: "Wähle ein Repository für deine Notizen oder erstelle ein neues:",
+        RUSSIAN: "Выберите репозиторий для заметок или создайте новый:",
+        SPANISH: "Elige un repositorio para tus notas o crea uno nuevo:",
+    },
+    "btn_create_new_repo": {
+        ENGLISH: "➕ Create new",
+        GERMAN: "➕ Neu erstellen",
+        RUSSIAN: "➕ Создать новый",
+        SPANISH: "➕ Crear nuevo",
+    },
+    "github_enter_repo_name": {
+        ENGLISH: "Send a name for the new repository (letters, digits, '.', '-', '_'):",
+        GERMAN: "Sende einen Namen für das neue Repository (Buchstaben, Ziffern, '.', '-', '_'):",
+        RUSSIAN: "Отправьте имя нового репозитория (буквы, цифры, «.», «-», «_»):",
+        SPANISH: "Envía un nombre para el nuevo repositorio (letras, dígitos, '.', '-', '_'):",
+    },
+    "github_repo_name_invalid": {
+        ENGLISH: "Invalid name. Use 1-100 letters, digits, '.', '-' or '_'. Try again:",
+        GERMAN: "Ungültiger Name. 1-100 Buchstaben, Ziffern, '.', '-' oder '_'. Versuche es erneut:",
+        RUSSIAN: "Недопустимое имя. 1-100 символов: буквы, цифры, «.», «-», «_». Попробуйте снова:",
+        SPANISH: "Nombre no válido. 1-100 letras, dígitos, '.', '-' o '_'. Inténtalo de nuevo:",
+    },
+    "github_session_expired": {
+        ENGLISH: "This connect session expired. Run /connect_github again.",
+        GERMAN: "Diese Verbindungssitzung ist abgelaufen. Führe /connect_github erneut aus.",
+        RUSSIAN: "Сессия подключения истекла. Запустите /connect_github снова.",
+        SPANISH: "La sesión de conexión expiró. Ejecuta /connect_github de nuevo.",
+    },
     "whatsapp_link_prompt": {
         ENGLISH: ("Send this message to the bot on WhatsApp:\n\nlink {code}\n\nCode expires in 5 minutes."),
         GERMAN: ("Senden Sie diese Nachricht an den Bot auf WhatsApp:\n\nlink {code}\n\nCode läuft in 5 Minuten ab."),

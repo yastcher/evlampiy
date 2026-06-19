@@ -170,6 +170,11 @@ def build_router() -> Router:
     router.callback_query.register(handlers.hub_callback_router, F.data.startswith("hub_"))
     router.callback_query.register(admin.admin_callback_router, F.data.startswith("adm_"))
     router.callback_query.register(buy_package_callback, F.data.startswith("buy_pkg_"))
+    # GitHub connect: repo selection buttons (existing repo or "create new")
+    router.callback_query.register(
+        obsidian_handlers.pick_repo_callback,
+        F.data.startswith(obsidian_handlers.REPO_PICK_PREFIX),
+    )
 
     # Voice / audio messages
     router.message.register(from_voice_to_text, F.voice | F.audio)
@@ -182,6 +187,13 @@ def build_router() -> Router:
     router.message.register(
         handlers.handle_command_input,
         GptCommandStates.waiting,
+        F.text,
+        ~F.text.startswith("/"),
+    )
+    # Conversation: new-repo name input during the GitHub connect flow
+    router.message.register(
+        obsidian_handlers.handle_repo_name_input,
+        obsidian_handlers.GithubRepoStates.waiting_for_name,
         F.text,
         ~F.text.startswith("/"),
     )

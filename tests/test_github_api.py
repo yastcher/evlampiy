@@ -10,6 +10,7 @@ from src.github_api import (
     get_github_file,
     get_or_create_obsidian_repo,
     get_repo_contents,
+    list_user_repos,
     put_github_file,
 )
 
@@ -96,6 +97,32 @@ class TestGetOrCreateObsidianRepo:
             result = await get_or_create_obsidian_repo("ghp_token")
 
         assert result is None
+
+
+class TestListUserRepos:
+    """Test listing the user's repositories for the connect flow."""
+
+    async def test_returns_repo_names(self, mock_httpx_response_factory, mock_httpx_client_factory):
+        """Returns repo names in the order GitHub provides them."""
+        repos = [{"name": "alpha"}, {"name": "beta"}, {"name": "gamma"}]
+
+        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.get.return_value = mock_httpx_response_factory(repos, 200)
+
+            result = await list_user_repos("ghp_token")
+
+        assert result == ["alpha", "beta", "gamma"]
+
+    async def test_returns_empty_on_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
+        """Returns an empty list when the API call fails."""
+        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+            mock_client = mock_httpx_client_factory(mock_client_cls)
+            mock_client.get.return_value = mock_httpx_response_factory(status_code=401)
+
+            result = await list_user_repos("invalid_token")
+
+        assert result == []
 
 
 class TestPutGithubFile:

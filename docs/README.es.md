@@ -32,6 +32,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 ### Integración con Obsidian
 - **Sincronización GitHub** — Guardado automático de transcripciones en tu vault vía GitHub API
 - **OAuth Device Flow** — Autenticación segura sin exponer tokens
+- **Elección de repositorio** — Al conectar, elige un repositorio de GitHub existente o crea uno nuevo (con cualquier nombre)
 - **Auto-categorización** — Clasificación de notas con IA (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Guardado dual** — Las notas contienen texto limpio; la transcripción original se preserva en un comentario HTML
 - **vocabulary.json** — Lista de palabras clave por categoría, construida automáticamente para mejorar la corrección de errores
