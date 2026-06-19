@@ -2,6 +2,10 @@
 
 ### Fixed
 
+- AI category replies wrapped in a markdown code fence (` ```json … ``` `) or surrounded by prose are now parsed,
+  instead of slugifying the whole reply into a giant folder name
+- Connecting an existing repository now seeds `inbox`/`trash`, so the inbox folder isn't deleted once its last note is
+  categorized out
 - Sanitize AI-suggested category names before using them as a repo path, so a stray newline or path separator no longer
   crashes categorization and strands the note in inbox
 

@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 _VOCABULARY_PATH = "vocabulary.json"
 _VOCABULARY_MAX_KEYWORDS_PER_CATEGORY = 50
+# A category is a short folder slug (the prompt asks for 1-2 words); anything longer means the
+# LLM reply wasn't a clean category and must not become a folder name.
+_MAX_CATEGORY_LEN = 50
 
 
 async def get_existing_categories(repo_info: GitHubRepo) -> list[str]:
@@ -61,6 +64,24 @@ async def update_vocabulary_in_repo(repo_info: GitHubRepo, category: str, keywor
     )
 
 
+def _extract_json_object(text: str) -> dict | None:
+    """Best-effort extraction of a JSON object from an LLM reply.
+
+    Models often wrap the JSON in a markdown ```json fence or add prose around it, which
+    breaks a plain ``json.loads``. Take the substring from the first ``{`` to the last ``}``
+    and parse that. Returns None if nothing parseable is found.
+    """
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end <= start:
+        return None
+    try:
+        parsed = json.loads(text[start : end + 1])
+    except json.JSONDecodeError, ValueError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def _normalize_category(raw: str) -> str | None:
     """Normalize an LLM-produced category into a safe path segment.
 
@@ -68,12 +89,15 @@ def _normalize_category(raw: str) -> str | None:
     and the LLM input is partly derived from user speech. A stray control character (e.g.
     a newline) crashes httpx with InvalidURL, and path separators / leading dots would let
     a note escape the base dir. Strip both; keep Unicode letters so non-English categories
-    (e.g. Cyrillic) still work.
+    (e.g. Cyrillic) still work. Reject overlong or JSON-structured slugs so a mis-parsed
+    reply can't become a monster folder name.
     """
     slug = raw.strip().lower().replace(" ", "_")
     slug = "".join(ch for ch in slug if ch.isprintable() and ch not in "/\\")
     slug = slug.strip("._-")
-    return slug or None
+    if not slug or len(slug) > _MAX_CATEGORY_LEN or any(ch in slug for ch in "{}[]"):
+        return None
+    return slug
 
 
 async def classify_note(
@@ -101,14 +125,15 @@ async def classify_note(
     if not result:
         return None, []
 
-    try:
-        data = json.loads(result.strip())
-        category = _normalize_category(data.get("category", ""))
+    data = _extract_json_object(result)
+    if data is not None:
+        category = _normalize_category(str(data.get("category", "")))
         keywords = [str(k) for k in data.get("keywords", [])[:5]]
         return category, keywords
-    except json.JSONDecodeError, TypeError, AttributeError:
-        # Fallback: treat as plain category name (old-style LLM response)
-        return _normalize_category(result), []
+
+    # Fallback: some models reply with a bare category word instead of JSON. The guard in
+    # _normalize_category rejects anything that doesn't look like a short category.
+    return _normalize_category(result), []
 
 
 async def move_github_file(repo_info: GitHubRepo, old_path: str, new_path: str) -> bool:

@@ -259,6 +259,42 @@ class TestClassifyNote:
 
         assert category == "работа"
 
+    async def test_parses_fenced_json(self):
+        """LLM replies wrapped in a ```json code fence are parsed, not slugified into a folder name."""
+        response = '```json\n{"category": "creative_ideas", "keywords": ["рассказ", "роман"]}\n```'
+        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+            category, keywords = await classify_note("A sci-fi story idea", [])
+
+        assert category == "creative_ideas"
+        assert keywords == ["рассказ", "роман"]
+
+    async def test_parses_json_with_surrounding_prose(self):
+        """JSON embedded in explanatory prose is still extracted."""
+        response = 'Sure, here it is: {"category": "philosophy", "keywords": ["наука"]} Done.'
+        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+            category, keywords = await classify_note("On knowledge", [])
+
+        assert category == "philosophy"
+        assert keywords == ["наука"]
+
+    async def test_rejects_long_unparseable_response_as_category(self):
+        """A long non-JSON reply is not turned into a category (would create a garbage folder)."""
+        response = "I am sorry, but I cannot categorize this note without more context about its purpose."
+        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+            category, keywords = await classify_note("???", [])
+
+        assert category is None
+        assert keywords == []
+
+    async def test_rejects_braced_unparseable_response_as_category(self):
+        """A malformed JSON object is rejected rather than slugified into a folder name."""
+        response = '{"category": "creative_ideas" "keywords": []}'
+        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+            category, keywords = await classify_note("???", [])
+
+        assert category is None
+        assert keywords == []
+
 
 class TestMoveGithubFile:
     """Test file move operation in GitHub."""

@@ -21,17 +21,26 @@ class TestGetOrCreateObsidianRepo:
     """Test repo creation/check."""
 
     async def test_returns_existing_repo(self, mock_httpx_response_factory, mock_httpx_client_factory):
-        """Returns info when repo already exists."""
+        """Returns info when repo already exists, and still seeds the working folders."""
         user_response = mock_httpx_response_factory({"login": "testuser"}, 200)
         repo_response = mock_httpx_response_factory(status_code=200)
+        gitkeep_response = mock_httpx_response_factory(status_code=201)
 
         with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.side_effect = [user_response, repo_response]
+            mock_client.put.return_value = gitkeep_response
 
             result = await get_or_create_obsidian_repo("ghp_token")
 
         assert result == GitHubRepo(token="ghp_token", owner="testuser", repo="obsidian-notes")
+        # An existing repo is not re-created...
+        mock_client.post.assert_not_called()
+        # ...but inbox + trash are still seeded so they survive being emptied by categorization.
+        assert mock_client.put.call_count == 2
+        put_urls = [call.args[0] for call in mock_client.put.call_args_list]
+        assert any(url.endswith("evlampiy/inbox/.gitkeep") for url in put_urls)
+        assert any(url.endswith("evlampiy/trash/.gitkeep") for url in put_urls)
 
     async def test_creates_new_repo(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Creates repo when it doesn't exist."""

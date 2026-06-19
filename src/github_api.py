@@ -56,6 +56,24 @@ async def list_user_repos(token: str, limit: int = REPO_LIST_LIMIT) -> list[str]
     return [str(item["name"]) for item in response.json()]
 
 
+async def _seed_working_folders(
+    client: httpx.AsyncClient, headers: dict[str, str], username: str, repo_name: str
+) -> None:
+    """Seed inbox + trash with an empty .gitkeep so the folders survive even when emptied.
+
+    Run for existing repos too, not just freshly created ones: once the last note is
+    categorized out of inbox, an unseeded inbox folder would vanish on GitHub. Idempotent —
+    re-PUTting an existing .gitkeep returns 422 (no SHA supplied) and is a harmless no-op.
+    """
+    gitkeep_content = base64.b64encode(b"").decode("utf-8")
+    for folder in (obsidian_layout.inbox_dir(), obsidian_layout.trash_dir()):
+        await client.put(
+            f"{const.GITHUB_API_BASE}/repos/{username}/{repo_name}/contents/{folder}/.gitkeep",
+            headers=headers,
+            json={"message": f"Init {folder} folder", "content": gitkeep_content},
+        )
+
+
 async def get_or_create_obsidian_repo(token: str, repo_name: str = OBSIDIAN_DEFAULT_REPO_NAME) -> GitHubRepo | None:
     username = await get_github_username(token)
     if not username:
@@ -71,35 +89,25 @@ async def get_or_create_obsidian_repo(token: str, repo_name: str = OBSIDIAN_DEFA
         )
         if response.status_code == http.HTTPStatus.OK:
             logger.info("Repo %s/%s already exists", username, repo_name)
-            return GitHubRepo(token=token, owner=username, repo=repo_name)
-
-        if response.status_code != http.HTTPStatus.NOT_FOUND:
+        elif response.status_code == http.HTTPStatus.NOT_FOUND:
+            create_response = await client.post(
+                f"{const.GITHUB_API_BASE}/user/repos",
+                headers=headers,
+                json={"name": repo_name, "private": True, "auto_init": True},
+            )
+            if create_response.status_code not in (
+                http.HTTPStatus.OK,
+                http.HTTPStatus.CREATED,
+            ):
+                logger.error("Failed to create repo, status: %s", create_response.status_code)
+                return None
+            logger.info("Created repo %s/%s", username, repo_name)
+        else:
             logger.error("Failed to check repo, status: %s", response.status_code)
             return None
 
-        # Create private repo
-        create_response = await client.post(
-            f"{const.GITHUB_API_BASE}/user/repos",
-            headers=headers,
-            json={"name": repo_name, "private": True, "auto_init": True},
-        )
-        if create_response.status_code not in (
-            http.HTTPStatus.OK,
-            http.HTTPStatus.CREATED,
-        ):
-            logger.error("Failed to create repo, status: %s", create_response.status_code)
-            return None
-
-        logger.info("Created repo %s/%s", username, repo_name)
-
-        # Seed the bot's working folders (inbox + trash) so they always exist
-        gitkeep_content = base64.b64encode(b"").decode("utf-8")
-        for folder in (obsidian_layout.inbox_dir(), obsidian_layout.trash_dir()):
-            await client.put(
-                f"{const.GITHUB_API_BASE}/repos/{username}/{repo_name}/contents/{folder}/.gitkeep",
-                headers=headers,
-                json={"message": f"Init {folder} folder", "content": gitkeep_content},
-            )
+        # Always ensure the working folders exist so inbox/trash survive being emptied.
+        await _seed_working_folders(client, headers, username, repo_name)
 
     return GitHubRepo(token=token, owner=username, repo=repo_name)
 
