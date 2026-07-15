@@ -1,5 +1,10 @@
 ## [0.9.7] — 2026-07-15
 
+### Added
+
+- Optional `LLM_API_BASE` routes geo-blocked LLM providers (Groq/OpenRouter/Gemini/Anthropic/OpenAI) through a
+  Cloudflare Worker under `cloudflare/llm-proxy/`; DeepSeek/Qwen stay direct
+
 ### Changed
 
 - Deploy pushes the image to GHCR (`ghcr.io/yastcher/evlampiy_notes`, tagged `:<commit-sha>` + `:latest`) and the
@@ -7,6 +12,7 @@
 - Deploy recreates only the bot container — MongoDB is no longer restarted on every release
 - Deploy runs as an unprivileged SSH user (`SERVER_USER`, e.g. `yast`) instead of `root`; `DEPLOY_DIR` is configurable
 - Bot container now runs as a non-root user (`appuser`, uid 1000) instead of root
+- Both containers cap their json logs (10 MB × 3) so they can't fill the host disk; mongodb runs `--quiet` with a 30s healthcheck to stop per-connection log spam
 
 ### Fixed
 

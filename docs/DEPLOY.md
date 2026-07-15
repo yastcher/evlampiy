@@ -87,6 +87,12 @@ If `api.telegram.org` is unreachable from the host (e.g. a Russian VPS), deploy 
 Worker in `cloudflare/telegram-proxy/` and set `TELEGRAM_API_BASE` to its URL. Empty = official
 endpoint.
 
+#### LLM providers blocked on the host
+
+If the LLM provider APIs (Groq / OpenRouter / Gemini / Anthropic / OpenAI) are geo-blocked from the
+host, deploy the Cloudflare Worker in `cloudflare/llm-proxy/` and set `LLM_API_BASE` to its URL.
+Empty = providers are called directly. DeepSeek and Qwen are reached directly and not proxied.
+
 ### Server deploy (CI/CD)
 
 Releases roll out from the `release` branch via `.github/workflows/deploy.yml`: lint + type check +
@@ -283,6 +289,12 @@ docker compose up -d
 Если `api.telegram.org` недоступен с хоста (например, российский VPS), задеплойте Cloudflare
 Worker из `cloudflare/telegram-proxy/` и укажите `TELEGRAM_API_BASE` с его URL. Пусто = официальный
 endpoint.
+
+#### LLM-провайдеры заблокированы на хосте
+
+Если API LLM-провайдеров (Groq / OpenRouter / Gemini / Anthropic / OpenAI) гео-блокнуты с хоста,
+задеплойте Cloudflare Worker из `cloudflare/llm-proxy/` и укажите `LLM_API_BASE` с его URL. Пусто =
+прямые вызовы. DeepSeek и Qwen ходят напрямую и не проксируются.
 
 ### Деплой на сервер (CI/CD)
 

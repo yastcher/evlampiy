@@ -3,6 +3,7 @@ from unittest.mock import patch
 import httpx
 
 from src.ai_client import (
+    _api_base,
     _strip_backticks,
     classify_text,
     gpt_chat,
@@ -25,9 +26,7 @@ class TestStripBackticks:
 class TestGeminiProvider:
     """Test Gemini provider HTTP calls."""
 
-    async def test_gemini_returns_text(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_gemini_returns_text(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Gemini provider returns parsed text."""
         api_response = {
             "candidates": [{"content": {"parts": [{"text": "work"}]}}],
@@ -81,9 +80,7 @@ class TestGeminiProvider:
         self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter, mock_ai_sleep
     ):
         """Gemini retries after 429 and succeeds on next attempt."""
-        ok_response = mock_httpx_response_factory(
-            {"candidates": [{"content": {"parts": [{"text": "work"}]}}]}, 200
-        )
+        ok_response = mock_httpx_response_factory({"candidates": [{"content": {"parts": [{"text": "work"}]}}]}, 200)
         rate_limited = mock_httpx_response_factory(status_code=429)
         mock_ai_http.post.side_effect = [rate_limited, ok_response]
 
@@ -118,9 +115,7 @@ class TestGeminiProvider:
 class TestAnthropicProvider:
     """Test Anthropic provider HTTP calls."""
 
-    async def test_anthropic_returns_text(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_anthropic_returns_text(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Anthropic provider returns parsed text."""
         api_response = {
             "content": [{"text": "work"}],
@@ -160,9 +155,7 @@ class TestAnthropicProvider:
 class TestOpenAIProvider:
     """Test OpenAI provider HTTP calls."""
 
-    async def test_openai_returns_text(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_openai_returns_text(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """OpenAI provider returns parsed text."""
         api_response = {
             "choices": [{"message": {"content": "work"}}],
@@ -209,9 +202,7 @@ class TestProviderDispatch:
 
         assert result is None
 
-    async def test_gpt_chat_uses_gpt_provider(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_gpt_chat_uses_gpt_provider(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """gpt_chat dispatches to gpt_provider setting."""
         api_response = {
             "candidates": [{"content": {"parts": [{"text": "Hello!"}]}}],
@@ -226,9 +217,7 @@ class TestProviderDispatch:
 
         assert result == "Hello!"
 
-    async def test_strips_backticks_from_response(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_strips_backticks_from_response(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Strips markdown backticks from provider response."""
         api_response = {
             "candidates": [{"content": {"parts": [{"text": "```\nwork\n```"}]}}],
@@ -252,9 +241,7 @@ class TestFallbackOnNetworkError:
     ):
         """httpx.HTTPError on primary → falls back to secondary provider."""
 
-        groq_ok = mock_httpx_response_factory(
-            {"choices": [{"message": {"content": "groq_result"}}]}, 200
-        )
+        groq_ok = mock_httpx_response_factory({"choices": [{"message": {"content": "groq_result"}}]}, 200)
 
         call_count = 0
 
@@ -287,12 +274,8 @@ class TestFallbackOnNetworkError:
         self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter, mock_ai_sleep
     ):
         """Provider returns empty text → falls back to next provider."""
-        empty_gemini = mock_httpx_response_factory(
-            {"candidates": [{"content": {"parts": [{"text": ""}]}}]}, 200
-        )
-        groq_ok = mock_httpx_response_factory(
-            {"choices": [{"message": {"content": "groq_result"}}]}, 200
-        )
+        empty_gemini = mock_httpx_response_factory({"candidates": [{"content": {"parts": [{"text": ""}]}}]}, 200)
+        groq_ok = mock_httpx_response_factory({"choices": [{"message": {"content": "groq_result"}}]}, 200)
 
         async def fake_post(url: str, **kwargs):
             if "generativelanguage" in url:
@@ -314,3 +297,62 @@ class TestFallbackOnNetworkError:
             result = await classify_text("Test")
 
         assert result == "groq_result"
+
+
+class TestApiBase:
+    """Test LLM-proxy base resolution (_api_base)."""
+
+    def test_proxies_groq_when_base_set(self):
+        with patch("src.ai_client.settings.llm_api_base", "https://proxy.example"):
+            assert _api_base("groq", "https://api.groq.com") == "https://proxy.example/groq"
+
+    def test_proxies_gemini_when_base_set(self):
+        with patch("src.ai_client.settings.llm_api_base", "https://proxy.example"):
+            base = _api_base("gemini", "https://generativelanguage.googleapis.com")
+            assert base == "https://proxy.example/gemini"
+
+    def test_does_not_proxy_deepseek(self):
+        # DeepSeek is reachable directly, so it keeps its own base even with a proxy set.
+        with patch("src.ai_client.settings.llm_api_base", "https://proxy.example"):
+            assert _api_base("deepseek", "https://api.deepseek.com/v1") == "https://api.deepseek.com/v1"
+
+    def test_returns_default_when_base_empty(self):
+        with patch("src.ai_client.settings.llm_api_base", ""):
+            assert _api_base("groq", "https://api.groq.com") == "https://api.groq.com"
+
+
+class TestLlmProxyRouting:
+    """The configured LLM proxy base rewrites the outgoing request URL."""
+
+    async def test_gemini_request_goes_through_proxy(
+        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
+    ):
+        api_response = {"candidates": [{"content": {"parts": [{"text": "work"}]}}]}
+        mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
+
+        with (
+            patch("src.ai_client.settings.llm_api_base", "https://proxy.example"),
+            patch("src.ai_client.settings.gemini_api_key", "test-key"),
+            patch("src.ai_client.settings.gemini_model", "gemini-2.0-flash"),
+            patch("src.ai_client.settings.categorization_provider", "gemini"),
+        ):
+            result = await classify_text("Test prompt")
+
+        assert result == "work"
+        posted_url = mock_ai_http.post.call_args.args[0]
+        assert posted_url == "https://proxy.example/gemini/v1beta/models/gemini-2.0-flash:generateContent"
+
+    async def test_deepseek_request_bypasses_proxy(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
+        api_response = {"choices": [{"message": {"content": "work"}}]}
+        mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
+
+        with (
+            patch("src.ai_client.settings.llm_api_base", "https://proxy.example"),
+            patch("src.ai_client.settings.deepseek_api_key", "test-key"),
+            patch("src.ai_client.settings.categorization_provider", "deepseek"),
+        ):
+            result = await classify_text("Test prompt")
+
+        assert result == "work"
+        posted_url = mock_ai_http.post.call_args.args[0]
+        assert posted_url == "https://api.deepseek.com/v1/chat/completions"

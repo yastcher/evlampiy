@@ -1,3 +1,11 @@
+# Cap every container's json log so it can't fill the host disk — docker's default
+# json-file driver keeps logs unbounded. 10MB × 3 files per service is plenty to debug.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
 
   mongodb:
@@ -6,11 +14,15 @@ services:
     # Verified working: 8.0.3, 8.0.4. Re-test before bumping past 8.0.4.
     image: mongo:8.0.3
     container_name: mongodb
+    # --quiet drops the per-connection "accepted/closed" INFO lines that the
+    # healthcheck (mongosh opens a small connection pool every probe) writes on loop.
+    command: ["mongod", "--quiet"]
+    logging: *default-logging
     volumes:
       - ./mongo_data:/data/db
     healthcheck:
       test: [ "CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok" ]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 5
 
@@ -22,6 +34,7 @@ services:
     # then `docker compose up -d`.
     image: ${EVLAMPIY_IMAGE:-evlampiy_notes}:${IMAGE_TAG:-latest}
     restart: always
+    logging: *default-logging
     env_file:
       - .env
     environment:

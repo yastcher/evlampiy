@@ -89,8 +89,12 @@ class Settings(BaseSettings):
     # Many older :free models now return 404 "No endpoints found"; verify via /api/v1/models.
 
     # AI provider selection
-    categorization_provider: str = "deepseek"
-    gpt_provider: str = "deepseek"
+    categorization_provider: str = "gemini"
+    gpt_provider: str = "gemini"
+    # Optional reverse-proxy base for geo-blocked LLM providers (Groq/OpenRouter/Gemini/
+    # Anthropic/OpenAI) — a Cloudflare Worker under cloudflare/llm-proxy/. Calls go to
+    # <llm_api_base>/<provider>/<path>. Empty = providers are called directly.
+    llm_api_base: str = ""
 
     # Gemini
     gemini_api_key: str = ""

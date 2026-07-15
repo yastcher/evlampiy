@@ -40,6 +40,31 @@ GPT_FALLBACK_CHAIN: list[str] = [
 _MAX_RETRIES = 3
 _RETRY_DELAYS = (2.0, 4.0, 8.0)
 
+# Providers geo-blocked from some deploys (e.g. a Russian VPS). Their const API base is
+# host-only, so the LLM proxy Worker can route /<provider>/<path> to the upstream host
+# (see cloudflare/llm-proxy/). DeepSeek/Qwen keep their path-suffixed bases and stay direct.
+_PROXYABLE_PROVIDERS = frozenset(
+    {
+        const.PROVIDER_GROQ,
+        const.PROVIDER_OPENROUTER,
+        const.PROVIDER_GEMINI,
+        const.PROVIDER_ANTHROPIC,
+        const.PROVIDER_OPENAI,
+    }
+)
+
+
+def _api_base(provider: str, default_base: str) -> str:
+    """Return the effective API base for a provider, routed through the LLM proxy if set.
+
+    With ``LLM_API_BASE`` configured and a proxyable provider, calls go to
+    ``<llm_api_base>/<provider>`` (the Worker swaps that prefix for the upstream host);
+    otherwise the provider's direct base is used.
+    """
+    if settings.llm_api_base and provider in _PROXYABLE_PROVIDERS:
+        return f"{settings.llm_api_base}/{provider}"
+    return default_base
+
 
 class RateLimitError(Exception):
     """Raised when a provider's rate limit is exhausted after all retries."""
@@ -148,7 +173,8 @@ async def _gemini_complete(prompt: str, max_tokens: int, temperature: float) -> 
             "thinkingConfig": {"thinkingBudget": 0},
         },
     }
-    url = f"{const.GEMINI_API_BASE}/v1beta/models/{settings.gemini_model}:generateContent"
+    base = _api_base(const.PROVIDER_GEMINI, const.GEMINI_API_BASE)
+    url = f"{base}/v1beta/models/{settings.gemini_model}:generateContent"
 
     client = await get_http_client()
     response = await client.post(url, headers=headers, json=payload)
@@ -194,7 +220,7 @@ async def _anthropic_complete(prompt: str, max_tokens: int, temperature: float) 
 
     client = await get_http_client()
     response = await client.post(
-        f"{const.ANTHROPIC_API_BASE}/v1/messages",
+        f"{_api_base(const.PROVIDER_ANTHROPIC, const.ANTHROPIC_API_BASE)}/v1/messages",
         headers=headers,
         json=payload,
     )
@@ -258,7 +284,7 @@ async def _openai_complete(prompt: str, max_tokens: int, temperature: float) -> 
 
     endpoint = OpenAIEndpoint(
         provider=const.PROVIDER_OPENAI,
-        url=f"{const.OPENAI_API_BASE}/v1/chat/completions",
+        url=f"{_api_base(const.PROVIDER_OPENAI, const.OPENAI_API_BASE)}/v1/chat/completions",
         api_key=settings.gpt_token,
         model=settings.gpt_model,
     )
@@ -273,7 +299,7 @@ async def _groq_complete(prompt: str, max_tokens: int, temperature: float) -> st
 
     endpoint = OpenAIEndpoint(
         provider=const.PROVIDER_GROQ,
-        url=f"{const.GROQ_API_BASE}/openai/v1/chat/completions",
+        url=f"{_api_base(const.PROVIDER_GROQ, const.GROQ_API_BASE)}/openai/v1/chat/completions",
         api_key=settings.groq_api_key,
         model=settings.groq_llm_model,
     )
@@ -318,7 +344,7 @@ async def _openrouter_complete(prompt: str, max_tokens: int, temperature: float)
 
     endpoint = OpenAIEndpoint(
         provider=const.PROVIDER_OPENROUTER,
-        url=f"{const.OPENROUTER_API_BASE}/api/v1/chat/completions",
+        url=f"{_api_base(const.PROVIDER_OPENROUTER, const.OPENROUTER_API_BASE)}/api/v1/chat/completions",
         api_key=settings.openrouter_api_key,
         model=settings.openrouter_model,
     )
@@ -343,7 +369,7 @@ _OPENAI_ENDPOINTS: dict[str, typing.Callable[[], OpenAIEndpoint | None]] = {
     const.PROVIDER_OPENAI: lambda: (
         OpenAIEndpoint(
             const.PROVIDER_OPENAI,
-            f"{const.OPENAI_API_BASE}/v1/chat/completions",
+            f"{_api_base(const.PROVIDER_OPENAI, const.OPENAI_API_BASE)}/v1/chat/completions",
             settings.gpt_token,
             settings.gpt_model,
         )
@@ -353,7 +379,7 @@ _OPENAI_ENDPOINTS: dict[str, typing.Callable[[], OpenAIEndpoint | None]] = {
     const.PROVIDER_GROQ: lambda: (
         OpenAIEndpoint(
             const.PROVIDER_GROQ,
-            f"{const.GROQ_API_BASE}/openai/v1/chat/completions",
+            f"{_api_base(const.PROVIDER_GROQ, const.GROQ_API_BASE)}/openai/v1/chat/completions",
             settings.groq_api_key,
             settings.groq_llm_model,
         )
@@ -383,7 +409,7 @@ _OPENAI_ENDPOINTS: dict[str, typing.Callable[[], OpenAIEndpoint | None]] = {
     const.PROVIDER_OPENROUTER: lambda: (
         OpenAIEndpoint(
             const.PROVIDER_OPENROUTER,
-            f"{const.OPENROUTER_API_BASE}/api/v1/chat/completions",
+            f"{_api_base(const.PROVIDER_OPENROUTER, const.OPENROUTER_API_BASE)}/api/v1/chat/completions",
             settings.openrouter_api_key,
             settings.openrouter_model,
         )
