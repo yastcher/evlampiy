@@ -15,7 +15,12 @@ services:
       retries: 5
 
   evlampiy_notes:
-    image: evlampiy_notes:latest
+    # Prod pulls the image from GHCR: the deploy writes EVLAMPIY_IMAGE and IMAGE_TAG
+    # (the release commit SHA) into the server's .env, so Compose resolves the exact
+    # release and a later manual `docker compose up` reproduces it instead of drifting.
+    # The defaults keep local dev registry-free — `docker build -t evlampiy_notes:latest .`
+    # then `docker compose up -d`.
+    image: ${EVLAMPIY_IMAGE:-evlampiy_notes}:${IMAGE_TAG:-latest}
     restart: always
     env_file:
       - .env

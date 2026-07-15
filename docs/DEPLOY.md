@@ -87,6 +87,53 @@ If `api.telegram.org` is unreachable from the host (e.g. a Russian VPS), deploy 
 Worker in `cloudflare/telegram-proxy/` and set `TELEGRAM_API_BASE` to its URL. Empty = official
 endpoint.
 
+### Server deploy (CI/CD)
+
+Releases roll out from the `release` branch via `.github/workflows/deploy.yml`: lint + type check +
+tests, then the image is built, tagged `:<commit-sha>` (immutable rollback handle) and `:latest`,
+and pushed to **GHCR** (`ghcr.io/yastcher/evlampiy_notes`). The deploy step copies
+`docker-compose.yml` over SSH, pins `EVLAMPIY_IMAGE` + `IMAGE_TAG` in the server's `.env`, pulls the
+image and recreates only the bot container — MongoDB is never restarted. If `/health` does not
+answer within 30s, the job fails and dumps the container logs.
+
+The registry needs no extra secret: the image lives in this repo's GHCR namespace, and both push and
+pull are authorized with the built-in `GITHUB_TOKEN` (job permission `packages: write`).
+
+#### GitHub secrets
+
+| Name | Description |
+|---|---|
+| `SSH_PRIVATE_KEY` | base64 ssh key (`cat ~/.ssh/id_rsa \| base64 -w0`); the user must be in the `docker` group |
+| `SERVER_IP` | server IP / hostname |
+| `SERVER_USER` | ssh user — unprivileged, not `root` (e.g. `yast`) |
+| `DEPLOY_DIR` | optional, path relative to `~`; defaults to `evlampiy` |
+
+#### Server prep (once)
+
+```bash
+# Docker + compose plugin, then let the deploy user talk to the daemon
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker "$USER" && newgrp docker
+
+mkdir -p ~/evlampiy && cd ~/evlampiy
+# Put the real .env here (see Configuration above) — CI does not deploy it.
+```
+
+The deploy dir holds `mongo_data/`, the bind mount backing MongoDB — **it is the database**. Back it
+up (`docker compose exec -T mongodb mongodump --archive --gzip > dump.gz`) before moving or deleting
+the directory.
+
+#### Rollback
+
+`IMAGE_TAG` in the server's `.env` is the release commit SHA, so any previous release can be
+restored without CI:
+
+```bash
+cd ~/evlampiy
+sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=<previous-sha>/' .env
+docker compose up -d
+```
+
 ### WhatsApp Webhook Setup
 
 If using WhatsApp integration:
@@ -236,6 +283,53 @@ docker compose up -d
 Если `api.telegram.org` недоступен с хоста (например, российский VPS), задеплойте Cloudflare
 Worker из `cloudflare/telegram-proxy/` и укажите `TELEGRAM_API_BASE` с его URL. Пусто = официальный
 endpoint.
+
+### Деплой на сервер (CI/CD)
+
+Релизы катятся из ветки `release` через `.github/workflows/deploy.yml`: линтер + тайпчекер + тесты,
+затем сборка образа, теги `:<commit-sha>` (неизменяемый handle для отката) и `:latest`, push в
+**GHCR** (`ghcr.io/yastcher/evlampiy_notes`). Шаг деплоя копирует по SSH `docker-compose.yml`, пинит
+`EVLAMPIY_IMAGE` + `IMAGE_TAG` в серверном `.env`, тянет образ и пересоздаёт только контейнер бота —
+MongoDB не перезапускается. Если `/health` не отвечает 30 секунд, job падает и печатает логи
+контейнера.
+
+Реестр не требует дополнительных секретов: образ лежит в GHCR-неймспейсе этого же репозитория, push
+и pull авторизуются встроенным `GITHUB_TOKEN` (job-permission `packages: write`).
+
+#### GitHub secrets
+
+| Имя | Описание |
+|---|---|
+| `SSH_PRIVATE_KEY` | base64 ssh-ключ (`cat ~/.ssh/id_rsa \| base64 -w0`); пользователь должен быть в группе `docker` |
+| `SERVER_IP` | IP / hostname сервера |
+| `SERVER_USER` | пользователь для ssh — непривилегированный, не `root` (например `yast`) |
+| `DEPLOY_DIR` | опционально, путь относительно `~`; по умолчанию `evlampiy` |
+
+#### Подготовка сервера (один раз)
+
+```bash
+# Docker + compose-plugin, затем доступ деплой-юзера к демону
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker "$USER" && newgrp docker
+
+mkdir -p ~/evlampiy && cd ~/evlampiy
+# Положите сюда настоящий .env (см. «Конфигурация» выше) — CI его не деплоит.
+```
+
+В деплой-директории лежит `mongo_data/` — bind-mount MongoDB, **то есть сама база**. Перед переносом
+или удалением директории снимите бэкап:
+`docker compose exec -T mongodb mongodump --archive --gzip > dump.gz`.
+
+#### Откат
+
+`IMAGE_TAG` в серверном `.env` — это SHA коммита релиза, поэтому любой предыдущий релиз
+восстанавливается без CI:
+
+```bash
+cd ~/evlampiy
+sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=<предыдущий-sha>/' .env
+docker compose up -d
+```
 
 ### Настройка Webhook для WhatsApp
 

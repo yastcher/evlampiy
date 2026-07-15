@@ -1,3 +1,19 @@
+## [0.9.7] — 2026-07-15
+
+### Changed
+
+- Deploy pushes the image to GHCR (`ghcr.io/yastcher/evlampiy_notes`, tagged `:<commit-sha>` + `:latest`) and the
+  server pulls it, instead of shipping a gzipped `docker save` tarball over scp
+- Deploy recreates only the bot container — MongoDB is no longer restarted on every release
+- Deploy runs as an unprivileged SSH user (`SERVER_USER`, e.g. `yast`) instead of `root`; `DEPLOY_DIR` is configurable
+- Bot container now runs as a non-root user (`appuser`, uid 1000) instead of root
+
+### Fixed
+
+- Deploy no longer runs `docker volume prune -f`
+- The remote deploy script aborts on the first failing command (`set -euo pipefail`) instead of reporting success
+- Deploy smoke-checks `/health` after rollout and fails with container logs if the bot doesn't come up
+
 ## [0.9.5] — 2026-06-19
 
 ### Fixed

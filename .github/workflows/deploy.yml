@@ -58,48 +58,117 @@ jobs:
     needs: lint-and-test
     if: github.ref == 'refs/heads/release' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    # GITHUB_TOKEN needs package write to push the image to GHCR. No extra secret
+    # to manage — the token is minted per run.
+    permissions:
+      contents: read
+      packages: write
     env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      WIT_RU_TOKEN: ${{ secrets.WIT_RU_TOKEN }}
-      WIT_EN_TOKEN: ${{ secrets.WIT_EN_TOKEN }}
-      WIT_ES_TOKEN: ${{ secrets.WIT_ES_TOKEN }}
-      WIT_DE_TOKEN: ${{ secrets.WIT_DE_TOKEN }}
-      MONGO_URI: ${{ secrets.MONGO_URI }}
-      GPT_TOKEN: ${{ secrets.GPT_TOKEN }}
-      VIP_USER_IDS: ${{ secrets.VIP_USER_IDS }}
-      ADMIN_USER_IDS: ${{ secrets.ADMIN_USER_IDS }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       SERVER_IP: ${{ secrets.SERVER_IP }}
       SERVER_USER: ${{ secrets.SERVER_USER }}
+      DEPLOY_DIR: ${{ secrets.DEPLOY_DIR || 'evlampiy' }}
+      # IMAGE_TAG is the release commit SHA — an immutable handle the server pins
+      # in its .env, so a rollback is `IMAGE_TAG=<old-sha> docker compose up -d`.
+      EVLAMPIY_IMAGE: ghcr.io/yastcher/evlampiy_notes
+      IMAGE_TAG: ${{ github.sha }}
+      # Logs the server into GHCR for the pull (ephemeral, per-run token).
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GHCR_USER: ${{ github.actor }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        run: |
-          docker buildx create --use
-          docker buildx inspect --bootstrap
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and save docker image
+      - name: Build and push image
+        # `--pull` forces a fresh pull of the python base image instead of reusing a
+        # cached layer, so its security patches actually reach production. Tag both
+        # the immutable :<sha> (rollback handle) and the moving :latest.
         run: |
-          docker build --load -t evlampiy_notes:latest .
-          docker save evlampiy_notes:latest | gzip > evlampiy_notes.tar.gz
+          docker build --pull \
+            -t "$EVLAMPIY_IMAGE:$IMAGE_TAG" \
+            -t "$EVLAMPIY_IMAGE:latest" \
+            .
+          docker push "$EVLAMPIY_IMAGE:$IMAGE_TAG"
+          docker push "$EVLAMPIY_IMAGE:latest"
 
-      - name: Copy docker image and docker-compose file to server and run
+      - name: Deploy on server
         run: |
+          set -euo pipefail
           echo "$SSH_PRIVATE_KEY" | base64 --decode > private_key
           chmod 600 private_key
-          scp -i private_key -o StrictHostKeyChecking=no evlampiy_notes.tar.gz $SERVER_USER@$SERVER_IP:~/evlampiy/evlampiy_notes.tar.gz
-          scp -i private_key -o StrictHostKeyChecking=no docker-compose.yml $SERVER_USER@$SERVER_IP:~/evlampiy/docker-compose.yml
-          ssh -i private_key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10 $SERVER_USER@$SERVER_IP << EOF
-            cd evlampiy
-            docker compose down --remove-orphans || true
-            gunzip -c ~/evlampiy/evlampiy_notes.tar.gz | docker load
-            rm ~/evlampiy/evlampiy_notes.tar.gz
-            docker image prune -f
-            docker volume prune -f
+
+          # ServerAlive* keepalives: `docker compose up -d` blocks with no stdout while
+          # it waits for the mongodb healthcheck, and that idle window let a firewall
+          # between the runner and the server reap the TCP connection (Broken pipe,
+          # exit 255). Probing every 30s keeps the session alive.
+          SSH_OPTS="-i private_key -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=10"
+          REMOTE="$SERVER_USER@$SERVER_IP"
+
+          ssh $SSH_OPTS $REMOTE "mkdir -p ~/$DEPLOY_DIR"
+          scp $SSH_OPTS docker-compose.yml $REMOTE:~/$DEPLOY_DIR/docker-compose.yml
+
+          # Log the server into GHCR with the same ephemeral GITHUB_TOKEN, piped over
+          # stdin (never on the command line / process list). Valid only for this run —
+          # enough to pull the image just pushed; we log out after.
+          echo "$GHCR_TOKEN" | ssh $SSH_OPTS $REMOTE \
+            "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+
+          # DEPLOY_DIR + image coordinates are passed into the remote shell so the
+          # heredoc can stay quoted (verbatim) — that keeps `$(seq ...)` and friends
+          # from being expanded on the runner.
+          ssh $SSH_OPTS $REMOTE \
+            "DEPLOY_DIR='$DEPLOY_DIR' EVLAMPIY_IMAGE='$EVLAMPIY_IMAGE' IMAGE_TAG='$IMAGE_TAG' bash -lse" <<'REMOTE_SCRIPT'
+            set -euo pipefail
+            cd ~/$DEPLOY_DIR
+
+            # Pin this release in .env so Compose resolves the exact :<sha> image.
+            set_env() {
+              local key="$1" val="$2"
+              if grep -q "^$key=" .env 2>/dev/null; then
+                sed -i "s|^$key=.*|$key=$val|" .env
+              else
+                echo "$key=$val" >> .env
+              fi
+            }
+            set_env EVLAMPIY_IMAGE "$EVLAMPIY_IMAGE"
+            set_env IMAGE_TAG "$IMAGE_TAG"
+
+            # Hard prerequisite: set -e aborts the deploy if the pull fails, leaving the
+            # running bot untouched.
+            docker compose pull
+
+            # No `docker compose down` — only the bot's image changed, so Compose
+            # recreates just that container and MongoDB keeps running.
             docker compose up -d --remove-orphans
-          EOF
-          rm private_key
+
+            # Drop the now-expired GHCR credential from the server's docker config.
+            docker logout ghcr.io || true
+
+            # Dangling images only. NEVER `docker volume prune` here, and never touch
+            # ./mongo_data — that bind mount IS the database.
+            docker image prune -f
+
+            # Smoke check — fail loudly if /health doesn't answer within 30s, so a
+            # broken release surfaces in CI instead of leaving the bot silently down.
+            for i in $(seq 1 15); do
+              if curl -fsS http://localhost:8000/health >/dev/null; then
+                echo "OK: /health is up"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "FAIL: /health did not respond in 30s — last 60 log lines:"
+            docker compose logs --tail=60
+            exit 1
+          REMOTE_SCRIPT
+
+          shred -u private_key || rm -f private_key

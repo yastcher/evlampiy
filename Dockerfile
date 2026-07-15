@@ -15,4 +15,10 @@ COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Drop root (defence in depth). The app only reads /app and the :ro data mount
+# (both world-readable) and writes only to stdout and /tmp (world-writable — pydub
+# shells out to ffmpeg with transient temp files there), so no chown of /app is needed.
+RUN useradd --create-home --uid 1000 appuser
+USER appuser
+
 CMD ["python", "-m", "src.main"]
