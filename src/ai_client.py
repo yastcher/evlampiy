@@ -10,6 +10,7 @@ import httpx
 from src import const
 from src.ai import _mask
 from src.config import settings
+from src.llm_proxy import api_base as _api_base
 from src.mongo import get_bot_config
 
 logger = logging.getLogger(__name__)
@@ -39,31 +40,6 @@ GPT_FALLBACK_CHAIN: list[str] = [
 
 _MAX_RETRIES = 3
 _RETRY_DELAYS = (2.0, 4.0, 8.0)
-
-# Providers geo-blocked from some deploys (e.g. a Russian VPS). Their const API base is
-# host-only, so the LLM proxy Worker can route /<provider>/<path> to the upstream host
-# (see cloudflare/llm-proxy/). DeepSeek/Qwen keep their path-suffixed bases and stay direct.
-_PROXYABLE_PROVIDERS = frozenset(
-    {
-        const.PROVIDER_GROQ,
-        const.PROVIDER_OPENROUTER,
-        const.PROVIDER_GEMINI,
-        const.PROVIDER_ANTHROPIC,
-        const.PROVIDER_OPENAI,
-    }
-)
-
-
-def _api_base(provider: str, default_base: str) -> str:
-    """Return the effective API base for a provider, routed through the LLM proxy if set.
-
-    With ``LLM_API_BASE`` configured and a proxyable provider, calls go to
-    ``<llm_api_base>/<provider>`` (the Worker swaps that prefix for the upstream host);
-    otherwise the provider's direct base is used.
-    """
-    if settings.llm_api_base and provider in _PROXYABLE_PROVIDERS:
-        return f"{settings.llm_api_base}/{provider}"
-    return default_base
 
 
 class RateLimitError(Exception):

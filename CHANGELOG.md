@@ -20,6 +20,10 @@
 - The remote deploy script aborts on the first failing command (`set -euo pipefail`) instead of reporting success
 - Deploy smoke-checks `/health` after rollout and fails with container logs if the bot doesn't come up
 - Deploy smoke-check no longer `exit`s from inside the ssh heredoc, which made a successful deploy report failure
+- Deploy removes superseded release images (`docker image prune -f` only drops dangling ones, so tagged `:<sha>`
+  releases piled up ~1 GB each)
+- Groq Whisper transcription now also honors `LLM_API_BASE` (it called `api.groq.com` directly, bypassing the proxy,
+  so it stayed geo-blocked while Groq LLM already worked through it)
 
 ## [0.9.5] — 2026-06-19
 

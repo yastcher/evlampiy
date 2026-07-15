@@ -50,6 +50,7 @@ src/
 ├── mongo.py                - Beanie ODM initialization and common queries
 ├── config.py               - Pydantic-settings configuration from .env
 ├── const.py                - Constants (provider names, roles, limits)
+├── llm_proxy.py            - Route geo-blocked LLM/transcription providers via LLM_API_BASE
 ├── types.py                - Domain type aliases (UserId, ChatId, Language, MonthKey)
 ├── dto.py                  - MongoDB document models (Beanie Documents)
 ├── localization.py         - Multi-language UI strings (en, ru, es, de)

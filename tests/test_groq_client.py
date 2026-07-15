@@ -39,8 +39,8 @@ class TestGroqClient:
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
-            mock_client_class.return_value.__aenter__.return_value.post.side_effect = (
-                httpx.HTTPStatusError("Error", request=mock_request, response=mock_response)
+            mock_client_class.return_value.__aenter__.return_value.post.side_effect = httpx.HTTPStatusError(
+                "Error", request=mock_request, response=mock_response
             )
 
             result = await transcribe_with_groq(b"audio", "en")
@@ -55,8 +55,8 @@ class TestGroqClient:
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
-            mock_client_class.return_value.__aenter__.return_value.post.side_effect = (
-                httpx.RequestError("Connection failed", request=MagicMock())
+            mock_client_class.return_value.__aenter__.return_value.post.side_effect = httpx.RequestError(
+                "Connection failed", request=MagicMock()
             )
 
             result = await transcribe_with_groq(b"audio", "en")
@@ -71,6 +71,48 @@ class TestGroqClient:
             result = await transcribe_with_groq(b"audio", "en")
 
             assert result == ""
+
+    async def test_transcription_goes_through_proxy_when_set(self):
+        """With LLM_API_BASE set, the transcription request is routed through the proxy."""
+        mock_response = MagicMock()
+        mock_response.text = "ok"
+        mock_response.raise_for_status = MagicMock()
+
+        with (
+            patch("src.transcription.groq_client.settings") as mock_settings,
+            patch("src.llm_proxy.settings.llm_api_base", "https://proxy.example"),
+            patch("src.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
+        ):
+            mock_settings.groq_api_key = "test-key"
+            mock_settings.groq_model = "whisper-large-v3-turbo"
+            mock_post = mock_client_class.return_value.__aenter__.return_value.post
+            mock_post.return_value = mock_response
+
+            await transcribe_with_groq(b"audio", "en")
+
+            posted_url = mock_post.call_args.args[0]
+            assert posted_url == "https://proxy.example/groq/openai/v1/audio/transcriptions"
+
+    async def test_transcription_uses_direct_url_without_proxy(self):
+        """With LLM_API_BASE empty, the transcription request goes straight to Groq."""
+        mock_response = MagicMock()
+        mock_response.text = "ok"
+        mock_response.raise_for_status = MagicMock()
+
+        with (
+            patch("src.transcription.groq_client.settings") as mock_settings,
+            patch("src.llm_proxy.settings.llm_api_base", ""),
+            patch("src.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
+        ):
+            mock_settings.groq_api_key = "test-key"
+            mock_settings.groq_model = "whisper-large-v3-turbo"
+            mock_post = mock_client_class.return_value.__aenter__.return_value.post
+            mock_post.return_value = mock_response
+
+            await transcribe_with_groq(b"audio", "en")
+
+            posted_url = mock_post.call_args.args[0]
+            assert posted_url == "https://api.groq.com/openai/v1/audio/transcriptions"
 
     async def test_passes_audio_format_in_filename(self):
         """Audio format is used in the filename hint."""

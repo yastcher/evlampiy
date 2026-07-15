@@ -157,6 +157,19 @@ jobs:
             # ./mongo_data — that bind mount IS the database.
             docker image prune -f
 
+            # `docker image prune -f` only drops dangling images, but every release stays
+            # tagged :<sha> (~1GB each), so superseded ones pile up and fill the disk.
+            # Remove every evlampiy image except the one the new container actually runs —
+            # scoped to $EVLAMPIY_IMAGE, so mongo and other projects on the same daemon are
+            # left alone. The `-n "$keep"` guard is critical: an empty keep would match
+            # nothing to exclude and delete the running image too.
+            keep="$(docker compose ps -q evlampiy_notes | xargs -r docker inspect -f '{{.Image}}' 2>/dev/null || true)"
+            if [ -n "$keep" ]; then
+              docker images --no-trunc --format '{{.ID}}' "$EVLAMPIY_IMAGE" \
+                | sort -u | grep -v "^${keep}$" \
+                | xargs -r docker rmi -f 2>/dev/null || true
+            fi
+
             # Smoke check — fail loudly if /health doesn't answer within 30s, so a
             # broken release surfaces in CI instead of leaving the bot silently down.
             # This script is piped to `bash -lse` over ssh stdin, so NEVER `exit` from

@@ -5,12 +5,11 @@ from io import BytesIO
 
 import httpx
 
-from src import const
+from src import const, llm_proxy
 from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-GROQ_API_URL = f"{const.GROQ_API_BASE}/openai/v1/audio/transcriptions"
 GROQ_TIMEOUT = 30.0
 
 LANGUAGE_MAP = {"en": "en", "ru": "ru", "es": "es", "de": "de"}
@@ -49,10 +48,15 @@ async def transcribe_with_groq(
         "Authorization": f"Bearer {settings.groq_api_key}",
     }
 
+    # Built per-call so LLM_API_BASE (set at runtime) routes Groq Whisper through the
+    # proxy Worker where api.groq.com is geo-blocked — same as the text providers.
+    base = llm_proxy.api_base(const.PROVIDER_GROQ, const.GROQ_API_BASE)
+    url = f"{base}/openai/v1/audio/transcriptions"
+
     try:
         async with httpx.AsyncClient(timeout=GROQ_TIMEOUT) as client:
             response = await client.post(
-                GROQ_API_URL,
+                url,
                 files=files,  # type: ignore[arg-type]
                 headers=headers,
             )
