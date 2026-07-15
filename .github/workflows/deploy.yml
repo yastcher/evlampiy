@@ -159,16 +159,26 @@ jobs:
 
             # Smoke check — fail loudly if /health doesn't answer within 30s, so a
             # broken release surfaces in CI instead of leaving the bot silently down.
-            for i in $(seq 1 15); do
-              if curl -fsS http://localhost:8000/health >/dev/null; then
-                echo "OK: /health is up"
-                exit 0
+            # This script is piped to `bash -lse` over ssh stdin, so NEVER `exit` from
+            # the middle of it: exiting before the heredoc is fully read leaves ssh
+            # unable to finish writing stdin and it reports failure even though the
+            # deploy worked. Use a flag + a trailing if/else so bash always drains
+            # stdin — success ends naturally (0), failure exits 1 with stdin at EOF.
+            healthy=0
+            for _ in $(seq 1 15); do
+              if curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
+                healthy=1
+                break
               fi
               sleep 2
             done
-            echo "FAIL: /health did not respond in 30s — last 60 log lines:"
-            docker compose logs --tail=60
-            exit 1
+            if [ "$healthy" -eq 1 ]; then
+              echo "OK: /health is up"
+            else
+              echo "FAIL: /health did not respond in 30s — last 60 log lines:"
+              docker compose logs --tail=60
+              exit 1
+            fi
           REMOTE_SCRIPT
 
           shred -u private_key || rm -f private_key

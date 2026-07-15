@@ -13,6 +13,7 @@
 - Deploy no longer runs `docker volume prune -f`
 - The remote deploy script aborts on the first failing command (`set -euo pipefail`) instead of reporting success
 - Deploy smoke-checks `/health` after rollout and fails with container logs if the bot doesn't come up
+- Deploy smoke-check no longer `exit`s from inside the ssh heredoc, which made a successful deploy report failure
 
 ## [0.9.5] — 2026-06-19
 
