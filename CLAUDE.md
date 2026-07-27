@@ -23,24 +23,21 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - When renaming or refactoring across the project, grep for ALL old names (module, package, repo, env prefix, URLs)
   across the entire tree before considering the task done. Don't skip files that seem unimportant (.env.example,
   docker-compose.yml, docs/, etc.).
-- 152-ФЗ: голосовые сообщения и текст пользователя содержат ФИО, телефоны, email.
-  Перед LLM cleanup / категоризацией (DeepSeek / Groq / Gemini / OpenRouter / Anthropic) —
-  маска `<PHONE_N>`/`<EMAIL_N>`/`<NAME_N>`. Применяется в едином месте на границе LLM-клиента
-  (модуль `src/ai/_mask.py`), а не в каждом провайдере. Map хранится в памяти,
+- 152-ФЗ: голосовые сообщения и текст пользователя содержат ФИО, телефоны, email. Перед LLM cleanup / категоризацией
+  (DeepSeek / Groq / Gemini / OpenRouter / Anthropic) — маска `<PHONE_N>`/`<EMAIL_N>`/`<NAME_N>`. Применяется в едином
+  месте на границе LLM-клиента (модуль `src/ai/_mask.py`), а не в каждом провайдере. Map хранится в памяти,
   размаскирование — перед записью в БД / отправкой обратно в чат.
-- Vocabulary.json (per-category keyword list) — НЕ хранить туда токены маски: keyword
-  должен быть осмысленным словом, не `<NAME_1>`. Маскировать только outgoing payload,
-  не учёт.
+- Vocabulary.json (per-category keyword list) — НЕ хранить туда токены маски: keyword должен быть осмысленным словом, не
+  `<NAME_1>`. Маскировать только outgoing payload, не учёт.
 
 ## Architecture
 
 - DDD: modular by domain in src/, each module: router.py, schemas.py, models.py, service.py, dependencies.py,
   exceptions.py
 - Constants: src/const.py, import as `from src import const`, use as `const.PROVIDER_GROQ`
-- Stdlib imports: `import datetime`, `import typing` — import the module, not names from it.
-  Use `datetime.datetime`, `datetime.UTC`, `typing.Optional`, etc.
-  Never use `from datetime import datetime, UTC, timezone` — always go through the module.
-  Prefer `datetime.UTC` over `datetime.timezone.utc` (Python 3.11+, enforced by ruff UP017).
+- Stdlib imports: `import datetime`, `import typing` — import the module, not names from it. Use `datetime.datetime`,
+  `datetime.UTC`, `typing.Optional`, etc. Never use `from datetime import datetime, UTC, timezone` — always go through
+  the module. Prefer `datetime.UTC` over `datetime.timezone.utc` (Python 3.11+, enforced by ruff UP017).
 - Settings: split BaseSettings per module
 - Max 500 lines per file — decompose if exceeded
 - FastAPI conventions: see .claude/skills/fastapi.md
@@ -64,8 +61,8 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 
 ## Code style
 
-Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config.
-Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
+Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config. Do not duplicate ruff rules here — if ruff can check
+it, ruff owns it.
 
 ## Code quality
 
@@ -77,25 +74,24 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
   or into `const.py` as module-level constants. Function parameter defaults are not a substitute for proper settings.
 - Values used in multiple modules go into `const.py`. Values used only in one module stay as module-level constants in
   that module. Configurable values go into `settings`.
-- No local imports inside functions. All imports at the top of the file.
-  Local imports are only acceptable when explicitly required (e.g. circular dependency workarounds).
+- No local imports inside functions. All imports at the top of the file. Local imports are only acceptable when
+  explicitly required (e.g. circular dependency workarounds).
 - No `global` keyword. Module-level mutable singletons (HTTP clients, caches) must use a holder class or
   module-attribute access pattern instead of `global`.
-- In `if/elif/else` chains over a discriminator (role, type, status), use `if/elif/else` — not `if ... continue`.
-  Early returns via `continue` are for guard clauses, not for branching logic.
+- In `if/elif/else` chains over a discriminator (role, type, status), use `if/elif/else` — not `if ... continue`. Early
+  returns via `continue` are for guard clauses, not for branching logic.
 
 ## Testing
 
 - Trophy testing: fast integration tests, real DB (mongomock), minimal mocks
-- Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление.
-  Round-trip: `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`,
-  нет `@`, нет двух подряд capitalized слов.
+- Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление. Round-trip:
+  `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`, нет `@`, нет двух подряд capitalized слов.
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
-- **All fixtures in tests/fixtures.py** — every @pytest.fixture must be declared there,
-  not in test files. Test files should have zero fixture definitions and minimal inline mocks.
-  If a test needs a mock, check if a fixture already exists; if not, add one to fixtures.py.
-- **Prefer integration tests over unit tests with heavy mocking** — don't create tests
-  that mock half the system. Trophy style: real DB, real logic, mock only external I/O.
+- **All fixtures in tests/fixtures.py** — every @pytest.fixture must be declared there, not in test files. Test files
+  should have zero fixture definitions and minimal inline mocks. If a test needs a mock, check if a fixture already
+  exists; if not, add one to fixtures.py.
+- **Prefer integration tests over unit tests with heavy mocking** — don't create tests that mock half the system. Trophy
+  style: real DB, real logic, mock only external I/O.
 - pytest_plugins already configured in conftest.py
 - asyncio_mode = "auto" in pyproject.toml — pytestmark not needed
 - Architectural tests in tests/test_architecture.py — enforced by pytestarch + AST
@@ -112,9 +108,9 @@ Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 - **Test both branches of conditionals**: if code has `if x: return A else: return B`, test both paths
 - **Mongomock caveat**: `find_one(Field == val)` with a single record won't distinguish `==` from `>=`/`<=`. Use
   multiple records or verify the returned record's field matches exactly
-- **Bug fix workflow**: every fix MUST start with a failing test that reproduces the bug.
-  Write the test first, verify it fails, then apply the fix and verify the test passes.
-  This prevents regressions and documents the exact failure scenario.
+- **Bug fix workflow**: every fix MUST start with a failing test that reproduces the bug. Write the test first, verify
+  it fails, then apply the fix and verify the test passes. This prevents regressions and documents the exact failure
+  scenario.
 
 ## Git
 
@@ -140,8 +136,8 @@ Before finishing any task, check for:
 
 - Secrets/tokens в коде, логах, ответах или ошибках
 - Injection: NoSQL, command injection, template injection
-- ПД (телефоны, email, ФИО) не уходят к внешним LLM в plaintext. Проверка: structured
-  лог исходящего запроса (DEBUG, gated за env), assert отсутствия `@`/`+7` в payload.
+- ПД (телефоны, email, ФИО) не уходят к внешним LLM в plaintext. Проверка: structured лог исходящего запроса (DEBUG,
+  gated за env), assert отсутствия `@`/`+7` в payload.
 - Эндпоинты без проверки авторизации
 
 **P1 (исправить до merge):**
@@ -186,9 +182,9 @@ Always update documentation as part of the same task (not as a separate step):
 4. Verify coverage >= 85%
 5. Security review (see above)
 6. Update documentation (see "Documentation" section above)
-7. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг,
-   скопированные антипаттерны из существующего кода, лишнюю сложность, нарушение принципа простоты.
-   Если нашёл — исправь до завершения.
+7. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг, скопированные
+   антипаттерны из существующего кода, лишнюю сложность, нарушение принципа простоты. Если нашёл — исправь до
+   завершения.
 
 Do not finish until lint, tests, security review, and tech lead review pass.
 
@@ -197,3 +193,5 @@ Do not finish until lint, tests, security review, and tech lead review pass.
 - Comments and logs in English
 - Когда нужно уменьшить техдолг - ищи в первую очередь строки "# todo =Y" и какой то текст с пояснением дальше. Затем
   различные исключения правил ruff или ty. Затем улучшение структуры тестов.
+- В конце нетривиальной сессии — 1–3 пункта в `.claude/insights-inbox.md`; заодно замечания к переносу разрешений
+  `settings.local.json` → `settings.json`.
