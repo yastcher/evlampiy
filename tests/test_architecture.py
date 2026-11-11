@@ -12,9 +12,7 @@ _arch = get_evaluable_architecture(_ROOT, _SRC)
 
 # Prefix depends on the project directory name (differs locally vs CI).
 # Detect it from the graph nodes: find node ending with ".src.const" and strip ".const".
-_PREFIX = next(
-    n.removesuffix(".const") for n in _arch._graph._graph.nodes() if n.endswith(".src.const")
-)
+_PREFIX = next(n.removesuffix(".const") for n in _arch._graph._graph.nodes() if n.endswith(".src.const"))
 
 
 # --- Rule 1: telegram <-> whatsapp domain isolation ---
@@ -81,48 +79,60 @@ class TestServicesFrameworkIsolation:
     """
 
     def test_services_do_not_import_aiogram(self):
-        violations = _imports_targeting(_PREFIX + ".src.services", ("aiogram",))
-        assert not violations, (
-            "services modules import aiogram (must stay framework-agnostic):\n"
-            + "\n".join(f"  {v}" for v in violations)
+        violations = _services_importing(("aiogram",))
+        assert not violations, "services modules import aiogram (must stay framework-agnostic):\n" + "\n".join(
+            f"  {v}" for v in violations
         )
 
     def test_services_do_not_import_pywa(self):
-        violations = _imports_targeting(_PREFIX + ".src.services", ("pywa", "pywa_async"))
-        assert not violations, (
-            "services modules import pywa (must stay framework-agnostic):\n"
-            + "\n".join(f"  {v}" for v in violations)
+        violations = _services_importing(("pywa", "pywa_async"))
+        assert not violations, "services modules import pywa (must stay framework-agnostic):\n" + "\n".join(
+            f"  {v}" for v in violations
         )
 
     def test_services_do_not_import_fastapi(self):
-        violations = _imports_targeting(_PREFIX + ".src.services", ("fastapi", "uvicorn"))
-        assert not violations, (
-            "services modules import fastapi/uvicorn (must stay framework-agnostic):\n"
-            + "\n".join(f"  {v}" for v in violations)
+        violations = _services_importing(("fastapi", "uvicorn"))
+        assert not violations, "services modules import fastapi/uvicorn (must stay framework-agnostic):\n" + "\n".join(
+            f"  {v}" for v in violations
         )
 
     def test_services_do_not_import_telegram_handlers(self):
         """Services must not depend on adapter modules — that's an inversion."""
-        violations = _imports_targeting(_PREFIX + ".src.services", (_PREFIX + ".src.telegram",))
-        assert not violations, (
-            "services modules import src.telegram (inverted dependency):\n"
-            + "\n".join(f"  {v}" for v in violations)
+        rule = (
+            Rule()
+            .modules_that()
+            .are_sub_modules_of(f"{_PREFIX}.services")
+            .should_not()
+            .import_modules_that()
+            .are_sub_modules_of(f"{_PREFIX}.telegram")
         )
+        rule.assert_applies(_arch)
 
 
-def _imports_targeting(source_pkg: str, targets: tuple[str, ...]) -> list[str]:
-    """Return nodes under ``source_pkg`` that import any module in ``targets``."""
-    graph = _arch._graph._graph
-    violations: list[str] = []
-    for src_node in graph.nodes():
-        if not src_node.startswith(source_pkg):
-            continue
-        for dst_node in graph.successors(src_node):
-            for target in targets:
-                if dst_node == target or dst_node.startswith(target + "."):
-                    violations.append(f"{src_node} → {dst_node}")
-                    break
+def _services_importing(packages: tuple[str, ...]) -> list[str]:
+    """Services modules that import any of the top-level ``packages``.
+
+    The pytestarch graph leaves external libraries out, so the imports are read from the AST.
+    """
+    services = pathlib.Path(_SRC) / "services"
+    modules = sorted(services.rglob("*.py"))
+    assert modules, f"{services} has no modules: the check would pass vacuously"
+    violations = []
+    for py_file in modules:
+        imported = _imported_packages(ast.parse(py_file.read_text(), filename=str(py_file)))
+        violations.extend(f"{py_file.relative_to(_SRC)} → {name}" for name in sorted(imported.intersection(packages)))
     return violations
+
+
+def _imported_packages(tree: ast.AST) -> set[str]:
+    """Top-level names of the absolute imports in ``tree``."""
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name.partition(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module.partition(".")[0])
+    return names
 
 
 # --- Rule 4: stdlib imports through module, not from-imports ---
@@ -142,7 +152,6 @@ class TestStdlibImportStyle:
                     rel = py_file.relative_to(_SRC)
                     names = ", ".join(alias.name for alias in node.names)
                     violations.append(f"{rel}:{node.lineno} — from {node.module} import {names}")
-        assert not violations, (
-            "Stdlib modules must be imported as `import X`, not `from X import ...`:\n"
-            + "\n".join(f"  {v}" for v in violations)
+        assert not violations, "Stdlib modules must be imported as `import X`, not `from X import ...`:\n" + "\n".join(
+            f"  {v}" for v in violations
         )

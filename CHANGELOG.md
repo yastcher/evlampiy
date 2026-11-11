@@ -8,6 +8,10 @@
 - Releases are cut from `main` by `scripts/release.sh patch|minor|major` and ship as `vX.Y.Z` tags
 - CHANGELOG entries go under `[Unreleased]` via `scripts/changelog_add.py`; the release picks the version
 
+### Fixed
+
+- Services-isolation architecture tests matched no module and always passed; now they catch violations
+
 ## [0.9.7] — 2026-07-15
 
 ### Added
