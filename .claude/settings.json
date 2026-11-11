@@ -8,6 +8,7 @@
       "Edit",
       "Write",
       "WebSearch",
+      "WebFetch(domain:*)",
       "Bash(docker compose:*)",
       "Bash(docker exec:*)",
       "Bash(docker ps:*)",

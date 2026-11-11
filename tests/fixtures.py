@@ -1,3 +1,7 @@
+import os
+import pathlib
+import shutil
+import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -7,6 +11,8 @@ import src.ai_client
 import src.telegram.handlers.obsidian as obsidian_handlers
 import src.whatsapp.client
 from src.whatsapp.app import create_fastapi_app
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def _build_user_mock(user_id: int = 12345, *, is_bot: bool = False) -> MagicMock:
@@ -385,3 +391,108 @@ def mock_audio_segment_factory():
         return seg
 
     return _create
+
+
+# --- release scripts ---
+
+_RELEASE_PYPROJECT = """\
+[project]
+name = "evlampiy"
+version = "1.2.3"
+dependencies = ["click==1.2.3"]
+
+[tool.example]
+version = "9.9.9"
+"""
+
+# A dependency on the project's own number: an edit anchored on the version alone would hit it.
+_RELEASE_LOCK = """\
+version = 1
+requires-python = ">=3.14"
+
+[[package]]
+name = "click"
+version = "1.2.3"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "evlampiy"
+version = "1.2.3"
+source = { virtual = "." }
+"""
+
+_RELEASE_CHANGELOG = """\
+## [Unreleased]
+
+<!-- New entries go here. -->
+<!-- Subsections, in order. -->
+
+### Fixed
+
+- The next fix.
+
+## [1.2.3] — 2026-10-05
+
+### Fixed
+
+- The fix.
+"""
+
+# Git for the release tests, deaf to the developer's own config (signing, hooks, templates).
+_GIT_ENV = {
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_AUTHOR_NAME": "Release Test",
+    "GIT_AUTHOR_EMAIL": "release@example.com",
+    "GIT_COMMITTER_NAME": "Release Test",
+    "GIT_COMMITTER_EMAIL": "release@example.com",
+}
+
+
+def git(cwd: pathlib.Path, *args: str) -> str:
+    """Run git in `cwd` with the isolated config; return stdout."""
+    result = subprocess.run(
+        ["git", *args], cwd=cwd, env=os.environ | _GIT_ENV, capture_output=True, text=True, check=True
+    )
+    return result.stdout
+
+
+@pytest.fixture
+def release_tree(tmp_path):
+    """A project tree on version 1.2.3 with one entry waiting under [Unreleased]."""
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    (tree / "pyproject.toml").write_text(_RELEASE_PYPROJECT)
+    (tree / "uv.lock").write_text(_RELEASE_LOCK)
+    (tree / "CHANGELOG.md").write_text(_RELEASE_CHANGELOG)
+    return tree
+
+
+@pytest.fixture
+def release_repo(tmp_path, release_tree):
+    """`release_tree` as a git repository on main, pushed to a bare origin, with the real
+    release scripts in it. Returns (work tree, origin, run) where run(*args) runs release.sh."""
+    origin = tmp_path / "origin.git"
+    git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
+    scripts = release_tree / "scripts"
+    scripts.mkdir()
+    for name in ("release.sh", "prepare_release.py", "release_from_tag.py"):
+        shutil.copy2(REPO_ROOT / "scripts" / name, scripts / name)
+    git(release_tree, "init", "-q", "-b", "main")
+    git(release_tree, "add", "-A")
+    git(release_tree, "commit", "-q", "-m", "init")
+    git(release_tree, "remote", "add", "origin", str(origin))
+    git(release_tree, "push", "-q", "-u", "origin", "main")
+
+    def run(*args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [scripts / "release.sh", *args],
+            cwd=release_tree,
+            env=os.environ | _GIT_ENV,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+
+    return release_tree, origin, run

@@ -1,5 +1,3 @@
-# CLAUDE.md
-
 ## Project
 
 Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
@@ -58,6 +56,8 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Typecheck: `uv run ty check src`
 - Test: `uv run pytest`
 - Coverage must be >= 85%
+- Changelog entry: `scripts/changelog_add.py <Added|Changed|Fixed|Removed|Docs> "- text"` (`--top` puts a user-facing entry above infrastructure ones)
+- Release (maintainer, on main): `scripts/release.sh patch|minor|major`
 
 ## Code style
 
@@ -115,7 +115,7 @@ it, ruff owns it.
 ## Git
 
 - Conventional commits (feat:, fix:, docs:, refactoring:)
-- Always PR, never push to main
+- Always PR, never push to main. The one exception is the release commit that `scripts/release.sh` pushes before its tag.
 - **Do not run git commit, checkout, reset, clean, stash, rebase** — these are blocked in settings.json. Ask user if
   needed.
 - Max ~500 lines of diff per commit — stop and propose a commit before continuing
@@ -159,17 +159,11 @@ Always update documentation as part of the same task (not as a separate step):
   commands, or setup changed
 - docs/ADMIN.md — if admin commands or roles changed
 - User-facing help in localization.py — if commands/features changed (all 4 languages)
-- CHANGELOG.md — steps:
-    1. Read `pyproject.toml` to get the current `version`.
-    2. Read CHANGELOG.md and check the top section heading (e.g. `## [0.8.9]`).
-    3. **If versions match** → append the new bullet to the existing matching subsection (Added / Changed / Fixed /
-       Removed / Docs). Do NOT create a duplicate subsection. If the subsection doesn't exist yet, add it in order:
-       Added → Changed → Fixed → Removed → Docs.
-    4. **If versions differ** (pyproject.toml has a newer version) → create a new section at the top:
-       `## [X.Y.Z] — YYYY-MM-DD` with the appropriate subsection and bullet.
-    5. Use concise bullet points. Version bumping in pyproject.toml is done by the user — do not change it.
-    6. Order CHANGELOG entries by user impact: user-facing changes first, infrastructure/internal changes last.
-    7. **Documentation-only changes** (README, ARCHITECTURE, ADMIN, etc.) go under `### Docs`, not `### Added`.
+- CHANGELOG.md — entries go under `## [Unreleased]`, only through `scripts/changelog_add.py`:
+    1. Subsections, in order: Added → Changed → Fixed → Removed → Docs. The script appends to an existing one or creates it in its place, never a duplicate.
+    2. Never write a version or a date, and never touch `version` in pyproject.toml or uv.lock: `scripts/release.sh` picks the number when the release is cut and closes `[Unreleased]` under it.
+    3. Concise bullets, ordered by user impact: user-facing first (`--top`), infrastructure/internal last.
+    4. **Documentation-only changes** (README, ARCHITECTURE, ADMIN, etc.) go under `### Docs`, not `### Added`.
 - Do not create separate doc files without necessity — keep README.md up to date
 - Documentation must be updated before running the "Before finishing" checklist, not after
 
