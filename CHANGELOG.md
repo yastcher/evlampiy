@@ -51,6 +51,10 @@
 - The Codecov upload from CI: it had no token and nothing read it
 - cosmic-ray, replaced by mutmut
 
+### Docs
+
+- `docs/GLOSSARY.md` names the project's own things, one word for each
+
 ## [0.9.7] — 2026-07-15
 
 ### Added

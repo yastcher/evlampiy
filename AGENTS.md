@@ -1,6 +1,6 @@
 ## Project
 
-Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
+Python voice-notes bot for Telegram (aiogram) and WhatsApp (pywa), async, on MongoDB (pymongo's async client and beanie). FastAPI serves only `/health` and the WhatsApp webhook.
 
 ## Safety rules
 
@@ -9,37 +9,26 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Never simplify architecture by removing existing providers, configs, or feature flags unless explicitly asked.
 - When fixing linter/import issues: fix one file at a time, run tests after each change.
 - Always propose solutions that make sense. No workarounds or hacks unless explicitly asked.
-- Never claim something doesn't exist without verifying first. Check the actual files/directories before making
-  statements.
-- Understand the purpose of each config file before modifying it (e.g., docker-compose.yml is for running the stack, not
-  for development).
+- Never claim something doesn't exist without verifying first. Check the actual files/directories before making statements.
+- Understand the purpose of each config file before modifying it (e.g., docker-compose.yml is for running the stack, not for development).
 - Любой файл с API-ключами, токенами или учётными данными считай только для чтения
 - Всегда сначала надо решить причину проблемы, а не следствие.
-- Не подавлять warnings/errors/логи, не разобравшись в причине. Сначала спросить: это наш баг, баг зависимости, или
-  информационное сообщение? Подавлять можно только осознанно и с объяснением почему.
+- Не подавлять warnings/errors/логи, не разобравшись в причине. Сначала спросить: это наш баг, баг зависимости, или информационное сообщение? Подавлять можно только осознанно и с объяснением почему.
 - Перед планированием надо продумать оптимальную систему типов.
-- When renaming or refactoring across the project, grep for ALL old names (module, package, repo, env prefix, URLs)
-  across the entire tree before considering the task done. Don't skip files that seem unimportant (.env.example,
-  docker-compose.yml, docs/, etc.).
-- 152-ФЗ: голосовые сообщения и текст пользователя содержат ФИО, телефоны, email. Перед LLM cleanup / категоризацией
-  (DeepSeek / Groq / Gemini / OpenRouter / Anthropic) — маска `<PHONE_N>`/`<EMAIL_N>`/`<NAME_N>`. Применяется в едином
-  месте на границе LLM-клиента (модуль `evlampiy/ai/_mask.py`), а не в каждом провайдере. Map хранится в памяти,
-  размаскирование — перед записью в БД / отправкой обратно в чат.
-- Vocabulary.json (per-category keyword list) — НЕ хранить туда токены маски: keyword должен быть осмысленным словом, не
-  `<NAME_1>`. Маскировать только outgoing payload, не учёт.
+- When renaming or refactoring across the project, grep for ALL old names (module, package, repo, env prefix, URLs) across the entire tree before considering the task done. Don't skip files that seem unimportant (.env.example, docker-compose.yml, docs/, etc.).
+- 152-ФЗ: голосовые сообщения и текст пользователя содержат ФИО, телефоны, email. Перед LLM cleanup / категоризацией / GPT-чатом (DeepSeek / Groq / Gemini / OpenRouter / Anthropic) — маска `<PHONE_N>`/`<EMAIL_N>`/`<NAME_N>` (`evlampiy/ai/_mask.py`). Применяется на границе каждого LLM-клиента — `ai_client._ai_complete` и `ai_chat.chat_complete`, — а не в каждом провайдере; новый путь к LLM идёт через одну из них. Map хранится в памяти, размаскирование — перед записью в БД / отправкой обратно в чат.
+- Vocabulary.json (per-category keyword list) — НЕ хранить туда токены маски: keyword должен быть осмысленным словом, не `<NAME_1>`. Маскировать только outgoing payload, не учёт.
+- **Anything run outside the test suite reads the real `.env`**: a probe script builds `Settings(_env_file=None, …)` with the values it needs, never a bare `Settings()`, and a local stack runs without the developer's `.env`, as `scripts/compose.qa.yml` does — otherwise a probe spends the owner's keys at a provider or polls Telegram next to production's bot
+- **Don't trust the shape of an LLM reply**: strip the markdown code fence (`ai_client._strip_backticks`), parse JSON tolerantly (`categorization._extract_json_object`), sanitize before storing — never `json.loads` on a raw reply; the repo was bitten twice (`a3c4b2c`, `edf899f`)
 
 ## Architecture
 
-- DDD: modular by domain in evlampiy/, each module: router.py, schemas.py, models.py, service.py, dependencies.py,
-  exceptions.py
+- Layout: delivery channels in `telegram/` (aiogram handlers) and `whatsapp/` (pywa and the FastAPI app), neither importing the other; use cases in `services/`, which import no aiogram, pywa or FastAPI; speech-to-text in `transcription/`, independent of the channels; the PII mask in `ai/`; shared modules (`ai_client`, `credits`, `categorization`, `obsidian`, …) flat in `evlampiy/`. `tests/test_architecture.py` holds these boundaries. HTTP is only `/health` and the webhook: no routers or schemas modules for symmetry
 - Constants: evlampiy/const.py, import as `from evlampiy import const`, use as `const.PROVIDER_GROQ`
-- Stdlib imports: `import datetime`, `import typing` — import the module, not names from it. Use `datetime.datetime`,
-  `datetime.UTC`, `typing.Optional`, etc. Never use `from datetime import datetime, UTC, timezone` — always go through
-  the module. Prefer `datetime.UTC` over `datetime.timezone.utc` (Python 3.11+, enforced by ruff UP017).
-- Settings: split BaseSettings per module
+- Stdlib imports: `import datetime`, `import typing` — import the module, not names from it. Use `datetime.datetime`, `datetime.UTC`, `typing.Optional`, etc. Never use `from datetime import datetime, UTC, timezone` — always go through the module. Prefer `datetime.UTC` over `datetime.timezone.utc` (Python 3.11+, enforced by ruff UP017).
+- Settings: one `Settings` in `evlampiy/config.py`, used as `from evlampiy.config import settings`; splitting it per module was weighed and declined as churn without gain
 - Max 500 lines per file — decompose if exceeded
-- Когда находишь уязвимость безопасности, сразу помечай её комментарием WARNING и предлагай безопасную альтернативу.
-  Никогда не реализуй небезопасные паттерны, даже если просят.
+- Когда находишь уязвимость безопасности, сразу помечай её комментарием WARNING и предлагай безопасную альтернативу. Никогда не реализуй небезопасные паттерны, даже если просят.
 
 ## Type hints
 
@@ -55,46 +44,42 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Format: `uv run ruff format`
 - Typecheck: `uv run ty check evlampiy tests` — the tests are code the gate types too
 - Test: `uv run pytest`; a partial run needs `--no-cov` (`uv run pytest tests/test_x.py --no-cov`) — the coverage floor applies to the whole suite
-- Heavy local runs go under a memory cap with no swap — `systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 <command>`; the gate caps its pytest step itself. A container is not inside that scope — it runs under dockerd — so cap it with `docker run --memory=… --memory-swap=…` (compose: `mem_limit`); image scans (Trivy) run in CI, never locally. On an 8 GB laptop the kernel's OOM killer otherwise picks the IDE, free swap or not
+- Heavy local runs go under a memory cap with no swap — `systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 <command>`; the gate caps its pytest step itself. A container is not inside that scope — it runs under dockerd — so cap it with `docker run --memory=… --memory-swap=…` (compose: `mem_limit`); image scans (Trivy) run in CI, never locally. Otherwise an OOM on an 8 GB laptop takes the IDE down, free swap or not: a command started from the IDE lives in its cgroup, and systemd stops the whole unit once the kernel kills one of its processes
 - Coverage floor: `fail_under` in pyproject.toml is a ratchet — raise it when coverage grows, never lower it; the README badges show it (`tests/test_docs.py` checks)
 - Changelog entry: `scripts/changelog_add.py <Added|Changed|Fixed|Removed|Docs> "- text"` (`--top` puts a user-facing entry above infrastructure ones)
 - Release (maintainer, on main): `mkdir -p tmp && scripts/pre_release_qa.sh > tmp/qa.log 2>&1`, then `scripts/release.sh patch|minor|major` — the QA run (the gate, a CRAP limit, a smoke of the release image's stack, mutation testing) stamps the tree it passed, and `release.sh` tags no other; `SKIP_PRERELEASE_QA=1` is for a hotfix that cannot wait
 - CRAP limit: `--max` in `scripts/pre_release_qa.sh` sat at the worst function when set and only comes down
 
+## Workflow
+
+- **Report only what a command showed**: "done" comes after its output was read, a record outside the repo after a green gate, and a cause is named only with the command that shows it. Not known yet — say so, and what was checked
+- **A refusal names its source: a settings rule or the auto-mode classifier.** A rule — stop and ask, without splitting the command to get around it. The classifier — change the form: a short separate command on checked paths, no `&&` chain. After a refusal, check what of the refused command did not apply
+- **Don't poll a background task in a loop**: the harness wakes the agent when it ends. If waiting is needed, wait on your command's PID (`$!`) or its result file — `pgrep -f <name>` finds the waiting shell itself; kill with `pkill -x <exact name>`, not a pattern
+
 ## Code style
 
-Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config. Do not duplicate ruff rules here — if ruff can check
-it, ruff owns it.
+Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config. Do not duplicate ruff rules here — if ruff can check it, ruff owns it.
 
 ## Code quality
 
-- Prefer the simplest solution that works. Don't add layers (multi-stage builds, extra abstractions, design patterns)
-  unless they solve a real, present problem. If a flat approach does the job — use it.
-- Existing codebase is not a reference to copy from blindly. Question patterns — if existing code has an antipattern,
-  write better code, don't propagate it.
-- No magic numbers in logic. Thresholds, limits, sizes, ratios — all go into `settings` as named settings with env vars,
-  or into `const.py` as module-level constants. Function parameter defaults are not a substitute for proper settings.
-- Values used in multiple modules go into `const.py`. Values used only in one module stay as module-level constants in
-  that module. Configurable values go into `settings`.
-- No local imports inside functions. All imports at the top of the file. Local imports are only acceptable when
-  explicitly required (e.g. circular dependency workarounds).
-- No `global` keyword. Module-level mutable singletons (HTTP clients, caches) must use a holder class or
-  module-attribute access pattern instead of `global`.
-- In `if/elif/else` chains over a discriminator (role, type, status), use `if/elif/else` — not `if ... continue`. Early
-  returns via `continue` are for guard clauses, not for branching logic.
+- Prefer the simplest solution that works. Don't add layers (multi-stage builds, extra abstractions, design patterns) unless they solve a real, present problem. If a flat approach does the job — use it.
+- Existing codebase is not a reference to copy from blindly. Question patterns — if existing code has an antipattern, write better code, don't propagate it.
+- No magic numbers in logic. Thresholds, limits, sizes, ratios — all go into `settings` as named settings with env vars, or into `const.py` as module-level constants. Function parameter defaults are not a substitute for proper settings.
+- Values used in multiple modules go into `const.py`. Values used only in one module stay as module-level constants in that module. Configurable values go into `settings`.
+- No local imports inside functions. All imports at the top of the file. Local imports are only acceptable when explicitly required (e.g. circular dependency workarounds).
+- No `global` keyword. Module-level mutable singletons (HTTP clients, caches) must use a holder class or module-attribute access pattern instead of `global`.
+- In `if/elif/else` chains over a discriminator (role, type, status), use `if/elif/else` — not `if ... continue`. Early returns via `continue` are for guard clauses, not for branching logic.
 
 ## Testing
 
 - Trophy testing: fast integration tests, a real MongoDB (the image production runs: a testcontainers container locally, so Docker must be running, or the server `TEST_MONGO_URI` names — CI's service, the devcontainer's), minimal mocks. Never `MONGO_URI`: that is the app's own database
-- Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление. Round-trip:
-  `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`, нет `@`, нет двух подряд capitalized слов.
+- Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление. Round-trip: `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`, нет `@`, нет двух подряд capitalized слов.
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
 - **Tests never see the developer's keys**: `tests/conftest.py` swaps `evlampiy.config.settings` for `Settings`' bare defaults (`tests/settings_isolation.py`) before the app is imported — no `.env`, no exported variable, so no key and no `MONGO_URI`. A test that needs a value patches it; a real vendor call runs only under `LIVE_VENDOR_TESTS=1` with its key exported
 - **Patch `asyncio` only where the code under test looks it up**: `sleep_replaced(module)` from `tests/fixtures.py`, never `patch("<module>.asyncio.sleep")` — that replaces `asyncio` itself, under the event loop and pymongo's heartbeat (a run grew to 9 GB); `tests/test_architecture.py` enforces it
 - A test that hangs fails after `timeout` seconds (pytest-timeout, pyproject.toml) with the stack where it hung
 - **All fixtures in fixture modules, never in test files** — `tests/fixtures.py` for the app, `tests/db_fixtures.py` for the test MongoDB, `tests/script_fixtures.py` for the repository's own scripts (release, changelog, gate); all are registered in `tests/conftest.py`. Test files have zero fixture definitions and minimal inline mocks: check for an existing fixture before adding one.
-- **Prefer integration tests over unit tests with heavy mocking** — don't create tests that mock half the system. Trophy
-  style: real DB, real logic, mock only external I/O.
+- **Prefer integration tests over unit tests with heavy mocking** — don't create tests that mock half the system. Trophy style: real DB, real logic, mock only external I/O.
 - pytest_plugins already configured in conftest.py
 - asyncio_mode = "auto" in pyproject.toml — pytestmark not needed
 - Architectural tests in tests/test_architecture.py — enforced by pytestarch + AST
@@ -104,14 +89,12 @@ it, ruff owns it.
 
 - **Boundary values**: always test exact boundary (==), one below, one above. `>=` must have a test where left == right
 - **Assert exact values, not ranges**: `assert count == 2`, not `assert count >= 1`. Weak assertions hide bugs
-- **Hardcode expected values**: don't reuse the same constant in test and production code. If `LINK_CODE_LENGTH = 6`,
-  test `assert len(code) == 6`, not `== LINK_CODE_LENGTH`
+- **Hardcode expected values**: don't reuse the same constant in test and production code. If `LINK_CODE_LENGTH = 6`, test `assert len(code) == 6`, not `== LINK_CODE_LENGTH`
 - **One assertion per behavior**: a test that checks too many things at once may pass even when one check is meaningless
 - **Test both branches of conditionals**: if code has `if x: return A else: return B`, test both paths
 - **Single-record caveat**: `find_one(Field == val)` with a single record won't distinguish `==` from `>=`/`<=`. Use multiple records or verify the returned record's field matches exactly
-- **Bug fix workflow**: every fix MUST start with a failing test that reproduces the bug. Write the test first, verify
-  it fails, then apply the fix and verify the test passes. This prevents regressions and documents the exact failure
-  scenario.
+- **Bug fix workflow**: every fix MUST start with a failing test that reproduces the bug. Write the test first, verify it fails, then apply the fix and verify the test passes. This prevents regressions and documents the exact failure scenario.
+- **A protection is checked by switching it off**: next to "after the fix it is not flagged" goes its twin "with the guard off it is flagged", asserting on the body of the outgoing request rather than on an object's field. Put the code back verifiably: `git diff <file>` is empty, or the file's hash matches
 
 ## Git
 
@@ -125,7 +108,7 @@ it, ruff owns it.
 ## Never do
 
 - Never hardcode secrets, tokens, or passwords in code — always use `settings.*` or environment variables
-- Never expose MongoDB port to host in docker-compose.yml
+- Never expose MongoDB port to host in docker-compose.yml, and publish nothing else past the host's loopback (`127.0.0.1:…`): Docker opens a published port past the firewall (`tests/test_compose.py` checks both)
 - Never use absolute paths in code or configs
 
 ## Security review
@@ -138,8 +121,7 @@ Before finishing any task, check for:
 
 - Secrets/tokens в коде, логах, ответах или ошибках
 - Injection: NoSQL, command injection, template injection
-- ПД (телефоны, email, ФИО) не уходят к внешним LLM в plaintext. Проверка: structured лог исходящего запроса (DEBUG,
-  gated за env), assert отсутствия `@`/`+7` в payload.
+- ПД (телефоны, email, ФИО) не уходят к внешним LLM в plaintext. Проверка: structured лог исходящего запроса (DEBUG, gated за env), assert отсутствия `@`/`+7` в payload.
 - Эндпоинты без проверки авторизации
 
 **P1 (исправить до merge):**
@@ -157,8 +139,7 @@ Before finishing any task, check for:
 
 Always update documentation as part of the same task (not as a separate step):
 
-- README.md + all localized READMEs (docs/README.ru.md, docs/README.es.md, docs/README.de.md) — if functionality,
-  commands, or setup changed
+- README.md + all localized READMEs (docs/README.ru.md, docs/README.es.md, docs/README.de.md) — if functionality, commands, or setup changed
 - docs/ADMIN.md — if admin commands or roles changed
 - User-facing help in localization.py — if commands/features changed (all 4 languages)
 - CHANGELOG.md — entries go under `## [Unreleased]`, only through `scripts/changelog_add.py`:
@@ -167,6 +148,7 @@ Always update documentation as part of the same task (not as a separate step):
     3. Concise bullets, ordered by user impact: user-facing first (`--top`), infrastructure/internal last.
     4. **Documentation-only changes** (README, ARCHITECTURE, ADMIN, etc.) go under `### Docs`, not `### Added`.
 - Do not create separate doc files without necessity — keep README.md up to date
+- `docs/GLOSSARY.md` holds the project's own words: a new term goes there first, and a question to the owner names a thing by its word from there
 - Documentation must be updated before running the "Before finishing" checklist, not after
 
 ## Before finishing
@@ -176,16 +158,12 @@ Always update documentation as part of the same task (not as a separate step):
 2. `scripts/gate.sh` — must end with `all gates passed`: it runs what CI runs, the coverage floor included. Run it bare, into a file, and read the log in a separate call: `mkdir -p tmp && scripts/gate.sh > tmp/gate.log 2>&1` — a pipe returns the exit code of its last command, not the gate's
 3. Security review (see above)
 4. Update documentation (see "Documentation" section above)
-5. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг, скопированные
-   антипаттерны из существующего кода, лишнюю сложность, нарушение принципа простоты. Если нашёл — исправь до
-   завершения.
+5. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг, скопированные антипаттерны из существующего кода, лишнюю сложность, нарушение принципа простоты. Если нашёл — исправь до завершения.
 
 Do not finish until the gate, security review, and tech lead review pass.
 
 ## Gotchas
 
 - Comments and logs in English
-- Когда нужно уменьшить техдолг - ищи в первую очередь строки "# todo =Y" и какой то текст с пояснением дальше. Затем
-  различные исключения правил ruff или ty. Затем улучшение структуры тестов.
-- В конце нетривиальной сессии — 1–3 пункта в `.claude/insights-inbox.md`; заодно замечания к переносу разрешений
-  `settings.local.json` → `settings.json`.
+- Когда нужно уменьшить техдолг - ищи в первую очередь строки "# todo =Y" и какой то текст с пояснением дальше. Затем различные исключения правил ruff или ty. Затем улучшение структуры тестов.
+- В конце нетривиальной сессии — пункт в `.claude/insights-inbox.md`, только если он улучшит работу (нечего — не пиши); заодно замечания к переносу разрешений `settings.local.json` → `settings.json`.

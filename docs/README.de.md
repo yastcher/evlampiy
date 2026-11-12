@@ -165,6 +165,7 @@ scripts/gate.sh
 | Dokument | Beschreibung |
 |----------|-------------|
 | [Architektur](ARCHITECTURE.md) | Verzeichnisstruktur, Datenfluss, technische Entscheidungen, Limits (English) |
+| [Glossar](GLOSSARY.md) | Die Begriffe des Projekts: Chats, Stufen, Tokens, die Maske, der Vault (English) |
 | [Deployment](DEPLOY.md) | Docker, nginx, Health Checks, Logs |
 | [Administration](ADMIN.md) | Admin-Befehle, Rollen, Alarme, Monitoring |
 | [WhatsApp-Einrichtung](WHATSAPP_SETUP.md) | WhatsApp Business API Konfiguration |
