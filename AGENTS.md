@@ -47,7 +47,7 @@ Python voice-notes bot for Telegram (aiogram) and WhatsApp (pywa), async, on Mon
 - Heavy local runs go under a memory cap with no swap — `systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 <command>`; the gate caps its pytest step itself. A container is not inside that scope — it runs under dockerd — so cap it with `docker run --memory=… --memory-swap=…` (compose: `mem_limit`); image scans (Trivy) run in CI, never locally. Otherwise an OOM on an 8 GB laptop takes the IDE down, free swap or not: a command started from the IDE lives in its cgroup, and systemd stops the whole unit once the kernel kills one of its processes
 - Coverage floor: `fail_under` in pyproject.toml is a ratchet — raise it when coverage grows, never lower it; the README badges show it (`tests/test_docs.py` checks)
 - Changelog entry: `scripts/changelog_add.py <Added|Changed|Fixed|Removed|Docs> "- text"` (`--top` puts a user-facing entry above infrastructure ones)
-- Release (maintainer, on main): `mkdir -p tmp && scripts/pre_release_qa.sh > tmp/qa.log 2>&1`, then `scripts/release.sh patch|minor|major` — the QA run (the gate, a CRAP limit, a smoke of the release image's stack, mutation testing) stamps the tree it passed, and `release.sh` tags no other; `SKIP_PRERELEASE_QA=1` is for a hotfix that cannot wait
+- Release (maintainer, on main): `mkdir -p tmp && scripts/pre_release_qa.sh > tmp/qa.log 2>&1`, then `scripts/release.sh patch|minor|major` — the QA run (the gate, a CRAP limit, a smoke of the release image's stack, mutation testing) stamps the tree it passed, and `release.sh` tags no other; `SKIP_PRERELEASE_QA=1` is for a hotfix that cannot wait. The tag is the release: CI builds, scans, deploys and publishes it (`docs/DEPLOY.md`)
 - CRAP limit: `--max` in `scripts/pre_release_qa.sh` sat at the worst function when set and only comes down
 
 ## Workflow
@@ -113,7 +113,7 @@ Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config. Do not dupli
 
 ## Security review
 
-SAST runs on its own: Semgrep in the gate and CI (`p/python`, `p/dockerfile`, `p/github-actions`), CodeQL in CI (`codeql.yml`, findings in the Security tab). A finding is fixed, or suppressed on its line with `# nosemgrep: <rule>` and a comment saying why. Dependencies: `scripts/audit_deps.py` (pip-audit over every pin of `uv.lock`) in the gate and CI; an advisory we live with goes into its `ACCEPTED` with a reason and a date to look again.
+SAST runs on its own: Semgrep in the gate and CI (`p/python`, `p/dockerfile`, `p/github-actions`), CodeQL in CI (`codeql.yml`, findings in the Security tab). A finding is fixed, or suppressed on its line with `# nosemgrep: <rule>` and a comment saying why. Dependencies: `scripts/audit_deps.py` (pip-audit over every pin of `uv.lock`) in the gate and CI; an advisory we live with goes into its `ACCEPTED` with a reason and a date to look again. The image: Trivy over its OS packages in CI, on every pull request and release tag (`image` job of `ci.yml`).
 
 Before finishing any task, check for:
 

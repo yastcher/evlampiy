@@ -14,6 +14,7 @@
 - Pre-release QA runs mutmut over the PII mask, billing, account linking and categorization; survivors and untested mutants only go down
 - Pre-release QA starts the release image with MongoDB in a stack of its own and passes it only healthy and with no restarts a minute later
 - `deploy/` dumps the database before a release, keeps the running release's compose file, and puts that release back when the new one does not hold
+- Pull requests and releases build the image and scan its OS packages with Trivy; a fixable HIGH or CRITICAL stops a release
 
 ### Changed
 
@@ -31,6 +32,7 @@
 - The containers the tests and pre-release QA start have memory caps of their own, swap included
 - ty checks the tests as well as the package, in the gate and CI
 - The GPT chat's provider formats moved from `ai_chat.py` to `ai/chat_formats.py`, apart from the calls
+- A `vX.Y.Z` tag is what deploys: CI checks it, builds and pushes the image, rolls it out through `deploy/` and publishes a GitHub Release; the `release` branch no longer deploys
 
 ### Fixed
 
@@ -53,6 +55,7 @@
 - A revenue milestone is announced on any payment that crosses it, not only on the month's first payment
 - WhatsApp transcriptions count toward the Wit.ai monthly limit and stop at it, as Telegram's do
 - Pre-release QA runs a mutant that died or timed out beside others again, alone, and starts mutation testing only with as many workers as the free memory fits
+- The deploy trusts only the server's host key from the `SSH_KNOWN_HOSTS` secret, not whatever key answers
 
 ### Removed
 
@@ -64,6 +67,7 @@
 - `docs/GLOSSARY.md` names the project's own things, one word for each
 - The docs describe the bot the code runs: provider chains, tiers, retries, the self-test, the event loop; the category vocabulary serves categorization only
 - `GITHUB_TOKEN_SETUP.md` explains the OAuth App behind `GITHUB_CLIENT_ID` instead of a token the bot never read
+- `DEPLOY.md` describes the tag release, the database dumps and the rollback, with a diagram of the pipeline
 
 ## [0.9.7] — 2026-07-15
 

@@ -1,18 +1,23 @@
 name: CI
 
-# Every push and pull request runs the checks; a push to `release` also deploys.
+# Every push and pull request runs the checks, and a pull request builds and scans the image.
+# A `vX.Y.Z` tag, which `scripts/release.sh` pushes, is the release: its image is pushed,
+# deployed and published. Nothing else deploys.
 on:
   push:
     branches:
       - main
-      - release
+    tags:
+      - "v*.*.*"
   pull_request:
     branches:
       - main
-      - release
 
 permissions:
   contents: read
+
+env:
+  IMAGE: ghcr.io/yastcher/evlampiy_notes
 
 jobs:
   # `scripts/gate.sh` runs these checks locally, in the same order and with the same
@@ -77,144 +82,130 @@ jobs:
       - name: Shell scripts
         run: shellcheck scripts/*.sh deploy/*.sh
 
-  build-and-deploy:
+  # A pull request builds and scans the image too, so a release meets no surprise here; only a
+  # tag pushes it.
+  image:
     needs: lint-and-test
-    if: github.ref == 'refs/heads/release' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    # GITHUB_TOKEN needs package write to push the image to GHCR. No extra secret
-    # to manage — the token is minted per run.
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
-    env:
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      SERVER_IP: ${{ secrets.SERVER_IP }}
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      DEPLOY_DIR: ${{ secrets.DEPLOY_DIR || 'evlampiy' }}
-      # IMAGE_TAG is the release commit SHA — an immutable handle the server pins
-      # in its .env, so a rollback is `IMAGE_TAG=<old-sha> docker compose up -d`.
-      EVLAMPIY_IMAGE: ghcr.io/yastcher/evlampiy_notes
-      IMAGE_TAG: ${{ github.sha }}
-      # Logs the server into GHCR for the pull (ephemeral, per-run token).
-      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GHCR_USER: ${{ github.actor }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3.7.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # The tag must name the version the tree declares: the check release.sh ran before pushing
+      # it. It also keeps any other tag name out of the deploy's ssh command.
+      - name: Check the tag against the tree
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python3 scripts/release_from_tag.py "$GITHUB_REF_NAME" >/dev/null
 
-      - name: Build and push image
-        # `--pull` forces a fresh pull of the python base image instead of reusing a
-        # cached layer, so its security patches actually reach production. Tag both
-        # the immutable :<sha> (rollback handle) and the moving :latest.
+      # `--pull` takes a fresh python base image, so its security patches reach production.
+      - name: Build the image
+        run: docker build --pull --tag evlampiy_notes:ci .
+
+      # The OS packages: the Python pins are scripts/audit_deps.py's, in the checks above. Trivy
+      # runs from its own image, pinned by digest, and reads a saved copy of ours: no Docker
+      # socket, no registry login and no secret reach it.
+      - name: Scan the image
         run: |
-          docker build --pull \
-            -t "$EVLAMPIY_IMAGE:$IMAGE_TAG" \
-            -t "$EVLAMPIY_IMAGE:latest" \
-            .
-          docker push "$EVLAMPIY_IMAGE:$IMAGE_TAG"
-          docker push "$EVLAMPIY_IMAGE:latest"
+          docker save evlampiy_notes:ci --output image.tar
+          docker run --rm --volume "$PWD/image.tar:/image.tar:ro" \
+            ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
+            image --input /image.tar --scanners vuln --pkg-types os \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
 
-      - name: Deploy on server
+      - name: Push the release image
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          echo "$SSH_PRIVATE_KEY" | base64 --decode > private_key
-          chmod 600 private_key
+          echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag evlampiy_notes:ci "$IMAGE:$GITHUB_REF_NAME"
+          docker tag evlampiy_notes:ci "$IMAGE:latest"
+          docker push --all-tags "$IMAGE"
 
-          # ServerAlive* keepalives: `docker compose up -d` blocks with no stdout while
-          # it waits for the mongodb healthcheck, and that idle window let a firewall
-          # between the runner and the server reap the TCP connection (Broken pipe,
-          # exit 255). Probing every 30s keeps the session alive.
-          SSH_OPTS="-i private_key -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=30 -o ServerAliveCountMax=10"
-          REMOTE="$SERVER_USER@$SERVER_IP"
+  deploy:
+    needs: image
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    # deploy.sh waits up to two minutes for /health, then watches the release hold for one.
+    timeout-minutes: 20
+    environment: production
+    # One release at a time on the server: a second tag waits for the first to finish.
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      # The server pulls the image with this run's token, which dies with the run.
+      packages: read
+    env:
+      SERVER: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}
+      DEPLOY_DIR: ${{ secrets.DEPLOY_DIR || 'evlampiy' }}
 
-          ssh $SSH_OPTS $REMOTE "mkdir -p ~/$DEPLOY_DIR"
-          scp $SSH_OPTS docker-compose.yml $REMOTE:~/$DEPLOY_DIR/docker-compose.yml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-          # Log the server into GHCR with the same ephemeral GITHUB_TOKEN, piped over
-          # stdin (never on the command line / process list). Valid only for this run —
-          # enough to pull the image just pushed; we log out after.
-          echo "$GHCR_TOKEN" | ssh $SSH_OPTS $REMOTE \
-            "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+      # Only the key in SSH_KNOWN_HOSTS is trusted. A fresh runner knows no host, so accepting
+      # whatever key answers would hand the session, and the registry token, to whoever answers.
+      - name: Set up SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$SSH_KNOWN_HOSTS" ]; then
+            echo "::error::the SSH_KNOWN_HOSTS secret is empty: docs/DEPLOY.md says how to fill it"
+            exit 1
+          fi
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s' "$SSH_PRIVATE_KEY" | base64 --decode > ~/.ssh/deploy_key
+          # ServerAlive: the deploy waits minutes in silence, and an idle connection was once
+          # reaped by a firewall on the way (Broken pipe, exit 255).
+          printf '%s\n' 'Host *' '  IdentityFile ~/.ssh/deploy_key' '  IdentitiesOnly yes' \
+            '  StrictHostKeyChecking yes' '  ServerAliveInterval 30' '  ServerAliveCountMax 10' > ~/.ssh/config
 
-          # DEPLOY_DIR + image coordinates are passed into the remote shell so the
-          # heredoc can stay quoted (verbatim) — that keeps `$(seq ...)` and friends
-          # from being expanded on the runner.
-          ssh $SSH_OPTS $REMOTE \
-            "DEPLOY_DIR='$DEPLOY_DIR' EVLAMPIY_IMAGE='$EVLAMPIY_IMAGE' IMAGE_TAG='$IMAGE_TAG' bash -lse" <<'REMOTE_SCRIPT'
-            set -euo pipefail
-            cd ~/$DEPLOY_DIR
+      # deploy/deploy.sh dumps the database, rolls the release out, watches it hold and puts the
+      # release before it back if it does not. The server gets this release's scripts and
+      # compose file; its .env stays the server's own.
+      - name: Deploy
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ssh "$SERVER" "mkdir -p $DEPLOY_DIR/deploy $DEPLOY_DIR/incoming"
+          scp deploy/*.sh "$SERVER:$DEPLOY_DIR/deploy/"
+          scp docker-compose.yml "$SERVER:$DEPLOY_DIR/incoming/docker-compose.yml"
+          # Through stdin: the token never shows on a command line or in the process list.
+          echo "$GHCR_TOKEN" | ssh "$SERVER" "docker login ghcr.io --username $GITHUB_ACTOR --password-stdin"
+          status=0
+          ssh "$SERVER" "cd $DEPLOY_DIR && bash deploy/deploy.sh $IMAGE $GITHUB_REF_NAME" || status=$?
+          ssh "$SERVER" "docker logout ghcr.io" || true
+          exit "$status"
 
-            # Pin this release in .env so Compose resolves the exact :<sha> image.
-            set_env() {
-              local key="$1" val="$2"
-              if grep -q "^$key=" .env 2>/dev/null; then
-                sed -i "s|^$key=.*|$key=$val|" .env
-              else
-                echo "$key=$val" >> .env
-              fi
-            }
-            set_env EVLAMPIY_IMAGE "$EVLAMPIY_IMAGE"
-            set_env IMAGE_TAG "$IMAGE_TAG"
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
 
-            # Hard prerequisite: set -e aborts the deploy if the pull fails, leaving the
-            # running bot untouched.
-            docker compose pull
+  # After the deploy: a release page says this version runs, so a deploy that failed publishes none.
+  release:
+    needs: deploy
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
 
-            # No `docker compose down` — only the bot's image changed, so Compose
-            # recreates just that container and MongoDB keeps running.
-            docker compose up -d --remove-orphans
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-            # Drop the now-expired GHCR credential from the server's docker config.
-            docker logout ghcr.io || true
-
-            # Dangling images only. NEVER `docker volume prune` here, and never touch
-            # ./mongo_data — that bind mount IS the database.
-            docker image prune -f
-
-            # `docker image prune -f` only drops dangling images, but every release stays
-            # tagged :<sha> (~1GB each), so superseded ones pile up and fill the disk.
-            # Remove every evlampiy image except the one the new container actually runs —
-            # scoped to $EVLAMPIY_IMAGE, so mongo and other projects on the same daemon are
-            # left alone. The `-n "$keep"` guard is critical: an empty keep would match
-            # nothing to exclude and delete the running image too.
-            keep="$(docker compose ps -q evlampiy_notes | xargs -r docker inspect -f '{{.Image}}' 2>/dev/null || true)"
-            if [ -n "$keep" ]; then
-              docker images --no-trunc --format '{{.ID}}' "$EVLAMPIY_IMAGE" \
-                | sort -u | grep -v "^${keep}$" \
-                | xargs -r docker rmi -f 2>/dev/null || true
-            fi
-
-            # Smoke check — fail loudly if /health doesn't answer within 30s, so a
-            # broken release surfaces in CI instead of leaving the bot silently down.
-            # This script is piped to `bash -lse` over ssh stdin, so NEVER `exit` from
-            # the middle of it: exiting before the heredoc is fully read leaves ssh
-            # unable to finish writing stdin and it reports failure even though the
-            # deploy worked. Use a flag + a trailing if/else so bash always drains
-            # stdin — success ends naturally (0), failure exits 1 with stdin at EOF.
-            healthy=0
-            for _ in $(seq 1 15); do
-              if curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
-                healthy=1
-                break
-              fi
-              sleep 2
-            done
-            if [ "$healthy" -eq 1 ]; then
-              echo "OK: /health is up"
-            else
-              echo "FAIL: /health did not respond in 30s — last 60 log lines:"
-              docker compose logs --tail=60
-              exit 1
-            fi
-          REMOTE_SCRIPT
-
-          shred -u private_key || rm -f private_key
+      # The notes are the tag's CHANGELOG section, the one release.sh printed before pushing it.
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/release_from_tag.py "$GITHUB_REF_NAME" --notes-file release-notes.md
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag
