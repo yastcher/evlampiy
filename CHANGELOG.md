@@ -10,6 +10,7 @@
 - Hypothesis fuzzes the WhatsApp webhook: unsigned and forged updates never reach the handlers
 - SAST: Semgrep in the gate and CI, CodeQL in CI with its findings in the Security tab
 - The gate and CI audit every pin of `uv.lock` for known vulnerabilities (pip-audit)
+- `scripts/pre_release_qa.sh` runs the slow checks before a release, the gate and a CRAP limit for now; `release.sh` tags only a tree it passed
 
 ### Changed
 

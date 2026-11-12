@@ -223,6 +223,28 @@ def test_release_refuses_history_origin_does_not_have(release_repo):
     assert git(origin, "tag") == ""
 
 
+def test_release_refuses_a_tree_the_pre_release_run_did_not_pass(release_repo):
+    work, origin, run = release_repo
+    (work / ".git" / "pre_release_qa.ok").write_text("a tree of an older run\n")
+
+    result = run("patch")
+
+    assert result.returncode == 1
+    assert "no green pre-release run for this tree" in result.stderr
+    assert git(origin, "tag") == ""
+
+
+def test_a_hotfix_may_skip_the_pre_release_run_and_says_so(release_repo):
+    work, origin, run = release_repo
+    (work / ".git" / "pre_release_qa.ok").unlink()
+
+    result = run("patch", SKIP_PRERELEASE_QA="1")
+
+    assert result.returncode == 0, result.stderr
+    assert "SKIP_PRERELEASE_QA=1: releasing without the pre-release run" in result.stderr
+    assert git(origin, "tag").strip() == "v1.2.4"
+
+
 def test_release_refuses_an_existing_tag(release_repo):
     work, _, run = release_repo
     git(work, "tag", "v1.2.4")

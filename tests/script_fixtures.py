@@ -77,7 +77,8 @@ def release_tree(tmp_path):
 @pytest.fixture
 def release_repo(tmp_path, release_tree):
     """`release_tree` as a git repository on main, pushed to a bare origin, with the real
-    release scripts in it. Returns (work tree, origin, run) where run(*args) runs release.sh."""
+    release scripts in it and a pre-release stamp for its tree. Returns (work tree, origin,
+    run) where run(*args, **env) runs release.sh."""
     origin = tmp_path / "origin.git"
     git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
     scripts = release_tree / "scripts"
@@ -89,12 +90,13 @@ def release_repo(tmp_path, release_tree):
     git(release_tree, "commit", "-q", "-m", "init")
     git(release_tree, "remote", "add", "origin", str(origin))
     git(release_tree, "push", "-q", "-u", "origin", "main")
+    (release_tree / ".git" / "pre_release_qa.ok").write_text(git(release_tree, "rev-parse", "HEAD^{tree}"))
 
-    def run(*args: str) -> subprocess.CompletedProcess[str]:
+    def run(*args: str, **env: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [scripts / "release.sh", *args],
             cwd=release_tree,
-            env=os.environ | _GIT_ENV,
+            env=os.environ | _GIT_ENV | env,
             capture_output=True,
             text=True,
             check=False,
@@ -145,3 +147,49 @@ def run_gate(tmp_path):
         return result, commands
 
     return run
+
+
+@pytest.fixture
+def run_qa(tmp_path):
+    """Run a copy of the real scripts/pre_release_qa.sh in a committed git tree, its stages stubbed.
+
+    scripts/gate.sh is a stub in that tree and `uv` one on PATH: each logs what it was asked
+    and fails when that equals `fail`. Returns (tree, run): run(fail="") gives back the
+    finished process, the commands the stages ran, and the stamp's text (None when absent).
+    """
+    tree = tmp_path / "tree"
+    scripts = tree / "scripts"
+    scripts.mkdir(parents=True)
+    shutil.copy2(REPO_ROOT / "scripts" / "pre_release_qa.sh", scripts / "pre_release_qa.sh")
+    stub = (
+        "#!/usr/bin/env bash\n"
+        'printf "%s %s\\n" "${0##*/}" "$*" >> "$QA_LOG"\n'
+        'if [ "${0##*/} $*" = "$QA_FAIL" ]; then exit 1; fi\n'
+    )
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for path in (scripts / "gate.sh", stubs / "uv"):
+        path.write_text(stub)
+        path.chmod(0o755)
+    git(tree, "init", "-q", "-b", "main")
+    git(tree, "add", "-A")
+    git(tree, "commit", "-q", "-m", "init")
+    log = tmp_path / "commands.log"
+    stamp = tree / ".git" / "pre_release_qa.ok"
+
+    def run(fail: str = "") -> tuple[subprocess.CompletedProcess[str], list[str], str | None]:
+        log.unlink(missing_ok=True)
+        env = {"PATH": f"{stubs}:{os.environ['PATH']}", "QA_LOG": str(log), "QA_FAIL": fail}
+        result = subprocess.run(
+            [scripts / "pre_release_qa.sh"],
+            cwd=tree,
+            env=os.environ | _GIT_ENV | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        commands = [line.rstrip() for line in log.read_text().splitlines()] if log.exists() else []
+        return result, commands, stamp.read_text().strip() if stamp.exists() else None
+
+    return tree, run

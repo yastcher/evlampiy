@@ -44,6 +44,17 @@ if ! git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
   exit 1
 fi
 
+# Only a tree `scripts/pre_release_qa.sh` passed may be tagged: its stamp holds the tree
+# hash, so a squash onto the same tree keeps it. SKIP_PRERELEASE_QA=1 is for a hotfix that
+# cannot wait for the run; the tag still has CI's checks behind it.
+stamp="$(git rev-parse --path-format=absolute --git-path pre_release_qa.ok)"
+if [ "${SKIP_PRERELEASE_QA:-}" = 1 ]; then
+  echo "SKIP_PRERELEASE_QA=1: releasing without the pre-release run" >&2
+elif [ "$(cat "$stamp" 2>/dev/null)" != "$(git rev-parse 'HEAD^{tree}')" ]; then
+  echo "no green pre-release run for this tree: run scripts/pre_release_qa.sh first" >&2
+  exit 1
+fi
+
 # Everything is validated before anything is written; this also refuses an empty [Unreleased].
 version="$(python3 scripts/prepare_release.py "$part" --check)"
 tag="v$version"
