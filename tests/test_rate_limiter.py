@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src import const
-from src.ai_client import (
+from evlampiy import const
+from evlampiy.ai_client import (
     RateLimiter,
     classify_text,
 )
@@ -63,8 +63,8 @@ class TestRetryOn429:
         mock_ai_http.post.side_effect = [rate_limited, ok_response]
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -83,8 +83,8 @@ class TestRetryOn429:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=429)
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -118,12 +118,12 @@ class TestFallbackOnExhausted:
         mock_ai_http.post.side_effect = fake_post
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
-            patch("src.ai_client.settings.groq_api_key", "groq-key"),
-            patch("src.ai_client.settings.openrouter_api_key", ""),
-            patch("src.ai_client.settings.deepseek_api_key", ""),
-            patch("src.ai_client.settings.qwen_api_key", ""),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "gemini-key"),
+            patch("evlampiy.ai_client.settings.groq_api_key", "groq-key"),
+            patch("evlampiy.ai_client.settings.openrouter_api_key", ""),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", ""),
+            patch("evlampiy.ai_client.settings.qwen_api_key", ""),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -138,10 +138,10 @@ class TestFallbackOnExhausted:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=429)
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
-            patch("src.ai_client.settings.groq_api_key", "groq-key"),
-            patch("src.ai_client.settings.openrouter_api_key", "openrouter-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "gemini-key"),
+            patch("evlampiy.ai_client.settings.groq_api_key", "groq-key"),
+            patch("evlampiy.ai_client.settings.openrouter_api_key", "openrouter-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -158,8 +158,8 @@ class TestGroqIntegration:
     async def test_groq_complete(self):
         """Groq LLM returns a valid response to classify prompt."""
         with (
-            patch("src.ai_client.settings.groq_api_key", os.getenv("GROQ_API_KEY", "")),
-            patch("src.ai_client.settings.categorization_provider", const.PROVIDER_GROQ),
+            patch("evlampiy.ai_client.settings.groq_api_key", os.getenv("GROQ_API_KEY", "")),
+            patch("evlampiy.ai_client.settings.categorization_provider", const.PROVIDER_GROQ),
         ):
             result = await classify_text("Say only the word: hello")
 
@@ -178,10 +178,10 @@ class TestOpenRouterIntegration:
         """OpenRouter returns a valid response to classify prompt."""
         with (
             patch(
-                "src.ai_client.settings.openrouter_api_key",
+                "evlampiy.ai_client.settings.openrouter_api_key",
                 os.getenv("OPENROUTER_API_KEY", ""),
             ),
-            patch("src.ai_client.settings.categorization_provider", const.PROVIDER_OPENROUTER),
+            patch("evlampiy.ai_client.settings.categorization_provider", const.PROVIDER_OPENROUTER),
         ):
             result = await classify_text("Say only the word: hello")
 

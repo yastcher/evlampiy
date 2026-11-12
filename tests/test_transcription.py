@@ -2,8 +2,8 @@ import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src import const
-from src.transcription.service import CHUNK_LENGTH_MS, transcribe_audio
+from evlampiy import const
+from evlampiy.transcription.service import CHUNK_LENGTH_MS, transcribe_audio
 
 
 class TestTranscribeAudio:
@@ -17,8 +17,8 @@ class TestTranscribeAudio:
         mock_wit.speech = MagicMock(return_value={"text": "Hello world"})
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
-            patch("src.transcription.service.voice_translators", {"en": mock_wit}),
+            patch("evlampiy.transcription.service.AudioSegment.from_file", return_value=seg),
+            patch("evlampiy.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             text, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
@@ -42,8 +42,8 @@ class TestTranscribeAudio:
         )
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
-            patch("src.transcription.service.voice_translators", {"en": mock_wit}),
+            patch("evlampiy.transcription.service.AudioSegment.from_file", return_value=seg),
+            patch("evlampiy.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             text, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
@@ -59,8 +59,8 @@ class TestTranscribeAudio:
         mock_wit.speech = MagicMock(return_value={})  # No 'text' key
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
-            patch("src.transcription.service.voice_translators", {"en": mock_wit}),
+            patch("evlampiy.transcription.service.AudioSegment.from_file", return_value=seg),
+            patch("evlampiy.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             text, _duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
@@ -77,9 +77,9 @@ class TestTranscribeAudio:
         mock_wit_en.speech = MagicMock(return_value={"text": "Hello world"})
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
+            patch("evlampiy.transcription.service.AudioSegment.from_file", return_value=seg),
             patch(
-                "src.transcription.service.voice_translators",
+                "evlampiy.transcription.service.voice_translators",
                 {"ru": mock_wit_ru, "en": mock_wit_en},
             ),
         ):
@@ -97,8 +97,8 @@ class TestTranscribeAudio:
         mock_wit.speech = MagicMock(return_value={"text": "Test"})
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
-            patch("src.transcription.service.voice_translators", {"en": mock_wit}),
+            patch("evlampiy.transcription.service.AudioSegment.from_file", return_value=seg),
+            patch("evlampiy.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             await transcribe_audio(b"audio_data", "ogg", "en")
 
@@ -113,8 +113,8 @@ class TestTranscribeAudio:
         mock_groq = AsyncMock(return_value="Groq result")
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
-            patch("src.transcription.service.transcribe_with_groq", mock_groq),
+            patch("evlampiy.transcription.service.AudioSegment.from_file", return_value=seg),
+            patch("evlampiy.transcription.service.transcribe_with_groq", mock_groq),
         ):
             text, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en", provider=const.PROVIDER_GROQ)
 
@@ -130,8 +130,8 @@ class TestTranscribeAudio:
         mock_wit.speech = MagicMock(return_value={"text": "Test"})
 
         with (
-            patch("src.transcription.service.AudioSegment.from_file", return_value=seg),
-            patch("src.transcription.service.voice_translators", {"en": mock_wit}),
+            patch("evlampiy.transcription.service.AudioSegment.from_file", return_value=seg),
+            patch("evlampiy.transcription.service.voice_translators", {"en": mock_wit}),
         ):
             _, duration, _ = await transcribe_audio(b"audio_data", "ogg", "en")
 
@@ -171,10 +171,10 @@ class TestTranscribeAudioConcurrency:
         try:
             with (
                 patch(
-                    "src.transcription.service.get_audio_duration_seconds",
+                    "evlampiy.transcription.service.get_audio_duration_seconds",
                     blocking_duration,
                 ),
-                patch("src.transcription.service._transcribe_with_wit", blocking_wit),
+                patch("evlampiy.transcription.service._transcribe_with_wit", blocking_wit),
             ):
                 await asyncio.sleep(0)  # let the ticker reach its first await
                 text, duration, wit_requests = await transcribe_audio(b"audio", "ogg", "en")

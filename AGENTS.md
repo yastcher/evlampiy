@@ -23,16 +23,16 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
   docker-compose.yml, docs/, etc.).
 - 152-ФЗ: голосовые сообщения и текст пользователя содержат ФИО, телефоны, email. Перед LLM cleanup / категоризацией
   (DeepSeek / Groq / Gemini / OpenRouter / Anthropic) — маска `<PHONE_N>`/`<EMAIL_N>`/`<NAME_N>`. Применяется в едином
-  месте на границе LLM-клиента (модуль `src/ai/_mask.py`), а не в каждом провайдере. Map хранится в памяти,
+  месте на границе LLM-клиента (модуль `evlampiy/ai/_mask.py`), а не в каждом провайдере. Map хранится в памяти,
   размаскирование — перед записью в БД / отправкой обратно в чат.
 - Vocabulary.json (per-category keyword list) — НЕ хранить туда токены маски: keyword должен быть осмысленным словом, не
   `<NAME_1>`. Маскировать только outgoing payload, не учёт.
 
 ## Architecture
 
-- DDD: modular by domain in src/, each module: router.py, schemas.py, models.py, service.py, dependencies.py,
+- DDD: modular by domain in evlampiy/, each module: router.py, schemas.py, models.py, service.py, dependencies.py,
   exceptions.py
-- Constants: src/const.py, import as `from src import const`, use as `const.PROVIDER_GROQ`
+- Constants: evlampiy/const.py, import as `from evlampiy import const`, use as `const.PROVIDER_GROQ`
 - Stdlib imports: `import datetime`, `import typing` — import the module, not names from it. Use `datetime.datetime`,
   `datetime.UTC`, `typing.Optional`, etc. Never use `from datetime import datetime, UTC, timezone` — always go through
   the module. Prefer `datetime.UTC` over `datetime.timezone.utc` (Python 3.11+, enforced by ruff UP017).
@@ -44,7 +44,7 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 
 ## Type hints
 
-- Domain identifiers: use TypeAlias from `src/types.py` (UserId, ChatId, Language, MonthKey) instead of bare `str`
+- Domain identifiers: use TypeAlias from `evlampiy/types.py` (UserId, ChatId, Language, MonthKey) instead of bare `str`
 - Input parameters: prefer `Sequence[X]` over `list[X]` if the function does not mutate the list
 - Return types: use concrete types (`list`, `dict`), not abstract
 - Import Sequence/Mapping from `collections.abc`, not from `typing`
@@ -53,7 +53,7 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 
 - Lint: `uv run ruff check --fix`
 - Format: `uv run ruff format`
-- Typecheck: `uv run ty check src`
+- Typecheck: `uv run ty check evlampiy`
 - Test: `uv run pytest`
 - Coverage must be >= 85%
 - Changelog entry: `scripts/changelog_add.py <Added|Changed|Fixed|Removed|Docs> "- text"` (`--top` puts a user-facing entry above infrastructure ones)

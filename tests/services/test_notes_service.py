@@ -1,15 +1,15 @@
-"""Tests for src.services.notes_service."""
+"""Tests for evlampiy.services.notes_service."""
 
 from unittest.mock import AsyncMock, patch
 
-from src.mongo import (
+from evlampiy.mongo import (
     get_auto_categorize,
     get_save_to_obsidian,
     set_auto_categorize,
     set_github_settings,
     set_save_to_obsidian,
 )
-from src.services.notes_service import (
+from evlampiy.services.notes_service import (
     categorize_all_for_chat,
     toggle_auto_categorize,
     toggle_save_to_obsidian,
@@ -54,7 +54,7 @@ class TestCategorizeAllForChat:
         chat_id = "u_notes_6"
         await set_github_settings(chat_id, "owner", "repo", "tok")
         with patch(
-            "src.services.notes_service.categorize_all_inbox",
+            "evlampiy.services.notes_service.categorize_all_inbox",
             AsyncMock(return_value=7),
         ) as mock_cat:
             has_repo, count = await categorize_all_for_chat(chat_id)

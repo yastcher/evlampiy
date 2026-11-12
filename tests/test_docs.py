@@ -5,7 +5,7 @@ import re
 
 _ROOT = pathlib.Path(__file__).resolve().parents[1]
 _DOCS = _ROOT / "docs"
-_SRC = _ROOT / "src"
+_SRC = _ROOT / "evlampiy"
 
 # All markdown files that contain internal links
 _DOC_FILES = [
@@ -57,18 +57,18 @@ class TestDocLinks:
 
 
 class TestArchitectureFreshness:
-    """ARCHITECTURE.md directory tree matches actual src/ structure."""
+    """ARCHITECTURE.md directory tree matches actual evlampiy/ structure."""
 
     @staticmethod
     def _parse_tree_files(text: str) -> set[str]:
         """Extract relative file paths from the directory tree block."""
         # Match lines like: │   ├── handlers.py or ├── ai_client.py
-        # within the src/ tree block. Supports arbitrary nesting depth.
+        # within the evlampiy/ tree block. Supports arbitrary nesting depth.
         in_src_block = False
         files: list[str] = []
         prefix_by_depth: dict[int, str] = {}
         for line in text.splitlines():
-            if "src/" in line and "```" not in line and in_src_block is False:
+            if line.strip() == "evlampiy/" and in_src_block is False:
                 in_src_block = True
                 continue
             if in_src_block and line.strip().startswith("```"):
@@ -92,23 +92,23 @@ class TestArchitectureFreshness:
         return set(files)
 
     def test_tree_files_exist_in_src(self):
-        """Every file listed in ARCHITECTURE.md tree exists in src/."""
+        """Every file listed in ARCHITECTURE.md tree exists in evlampiy/."""
         arch = (_DOCS / "ARCHITECTURE.md").read_text()
         tree_files = self._parse_tree_files(arch)
         assert tree_files, "Failed to parse any files from ARCHITECTURE.md tree"
         missing = []
         for rel in tree_files:
             if not (_SRC / rel).exists():
-                missing.append(f"src/{rel}")
+                missing.append(f"evlampiy/{rel}")
         assert not missing, "Files in ARCHITECTURE.md tree not found on disk:\n" + "\n".join(
             f"  {m}" for m in sorted(missing)
         )
 
     def test_src_python_files_in_tree(self):
-        """Every .py file in src/ is listed in the ARCHITECTURE.md tree."""
+        """Every .py file in evlampiy/ is listed in the ARCHITECTURE.md tree."""
         arch = (_DOCS / "ARCHITECTURE.md").read_text()
         tree_files = self._parse_tree_files(arch)
-        # Collect all .py files in src/ (excluding __pycache__, __init__.py)
+        # Collect all .py files in evlampiy/ (excluding __pycache__, __init__.py)
         actual_files = set()
         for py in _SRC.rglob("*.py"):
             if "__pycache__" in str(py):
@@ -119,8 +119,8 @@ class TestArchitectureFreshness:
             actual_files.add(rel)
         undocumented = actual_files - tree_files
         assert not undocumented, (
-            "Python files in src/ not listed in ARCHITECTURE.md tree:\n"
-            + "\n".join(f"  src/{f}" for f in sorted(undocumented))
+            "Python files in evlampiy/ not listed in ARCHITECTURE.md tree:\n"
+            + "\n".join(f"  evlampiy/{f}" for f in sorted(undocumented))
         )
 
 

@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 
-from src.config import settings
-from src.wit_tracking import (
+from evlampiy.config import settings
+from evlampiy.wit_tracking import (
     get_all_wit_usage_this_month,
     get_wit_usage_this_month,
     increment_wit_usage,
@@ -57,7 +57,7 @@ class TestWitUsagePipeline:
         assert await get_wit_usage_this_month("ru") == 10
 
         # 2. In a future month: usage is zero (new month key, no record yet)
-        with patch("src.wit_tracking.current_month_key", return_value="2099-12"):
+        with patch("evlampiy.wit_tracking.current_month_key", return_value="2099-12"):
             assert await get_wit_usage_this_month("ru") == 0
 
             # 3. New month accumulates independently from current month

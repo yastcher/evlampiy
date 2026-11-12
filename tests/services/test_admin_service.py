@@ -1,10 +1,10 @@
-"""Pure-logic tests for src.services.admin_service.
+"""Pure-logic tests for evlampiy.services.admin_service.
 
 Mongo-backed operations (assign_role / revoke_role / block_user / unblock_user /
 change_credits) are exercised through the existing handler tests in `tests/test_admin.py`.
 """
 
-from src.services.admin_service import parse_credits_amount, parse_user_id
+from evlampiy.services.admin_service import parse_credits_amount, parse_user_id
 
 
 class TestParseUserId:

@@ -7,6 +7,7 @@
 
 - Releases are cut from `main` by `scripts/release.sh patch|minor|major` and ship as `vX.Y.Z` tags
 - CHANGELOG entries go under `[Unreleased]` via `scripts/changelog_add.py`; the release picks the version
+- The package is `evlampiy` instead of `src`: run `python -m evlampiy.main`
 
 ### Fixed
 

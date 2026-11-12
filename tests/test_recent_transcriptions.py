@@ -1,6 +1,6 @@
 """TROPHY-style pipeline tests for recent transcription context storage."""
 
-from src.mongo import get_recent_transcriptions, save_recent_transcription
+from evlampiy.mongo import get_recent_transcriptions, save_recent_transcription
 
 
 class TestRecentTranscriptionPipeline:

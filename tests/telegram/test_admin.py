@@ -2,10 +2,10 @@
 
 from unittest.mock import patch
 
-from src import const
-from src.alerts import check_and_send_alerts
-from src.config import settings
-from src.credits import (
+from evlampiy import const
+from evlampiy.alerts import check_and_send_alerts
+from evlampiy.config import settings
+from evlampiy.credits import (
     add_credits,
     admin_add_credits,
     current_month_key,
@@ -22,10 +22,10 @@ from src.credits import (
     is_vip_user,
     record_groq_usage,
 )
-from src.dto import AlertState, MonthlyStats, UserCredits, UserTier, WitUsageStats
-from src.mongo import add_user_role, get_bot_config, get_users_by_role, remove_user_role
-from src.telegram.handlers.account import mystats_command
-from src.telegram.handlers.admin import (
+from evlampiy.dto import AlertState, MonthlyStats, UserCredits, UserTier, WitUsageStats
+from evlampiy.mongo import add_user_role, get_bot_config, get_users_by_role, remove_user_role
+from evlampiy.telegram.handlers.account import mystats_command
+from evlampiy.telegram.handlers.admin import (
     _build_providers_panel,
     add_credits_command,
     add_tester_command,
@@ -37,7 +37,7 @@ from src.telegram.handlers.admin import (
     remove_vip_command,
     unblock_command,
 )
-from src.telegram.handlers.common import stats_command
+from evlampiy.telegram.handlers.common import stats_command
 
 
 class TestAdminRole:

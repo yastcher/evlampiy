@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import httpx
 
-from src.github_api import (
+from evlampiy.github_api import (
     MAX_RETRIES,
     GitHubRepo,
     delete_github_file,
@@ -26,7 +26,7 @@ class TestGetOrCreateObsidianRepo:
         repo_response = mock_httpx_response_factory(status_code=200)
         gitkeep_response = mock_httpx_response_factory(status_code=201)
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.side_effect = [user_response, repo_response]
             mock_client.put.return_value = gitkeep_response
@@ -49,7 +49,7 @@ class TestGetOrCreateObsidianRepo:
         create_response = mock_httpx_response_factory(status_code=201)
         gitkeep_response = mock_httpx_response_factory(status_code=201)
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.side_effect = [user_response, not_found_response]
             mock_client.post.return_value = create_response
@@ -69,7 +69,7 @@ class TestGetOrCreateObsidianRepo:
         """Returns None when GitHub token is invalid."""
         user_response = mock_httpx_response_factory({"message": "Bad credentials"}, 401)
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = user_response
 
@@ -84,7 +84,7 @@ class TestGetOrCreateObsidianRepo:
         user_response = mock_httpx_response_factory({"login": "testuser"}, 200)
         error_response = mock_httpx_response_factory(status_code=500)
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.side_effect = [user_response, error_response]
 
@@ -98,7 +98,7 @@ class TestGetOrCreateObsidianRepo:
         not_found_response = mock_httpx_response_factory(status_code=404)
         create_fail_response = mock_httpx_response_factory(status_code=422)
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.side_effect = [user_response, not_found_response]
             mock_client.post.return_value = create_fail_response
@@ -115,7 +115,7 @@ class TestListUserRepos:
         """Returns repo names in the order GitHub provides them."""
         repos = [{"name": "alpha"}, {"name": "beta"}, {"name": "gamma"}]
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(repos, 200)
 
@@ -125,7 +125,7 @@ class TestListUserRepos:
 
     async def test_returns_empty_on_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns an empty list when the API call fails."""
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(status_code=401)
 
@@ -139,7 +139,7 @@ class TestPutGithubFile:
 
     async def test_creates_file_successfully(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """File is created in GitHub repo."""
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.put.return_value = mock_httpx_response_factory(status_code=201)
 
@@ -152,7 +152,7 @@ class TestPutGithubFile:
     async def test_returns_false_on_auth_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns False on 401 without retry."""
         bad_repo = GitHubRepo(token="bad_token", owner="testuser", repo="testrepo")
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.put.return_value = mock_httpx_response_factory(status_code=401)
 
@@ -168,7 +168,7 @@ class TestPutGithubFile:
         encoded_content = base64.b64encode(b"existing content").decode()
         file_response = mock_httpx_response_factory({"content": encoded_content, "sha": "existing-sha123"}, 200)
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.put.side_effect = [
                 mock_httpx_response_factory(status_code=422),
@@ -192,7 +192,7 @@ class TestPutGithubFile:
         self, mock_httpx_response_factory, mock_httpx_client_factory
     ):
         """Returns False when 422 occurs but SHA fetch also fails."""
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.put.return_value = mock_httpx_response_factory(status_code=422)
             mock_client.get.return_value = mock_httpx_response_factory(status_code=404)
@@ -206,8 +206,8 @@ class TestPutGithubFile:
     async def test_returns_false_on_network_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns False after all retries exhausted due to network errors."""
         with (
-            patch("src.github_api.httpx.AsyncClient") as mock_client_cls,
-            patch("src.github_api.asyncio.sleep"),
+            patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls,
+            patch("evlampiy.github_api.asyncio.sleep"),
         ):
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.put.side_effect = httpx.HTTPError("connection refused")
@@ -230,7 +230,7 @@ class TestGetRepoContents:
             {"name": "README.md", "type": "file"},
         ]
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(contents, 200)
 
@@ -243,7 +243,7 @@ class TestGetRepoContents:
         """Returns single item wrapped in list."""
         single_file = {"name": "README.md", "type": "file"}
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(single_file, 200)
 
@@ -253,7 +253,7 @@ class TestGetRepoContents:
 
     async def test_returns_empty_list_on_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns empty list on error."""
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(status_code=404)
 
@@ -271,7 +271,7 @@ class TestGetGithubFile:
         encoded = base64.b64encode(content.encode()).decode()
         response_data = {"content": encoded, "sha": "abc123"}
 
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(response_data, 200)
 
@@ -283,7 +283,7 @@ class TestGetGithubFile:
 
     async def test_returns_none_on_not_found(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns None when file not found."""
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.get.return_value = mock_httpx_response_factory(status_code=404)
 
@@ -297,7 +297,7 @@ class TestDeleteGithubFile:
 
     async def test_deletes_file_successfully(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns True on successful delete."""
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.request.return_value = mock_httpx_response_factory(status_code=200)
 
@@ -307,7 +307,7 @@ class TestDeleteGithubFile:
 
     async def test_returns_false_on_error(self, mock_httpx_response_factory, mock_httpx_client_factory):
         """Returns False on error."""
-        with patch("src.github_api.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.request.return_value = mock_httpx_response_factory(status_code=404)
 

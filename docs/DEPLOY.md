@@ -61,7 +61,7 @@ GEMINI_API_KEY=your_gemini_api_key
 ### Local Run
 
 ```bash
-uv run python -m src.main
+uv run python -m evlampiy.main
 ```
 
 ### Docker
@@ -192,7 +192,7 @@ uv run ruff check
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=src --cov-fail-under=85
+uv run pytest --cov=evlampiy --cov-fail-under=85
 ```
 
 ### Logs
@@ -264,7 +264,7 @@ GEMINI_API_KEY=ваш_gemini_api_ключ
 ### Локальный запуск
 
 ```bash
-uv run python -m src.main
+uv run python -m evlampiy.main
 ```
 
 ### Docker
@@ -391,7 +391,7 @@ uv run ruff check
 uv run pytest
 
 # Запуск с покрытием
-uv run pytest --cov=src --cov-fail-under=85
+uv run pytest --cov=evlampiy --cov-fail-under=85
 ```
 
 ### Логи

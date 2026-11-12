@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from src.credits import (
+from evlampiy.credits import (
     add_credits,
     can_perform_operation,
     deduct_credits,
@@ -10,7 +10,7 @@ from src.credits import (
     get_total_credits,
     get_user_tier,
 )
-from src.dto import UserCredits, UserTier
+from evlampiy.dto import UserCredits, UserTier
 
 
 class TestUserLifecycle:
@@ -71,7 +71,7 @@ class TestUserLifecycle:
         assert msg == "insufficient_credits"
 
         # 8. Month rollover resets free tokens
-        with patch("src.credits.current_month_key", return_value="2099-12"):
+        with patch("evlampiy.credits.current_month_key", return_value="2099-12"):
             free, purchased = await get_credits(user_id)
             assert free == 10  # reset
             assert purchased == 0  # still 0

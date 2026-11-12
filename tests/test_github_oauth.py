@@ -1,6 +1,6 @@
 from unittest.mock import AsyncMock, patch
 
-from src.github_oauth import get_github_device_code, poll_github_for_token
+from evlampiy.github_oauth import get_github_device_code, poll_github_for_token
 
 
 class TestGetGithubDeviceCode:
@@ -18,7 +18,7 @@ class TestGetGithubDeviceCode:
             "interval": 5,
         }
 
-        with patch("src.github_oauth.httpx.AsyncClient") as mock_client_cls:
+        with patch("evlampiy.github_oauth.httpx.AsyncClient") as mock_client_cls:
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.post.return_value = mock_httpx_response_factory(expected)
 
@@ -35,8 +35,8 @@ class TestPollGithubForToken:
     ):
         """Token returned after successful authorization."""
         with (
-            patch("src.github_oauth.httpx.AsyncClient") as mock_client_cls,
-            patch("src.github_oauth.asyncio.sleep", new_callable=AsyncMock),
+            patch("evlampiy.github_oauth.httpx.AsyncClient") as mock_client_cls,
+            patch("evlampiy.github_oauth.asyncio.sleep", new_callable=AsyncMock),
         ):
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.post.return_value = mock_httpx_response_factory(
@@ -52,8 +52,8 @@ class TestPollGithubForToken:
     ):
         """None returned when token expires."""
         with (
-            patch("src.github_oauth.httpx.AsyncClient") as mock_client_cls,
-            patch("src.github_oauth.asyncio.sleep", new_callable=AsyncMock),
+            patch("evlampiy.github_oauth.httpx.AsyncClient") as mock_client_cls,
+            patch("evlampiy.github_oauth.asyncio.sleep", new_callable=AsyncMock),
         ):
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.post.return_value = mock_httpx_response_factory({"error": "expired_token"})
@@ -67,8 +67,8 @@ class TestPollGithubForToken:
     ):
         """None returned when access is denied."""
         with (
-            patch("src.github_oauth.httpx.AsyncClient") as mock_client_cls,
-            patch("src.github_oauth.asyncio.sleep", new_callable=AsyncMock),
+            patch("evlampiy.github_oauth.httpx.AsyncClient") as mock_client_cls,
+            patch("evlampiy.github_oauth.asyncio.sleep", new_callable=AsyncMock),
         ):
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.post.return_value = mock_httpx_response_factory({"error": "access_denied"})
@@ -85,8 +85,8 @@ class TestPollGithubForToken:
         success_response = mock_httpx_response_factory({"access_token": "ghp_final"})
 
         with (
-            patch("src.github_oauth.httpx.AsyncClient") as mock_client_cls,
-            patch("src.github_oauth.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            patch("evlampiy.github_oauth.httpx.AsyncClient") as mock_client_cls,
+            patch("evlampiy.github_oauth.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
         ):
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.post.side_effect = [pending_response, success_response]
@@ -103,8 +103,8 @@ class TestPollGithubForToken:
         pending_response = mock_httpx_response_factory({"error": "authorization_pending"})
 
         with (
-            patch("src.github_oauth.httpx.AsyncClient") as mock_client_cls,
-            patch("src.github_oauth.asyncio.sleep", new_callable=AsyncMock),
+            patch("evlampiy.github_oauth.httpx.AsyncClient") as mock_client_cls,
+            patch("evlampiy.github_oauth.asyncio.sleep", new_callable=AsyncMock),
         ):
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.post.return_value = pending_response

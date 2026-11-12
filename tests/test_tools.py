@@ -3,14 +3,14 @@
 import json
 from unittest.mock import AsyncMock, patch
 
-from src.mongo import (
+from evlampiy.mongo import (
     save_recent_transcription,
     set_auto_categorize,
     set_auto_cleanup,
     set_chat_language,
     set_save_to_obsidian,
 )
-from src.tools import ToolDef, get_tools
+from evlampiy.tools import ToolDef, get_tools
 
 CHAT_ID = "u_12345"
 
@@ -132,8 +132,8 @@ class TestGetCategoriesTool:
         categories = ["work", "personal", "ideas"]
 
         with (
-            patch("src.tools.get_github_settings", return_value=mock_repo),
-            patch("src.tools.get_existing_categories", return_value=categories),
+            patch("evlampiy.tools.get_github_settings", return_value=mock_repo),
+            patch("evlampiy.tools.get_existing_categories", return_value=categories),
         ):
             tools = get_tools(CHAT_ID)
             tool = next(t for t in tools if t.name == "get_categories")
@@ -146,8 +146,8 @@ class TestGetCategoriesTool:
         mock_repo = AsyncMock()
 
         with (
-            patch("src.tools.get_github_settings", return_value=mock_repo),
-            patch("src.tools.get_existing_categories", side_effect=Exception("API error")),
+            patch("evlampiy.tools.get_github_settings", return_value=mock_repo),
+            patch("evlampiy.tools.get_existing_categories", side_effect=Exception("API error")),
         ):
             tools = get_tools(CHAT_ID)
             tool = next(t for t in tools if t.name == "get_categories")

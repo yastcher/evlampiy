@@ -76,7 +76,7 @@ cp .env.example .env
 # Bearbeite .env mit deinen Tokens
 
 # Starten
-uv run python -m src.main
+uv run python -m evlampiy.main
 ```
 
 ## Konfiguration
@@ -153,10 +153,10 @@ uv run pytest
 uv run ruff check
 
 # Typprüfung ausführen
-uv run ty check src
+uv run ty check evlampiy
 
 # Mit Coverage ausführen
-uv run pytest --cov=src --cov-fail-under=85
+uv run pytest --cov=evlampiy --cov-fail-under=85
 ```
 
 ## Dokumentation

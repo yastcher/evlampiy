@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from src import obsidian_layout
+from evlampiy import obsidian_layout
 
 
 def test_default_layout():

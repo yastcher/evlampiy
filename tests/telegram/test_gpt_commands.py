@@ -1,6 +1,6 @@
 from unittest.mock import AsyncMock, patch
 
-from src.gpt_commands import evlampiy_command
+from evlampiy.gpt_commands import evlampiy_command
 
 
 class TestEvlampiyCommand:
@@ -11,7 +11,7 @@ class TestEvlampiyCommand:
         mock_private_update.text = "Tell me a joke"
 
         with patch(
-            "src.gpt_commands.run_tool_conversation",
+            "evlampiy.gpt_commands.run_tool_conversation",
             AsyncMock(return_value="Why did the chicken..."),
         ):
             await evlampiy_command(mock_private_update, mock_context)
@@ -25,7 +25,7 @@ class TestEvlampiyCommand:
         mock_private_update.text = "Test"
 
         with patch(
-            "src.gpt_commands.run_tool_conversation",
+            "evlampiy.gpt_commands.run_tool_conversation",
             AsyncMock(side_effect=Exception("API Error")),
         ):
             await evlampiy_command(mock_private_update, mock_context)
@@ -39,7 +39,7 @@ class TestEvlampiyCommand:
         mock_private_update.text = "Test"
 
         with patch(
-            "src.gpt_commands.run_tool_conversation",
+            "evlampiy.gpt_commands.run_tool_conversation",
             AsyncMock(return_value=None),
         ):
             await evlampiy_command(mock_private_update, mock_context)
@@ -53,7 +53,7 @@ class TestEvlampiyCommand:
         mock_private_update.text = "What are my notes?"
         mock_conv = AsyncMock(return_value="Your notes are...")
 
-        with patch("src.gpt_commands.run_tool_conversation", mock_conv):
+        with patch("evlampiy.gpt_commands.run_tool_conversation", mock_conv):
             await evlampiy_command(mock_private_update, mock_context)
 
         call_args = mock_conv.call_args
@@ -67,7 +67,7 @@ class TestEvlampiyCommand:
         mock_private_update.text = "Test"
         mock_conv = AsyncMock(return_value="ok")
 
-        with patch("src.gpt_commands.run_tool_conversation", mock_conv):
+        with patch("evlampiy.gpt_commands.run_tool_conversation", mock_conv):
             await evlampiy_command(mock_private_update, mock_context)
 
         call_args = mock_conv.call_args
@@ -82,7 +82,7 @@ class TestEvlampiyCommand:
         mock_private_update.text = ""
 
         with patch(
-            "src.gpt_commands.run_tool_conversation",
+            "evlampiy.gpt_commands.run_tool_conversation",
             AsyncMock(return_value="ok"),
         ) as mock_conv:
             await evlampiy_command(mock_private_update, mock_context)

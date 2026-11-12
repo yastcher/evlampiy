@@ -1,10 +1,10 @@
-"""PII masking at the LLM boundary (src.ai._mask + ai_client._ai_complete)."""
+"""PII masking at the LLM boundary (evlampiy.ai._mask + ai_client._ai_complete)."""
 
 import re
 from unittest.mock import patch
 
-from src.ai._mask import mask, unmask
-from src.ai_client import classify_text
+from evlampiy.ai._mask import mask, unmask
+from evlampiy.ai_client import classify_text
 
 # A "dirty" segment: name (RU), phone, email, name (Latin).
 _DIRTY = (
@@ -68,8 +68,8 @@ class TestMaskingAtBoundary:
 
         prompt = "перезвонить Иван Петров на +7 905 123-45-67, email ivan@example.com"
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text(prompt)
 

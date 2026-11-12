@@ -2,7 +2,7 @@ import pytest
 from beanie import init_beanie
 from mongomock_motor import AsyncMongoMockClient
 
-from src.dto import (
+from evlampiy.dto import (
     AccountLink,
     AlertState,
     BotConfig,

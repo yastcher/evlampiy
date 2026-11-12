@@ -1,12 +1,12 @@
-"""Tests for src.services.payments_service.
+"""Tests for evlampiy.services.payments_service.
 
 Adapter-level flow (keyboard, send_invoice, alerts wiring) lives in tests/test_payments.py
 under TestPaymentFlow / TestBuyCommand / TestBuyPackageCallback / TestPreCheckout /
 TestBalanceCommand.
 """
 
-from src.credits import get_total_credits
-from src.services.payments_service import (
+from evlampiy.credits import get_total_credits
+from evlampiy.services.payments_service import (
     CREDIT_PACKAGES,
     AwardResult,
     award_tokens,

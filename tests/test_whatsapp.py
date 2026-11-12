@@ -3,11 +3,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import src.whatsapp.client
-from src.dto import UserTier
-from src.mongo import set_auto_categorize, set_chat_language, set_github_settings
-from src.whatsapp.client import WHATSAPP_CHAT_PREFIX, init_whatsapp_client
-from src.whatsapp.handlers import handle_link_command, handle_voice_message, register_handlers
+import evlampiy.whatsapp.client
+from evlampiy.dto import UserTier
+from evlampiy.mongo import set_auto_categorize, set_chat_language, set_github_settings
+from evlampiy.whatsapp.client import WHATSAPP_CHAT_PREFIX, init_whatsapp_client
+from evlampiy.whatsapp.handlers import handle_link_command, handle_voice_message, register_handlers
 
 
 class TestWhatsAppClient:
@@ -15,26 +15,26 @@ class TestWhatsAppClient:
 
     def test_returns_none_without_config(self):
         """Returns None when WhatsApp is not configured."""
-        with patch("src.whatsapp.client.settings") as mock_settings:
+        with patch("evlampiy.whatsapp.client.settings") as mock_settings:
             mock_settings.whatsapp_token = ""
             mock_settings.whatsapp_phone_id = ""
-            src.whatsapp.client._WhatsAppClientHolder.instance = None
+            evlampiy.whatsapp.client._WhatsAppClientHolder.instance = None
 
             result = init_whatsapp_client(FastAPI())
             assert result is None
 
     def test_creates_client_with_config(self):
         """Creates WhatsApp client when configured."""
-        with patch("src.whatsapp.client.settings") as mock_settings:
+        with patch("evlampiy.whatsapp.client.settings") as mock_settings:
             mock_settings.whatsapp_token = "test_token"
             mock_settings.whatsapp_phone_id = "123456789"
             mock_settings.whatsapp_app_id = ""
             mock_settings.whatsapp_app_secret = ""
             mock_settings.whatsapp_verify_token = "verify_token"
-            src.whatsapp.client._WhatsAppClientHolder.instance = None
+            evlampiy.whatsapp.client._WhatsAppClientHolder.instance = None
 
             app = FastAPI()
-            with patch("src.whatsapp.client.WhatsApp") as mock_wa_class:
+            with patch("evlampiy.whatsapp.client.WhatsApp") as mock_wa_class:
                 result = init_whatsapp_client(app)
                 mock_wa_class.assert_called_once()
                 # server must be wired to the FastAPI app for pywa to register routes
@@ -170,9 +170,9 @@ class TestHandleVoiceMessage:
         mocks["cleanup"].side_effect = lambda t, **kwargs: f"clean {t}"
 
         with (
-            patch("src.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99999")),
-            patch("src.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)),
-            patch("src.whatsapp.handlers.get_user_tier", AsyncMock(return_value=UserTier.PAID)),
+            patch("evlampiy.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99999")),
+            patch("evlampiy.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)),
+            patch("evlampiy.whatsapp.handlers.get_user_tier", AsyncMock(return_value=UserTier.PAID)),
         ):
             await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
@@ -192,9 +192,9 @@ class TestHandleVoiceMessage:
         mocks["transcribe"].return_value = ("raw text", 5, 1)
 
         with (
-            patch("src.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99998")),
-            patch("src.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)),
-            patch("src.whatsapp.handlers.get_user_tier", AsyncMock(return_value=UserTier.FREE)),
+            patch("evlampiy.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99998")),
+            patch("evlampiy.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)),
+            patch("evlampiy.whatsapp.handlers.get_user_tier", AsyncMock(return_value=UserTier.FREE)),
         ):
             await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
@@ -231,7 +231,7 @@ class TestHandleMessageRouter:
         mock_whatsapp_message.voice = MagicMock()
         mock_whatsapp_message.audio = None
 
-        with patch("src.whatsapp.handlers.handle_voice_message", AsyncMock()) as mock_voice:
+        with patch("evlampiy.whatsapp.handlers.handle_voice_message", AsyncMock()) as mock_voice:
             await handler(mock_whatsapp_client, mock_whatsapp_message)
             mock_voice.assert_called_once_with(mock_whatsapp_client, mock_whatsapp_message)
 
@@ -246,7 +246,7 @@ class TestHandleMessageRouter:
         mock_whatsapp_message.voice = None
         mock_whatsapp_message.audio = None
 
-        with patch("src.whatsapp.handlers.handle_link_command", AsyncMock()) as mock_link:
+        with patch("evlampiy.whatsapp.handlers.handle_link_command", AsyncMock()) as mock_link:
             await handler(mock_whatsapp_client, mock_whatsapp_message)
             mock_link.assert_called_once_with(mock_whatsapp_client, mock_whatsapp_message)
 
@@ -262,8 +262,8 @@ class TestHandleMessageRouter:
         mock_whatsapp_message.audio = None
 
         with (
-            patch("src.whatsapp.handlers.handle_voice_message", AsyncMock()) as mock_voice,
-            patch("src.whatsapp.handlers.handle_link_command", AsyncMock()) as mock_link,
+            patch("evlampiy.whatsapp.handlers.handle_voice_message", AsyncMock()) as mock_voice,
+            patch("evlampiy.whatsapp.handlers.handle_link_command", AsyncMock()) as mock_link,
         ):
             await handler(mock_whatsapp_client, mock_whatsapp_message)
             mock_voice.assert_not_called()
@@ -288,7 +288,7 @@ class TestHandleLinkCommand:
         mock_whatsapp_message.text = "link ABC123"
 
         with patch(
-            "src.services.account_linking_service.confirm_link", AsyncMock(return_value="rate_limited")
+            "evlampiy.services.account_linking_service.confirm_link", AsyncMock(return_value="rate_limited")
         ):
             await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
 
@@ -301,7 +301,7 @@ class TestHandleLinkCommand:
         mock_whatsapp_message.text = "link INVALID"
 
         with patch(
-            "src.services.account_linking_service.confirm_link", AsyncMock(return_value="invalid")
+            "evlampiy.services.account_linking_service.confirm_link", AsyncMock(return_value="invalid")
         ):
             await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
 
@@ -313,7 +313,7 @@ class TestHandleLinkCommand:
         """Link command with valid code succeeds."""
         mock_whatsapp_message.text = "link VALID123"
 
-        with patch("src.services.account_linking_service.confirm_link", AsyncMock(return_value="success")):
+        with patch("evlampiy.services.account_linking_service.confirm_link", AsyncMock(return_value="success")):
             await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_called_once()

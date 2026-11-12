@@ -2,19 +2,19 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src import const
-from src.alerts import check_and_send_alerts
-from src.credits import add_credits, get_total_credits, get_user_tier, increment_payment_stats
-from src.dto import UserTier
-from src.mongo import set_chat_language
-from src.telegram.handlers.payments import (
+from evlampiy import const
+from evlampiy.alerts import check_and_send_alerts
+from evlampiy.credits import add_credits, get_total_credits, get_user_tier, increment_payment_stats
+from evlampiy.dto import UserTier
+from evlampiy.mongo import set_chat_language
+from evlampiy.telegram.handlers.payments import (
     balance_command,
     buy_command,
     buy_package_callback,
     handle_pre_checkout,
     handle_successful_payment,
 )
-from src.telegram.handlers.settings import settings_hub
+from evlampiy.telegram.handlers.settings import settings_hub
 
 
 class TestPaymentFlow:
@@ -150,8 +150,8 @@ class TestMilestoneAlerts:
             alerts_sent.append(message)
 
         with (
-            patch("src.alerts.send_admin_alert", capture_alert),
-            patch("src.alerts.settings") as mock_settings,
+            patch("evlampiy.alerts.send_admin_alert", capture_alert),
+            patch("evlampiy.alerts.settings") as mock_settings,
         ):
             mock_settings.admin_user_ids = ["123"]
             mock_settings.wit_free_monthly_limit = 500
@@ -177,7 +177,7 @@ class TestPaymentTierTransition:
         assert await get_user_tier(user_id) == UserTier.FREE
 
         # 2. Settings hub: only 2 base buttons
-        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
+        with patch("evlampiy.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         keyboard = mock_private_update.answer.call_args.kwargs["reply_markup"].inline_keyboard
@@ -197,7 +197,7 @@ class TestPaymentTierTransition:
 
         # 5. Settings hub now shows 4 buttons (language, gpt, provider, cleanup)
         mock_private_update.answer.reset_mock()
-        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
+        with patch("evlampiy.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         keyboard = mock_private_update.answer.call_args.kwargs["reply_markup"].inline_keyboard

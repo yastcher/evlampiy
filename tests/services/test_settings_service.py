@@ -1,12 +1,12 @@
-"""Tests for src.services.settings_service."""
+"""Tests for evlampiy.services.settings_service."""
 
-from src.mongo import (
+from evlampiy.mongo import (
     get_auto_cleanup,
     get_preferred_provider,
     set_auto_cleanup,
     set_preferred_provider,
 )
-from src.services.settings_service import set_chat_provider_choice, toggle_auto_cleanup
+from evlampiy.services.settings_service import set_chat_provider_choice, toggle_auto_cleanup
 
 
 class TestToggleAutoCleanup:

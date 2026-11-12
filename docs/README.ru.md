@@ -76,7 +76,7 @@ cp .env.example .env
 # Отредактируйте .env, добавив токены
 
 # Запуск
-uv run python -m src.main
+uv run python -m evlampiy.main
 ```
 
 ## Конфигурация
@@ -153,10 +153,10 @@ uv run pytest
 uv run ruff check
 
 # Проверка типов
-uv run ty check src
+uv run ty check evlampiy
 
 # Запуск с покрытием
-uv run pytest --cov=src --cov-fail-under=85
+uv run pytest --cov=evlampiy --cov-fail-under=85
 ```
 
 ## Документация

@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
-from src.account_linking import (
+from evlampiy.account_linking import (
     LINK_CODE_LENGTH,
     LINK_CODE_TTL_SECONDS,
     LINK_MAX_ATTEMPTS,
@@ -13,10 +13,10 @@ from src.account_linking import (
     get_linked_whatsapp,
     unlink,
 )
-from src.dto import LinkAttempt, LinkCode
-from src.mongo import set_chat_language
-from src.telegram.handlers.account import link_whatsapp, unlink_whatsapp
-from src.whatsapp.handlers import handle_link_command
+from evlampiy.dto import LinkAttempt, LinkCode
+from evlampiy.mongo import set_chat_language
+from evlampiy.telegram.handlers.account import link_whatsapp, unlink_whatsapp
+from evlampiy.whatsapp.handlers import handle_link_command
 
 
 class TestAccountLinking:

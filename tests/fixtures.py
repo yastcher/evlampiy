@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from aiogram.types import CallbackQuery, Chat, Message, User
 
-import src.ai_client
-import src.telegram.handlers.obsidian as obsidian_handlers
-import src.whatsapp.client
-from src.whatsapp.app import create_fastapi_app
+import evlampiy.ai_client
+import evlampiy.telegram.handlers.obsidian as obsidian_handlers
+import evlampiy.whatsapp.client
+from evlampiy.whatsapp.app import create_fastapi_app
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -162,14 +162,14 @@ def mock_httpx_client_factory():
 def mock_ai_http():
     """Provide a mock httpx client for ai_client calls via get_http_client."""
     mock_client = AsyncMock()
-    with patch("src.ai_client.get_http_client", return_value=mock_client):
+    with patch("evlampiy.ai_client.get_http_client", return_value=mock_client):
         yield mock_client
 
 
 @pytest.fixture
 def mock_rate_limiter():
     """Bypass rate limiting in tests."""
-    with patch.object(src.ai_client.rate_limiter, "acquire", new_callable=AsyncMock):
+    with patch.object(evlampiy.ai_client.rate_limiter, "acquire", new_callable=AsyncMock):
         yield
 
 
@@ -177,13 +177,13 @@ def mock_rate_limiter():
 def no_fallback_keys():
     """Clear all AI provider API keys so the fallback chain doesn't interfere."""
     with (
-        patch("src.ai_client.settings.gemini_api_key", ""),
-        patch("src.ai_client.settings.anthropic_bot_api_key", ""),
-        patch("src.ai_client.settings.gpt_token", ""),
-        patch("src.ai_client.settings.groq_api_key", ""),
-        patch("src.ai_client.settings.openrouter_api_key", ""),
-        patch("src.ai_client.settings.deepseek_api_key", ""),
-        patch("src.ai_client.settings.qwen_api_key", ""),
+        patch("evlampiy.ai_client.settings.gemini_api_key", ""),
+        patch("evlampiy.ai_client.settings.anthropic_bot_api_key", ""),
+        patch("evlampiy.ai_client.settings.gpt_token", ""),
+        patch("evlampiy.ai_client.settings.groq_api_key", ""),
+        patch("evlampiy.ai_client.settings.openrouter_api_key", ""),
+        patch("evlampiy.ai_client.settings.deepseek_api_key", ""),
+        patch("evlampiy.ai_client.settings.qwen_api_key", ""),
     ):
         yield
 
@@ -192,8 +192,8 @@ def no_fallback_keys():
 def mock_ai_sleep():
     """Mock asyncio.sleep in ai_client and ai_chat (no-op, suppress actual sleeping)."""
     with (
-        patch("src.ai_client.asyncio.sleep", new_callable=AsyncMock),
-        patch("src.ai_chat.asyncio.sleep", new_callable=AsyncMock),
+        patch("evlampiy.ai_client.asyncio.sleep", new_callable=AsyncMock),
+        patch("evlampiy.ai_chat.asyncio.sleep", new_callable=AsyncMock),
     ):
         yield
 
@@ -206,7 +206,7 @@ def capture_ai_sleep():
     async def _fake_sleep(seconds: float) -> None:
         calls.append(seconds)
 
-    with patch("src.ai_client.asyncio.sleep", side_effect=_fake_sleep):
+    with patch("evlampiy.ai_client.asyncio.sleep", side_effect=_fake_sleep):
         yield calls
 
 
@@ -215,26 +215,26 @@ def voice_external_mocks():
     """Mock external boundaries for voice handler (Trophy: real DB, mock I/O).
 
     transcribe_audio / save_transcription_to_obsidian / cleanup_transcript / categorize_note
-    live in `src.services.voice_pipeline` after PR2 of architecture-isolation.
+    live in `evlampiy.services.voice_pipeline` after PR2 of architecture-isolation.
     send_response / check_and_send_alerts stay in the telegram adapter.
     """
     with (
         patch(
-            "src.services.voice_pipeline.transcribe_audio",
+            "evlampiy.services.voice_pipeline.transcribe_audio",
             AsyncMock(return_value=("Hello world", 5, 1)),
         ) as mock_transcribe,
-        patch("src.telegram.handlers.voice.send_response", AsyncMock()) as mock_send,
+        patch("evlampiy.telegram.handlers.voice.send_response", AsyncMock()) as mock_send,
         patch(
-            "src.services.voice_pipeline.save_transcription_to_obsidian",
+            "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
             AsyncMock(return_value=(False, None)),
         ) as mock_obsidian,
-        patch("src.telegram.handlers.voice.check_and_send_alerts", AsyncMock()) as mock_alerts,
+        patch("evlampiy.telegram.handlers.voice.check_and_send_alerts", AsyncMock()) as mock_alerts,
         patch(
-            "src.services.voice_pipeline.cleanup_transcript",
+            "evlampiy.services.voice_pipeline.cleanup_transcript",
             AsyncMock(side_effect=lambda t, **kwargs: t),
         ) as mock_cleanup,
         patch(
-            "src.services.voice_pipeline.categorize_note",
+            "evlampiy.services.voice_pipeline.categorize_note",
             AsyncMock(return_value="work"),
         ) as mock_categorize,
     ):
@@ -275,18 +275,18 @@ def whatsapp_voice_external_mocks(mock_httpx_download_response):
     mock_client.get = AsyncMock(return_value=mock_httpx_download_response)
 
     with (
-        patch("src.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
+        patch("evlampiy.whatsapp.handlers.httpx.AsyncClient") as mock_client_class,
         patch(
-            "src.services.voice_pipeline.transcribe_audio",
+            "evlampiy.services.voice_pipeline.transcribe_audio",
             AsyncMock(return_value=("Hello world", 5, 1)),
         ) as mock_transcribe,
         patch(
-            "src.services.voice_pipeline.save_transcription_to_obsidian",
+            "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
             AsyncMock(return_value=(True, "note.md")),
         ) as mock_save,
-        patch("src.services.voice_pipeline.categorize_note", AsyncMock()) as mock_categorize,
+        patch("evlampiy.services.voice_pipeline.categorize_note", AsyncMock()) as mock_categorize,
         patch(
-            "src.services.voice_pipeline.cleanup_transcript",
+            "evlampiy.services.voice_pipeline.cleanup_transcript",
             AsyncMock(side_effect=lambda t, **kwargs: t),
         ) as mock_cleanup,
     ):
@@ -324,7 +324,7 @@ def mock_selftest_cleanup():
     """Factory for mocking selftest cleanup_text with configurable return value."""
 
     def _create(return_value="cleaned text"):
-        return patch("src.selftest.cleanup_text", new_callable=AsyncMock, return_value=return_value)
+        return patch("evlampiy.selftest.cleanup_text", new_callable=AsyncMock, return_value=return_value)
 
     return _create
 
@@ -344,8 +344,8 @@ def _patch_settings(tmp_path):
     sample_file = tmp_path / "test_sample.ogg"
     sample_file.write_bytes(b"fake_ogg_audio_data")
     with (
-        patch("src.selftest.settings") as mock_settings,
-        patch("src.selftest.get_audio_duration_seconds", return_value=5),
+        patch("evlampiy.selftest.settings") as mock_settings,
+        patch("evlampiy.selftest.get_audio_duration_seconds", return_value=5),
     ):
         mock_settings.admin_user_ids = {"12345"}
         mock_settings.selftest_sample_path = str(sample_file)
@@ -361,7 +361,7 @@ def _patch_settings(tmp_path):
 @pytest.fixture
 def admin_auth():
     """Patch settings to treat user 999 as admin for the test duration."""
-    with patch("src.config.settings.admin_user_ids_raw", "999"):
+    with patch("evlampiy.config.settings.admin_user_ids_raw", "999"):
         yield
 
 
@@ -369,13 +369,13 @@ def admin_auth():
 def fastapi_app_no_whatsapp():
     """Real FastAPI app with WhatsApp disabled — does not depend on local .env.
 
-    Patches `settings` seen by `src.whatsapp.client` to have empty credentials so
+    Patches `settings` seen by `evlampiy.whatsapp.client` to have empty credentials so
     `init_whatsapp_client()` returns None and WhatsApp wiring is skipped.
     """
-    with patch("src.whatsapp.client.settings") as mock_settings:
+    with patch("evlampiy.whatsapp.client.settings") as mock_settings:
         mock_settings.whatsapp_token = ""
         mock_settings.whatsapp_phone_id = ""
-        src.whatsapp.client._WhatsAppClientHolder.instance = None
+        evlampiy.whatsapp.client._WhatsAppClientHolder.instance = None
         yield create_fastapi_app()
 
 

@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import httpx
 
-from src.ai_client import (
+from evlampiy.ai_client import (
     _api_base,
     _strip_backticks,
     classify_text,
@@ -34,8 +34,8 @@ class TestGeminiProvider:
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test prompt")
 
@@ -43,7 +43,7 @@ class TestGeminiProvider:
 
     async def test_gemini_returns_none_without_key(self, mock_rate_limiter, no_fallback_keys):
         """Returns None when Gemini key not set."""
-        with patch("src.ai_client.settings.categorization_provider", "gemini"):
+        with patch("evlampiy.ai_client.settings.categorization_provider", "gemini"):
             result = await classify_text("Test prompt")
 
         assert result is None
@@ -55,8 +55,8 @@ class TestGeminiProvider:
         mock_ai_http.post.return_value = mock_httpx_response_factory({"candidates": []}, 200)
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test prompt")
 
@@ -69,8 +69,8 @@ class TestGeminiProvider:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=500)
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test prompt")
 
@@ -85,8 +85,8 @@ class TestGeminiProvider:
         mock_ai_http.post.side_effect = [rate_limited, ok_response]
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test prompt")
 
@@ -104,8 +104,8 @@ class TestGeminiProvider:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=429)
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test prompt")
 
@@ -123,8 +123,8 @@ class TestAnthropicProvider:
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
         with (
-            patch("src.ai_client.settings.anthropic_bot_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "anthropic"),
+            patch("evlampiy.ai_client.settings.anthropic_bot_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "anthropic"),
         ):
             result = await classify_text("Test prompt")
 
@@ -132,7 +132,7 @@ class TestAnthropicProvider:
 
     async def test_anthropic_returns_none_without_key(self, mock_rate_limiter, no_fallback_keys):
         """Returns None when Anthropic key not set."""
-        with patch("src.ai_client.settings.categorization_provider", "anthropic"):
+        with patch("evlampiy.ai_client.settings.categorization_provider", "anthropic"):
             result = await classify_text("Test prompt")
 
         assert result is None
@@ -144,8 +144,8 @@ class TestAnthropicProvider:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=500)
 
         with (
-            patch("src.ai_client.settings.anthropic_bot_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "anthropic"),
+            patch("evlampiy.ai_client.settings.anthropic_bot_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "anthropic"),
         ):
             result = await classify_text("Test prompt")
 
@@ -163,8 +163,8 @@ class TestOpenAIProvider:
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
         with (
-            patch("src.ai_client.settings.gpt_token", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "openai"),
+            patch("evlampiy.ai_client.settings.gpt_token", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "openai"),
         ):
             result = await classify_text("Test prompt")
 
@@ -172,7 +172,7 @@ class TestOpenAIProvider:
 
     async def test_openai_returns_none_without_key(self, mock_rate_limiter, no_fallback_keys):
         """Returns None when OpenAI key not set."""
-        with patch("src.ai_client.settings.categorization_provider", "openai"):
+        with patch("evlampiy.ai_client.settings.categorization_provider", "openai"):
             result = await classify_text("Test prompt")
 
         assert result is None
@@ -184,8 +184,8 @@ class TestOpenAIProvider:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=500)
 
         with (
-            patch("src.ai_client.settings.gpt_token", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "openai"),
+            patch("evlampiy.ai_client.settings.gpt_token", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "openai"),
         ):
             result = await classify_text("Test prompt")
 
@@ -197,7 +197,7 @@ class TestProviderDispatch:
 
     async def test_unknown_provider_returns_none(self, mock_rate_limiter, no_fallback_keys):
         """Returns None for unknown provider."""
-        with patch("src.ai_client.settings.categorization_provider", "unknown"):
+        with patch("evlampiy.ai_client.settings.categorization_provider", "unknown"):
             result = await classify_text("Test")
 
         assert result is None
@@ -210,8 +210,8 @@ class TestProviderDispatch:
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
         with (
-            patch("src.ai_client.settings.gpt_provider", "gemini"),
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.gpt_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
         ):
             result = await gpt_chat("Hello")
 
@@ -225,8 +225,8 @@ class TestProviderDispatch:
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
         with (
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
         ):
             result = await classify_text("Test")
 
@@ -257,12 +257,12 @@ class TestFallbackOnNetworkError:
         mock_ai_http.post.side_effect = fake_post
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
-            patch("src.ai_client.settings.groq_api_key", "groq-key"),
-            patch("src.ai_client.settings.openrouter_api_key", ""),
-            patch("src.ai_client.settings.deepseek_api_key", ""),
-            patch("src.ai_client.settings.qwen_api_key", ""),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "gemini-key"),
+            patch("evlampiy.ai_client.settings.groq_api_key", "groq-key"),
+            patch("evlampiy.ai_client.settings.openrouter_api_key", ""),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", ""),
+            patch("evlampiy.ai_client.settings.qwen_api_key", ""),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -287,12 +287,12 @@ class TestFallbackOnNetworkError:
         mock_ai_http.post.side_effect = fake_post
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
-            patch("src.ai_client.settings.groq_api_key", "groq-key"),
-            patch("src.ai_client.settings.openrouter_api_key", ""),
-            patch("src.ai_client.settings.deepseek_api_key", ""),
-            patch("src.ai_client.settings.qwen_api_key", ""),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "gemini-key"),
+            patch("evlampiy.ai_client.settings.groq_api_key", "groq-key"),
+            patch("evlampiy.ai_client.settings.openrouter_api_key", ""),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", ""),
+            patch("evlampiy.ai_client.settings.qwen_api_key", ""),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -303,21 +303,21 @@ class TestApiBase:
     """Test LLM-proxy base resolution (_api_base)."""
 
     def test_proxies_groq_when_base_set(self):
-        with patch("src.ai_client.settings.llm_api_base", "https://proxy.example"):
+        with patch("evlampiy.ai_client.settings.llm_api_base", "https://proxy.example"):
             assert _api_base("groq", "https://api.groq.com") == "https://proxy.example/groq"
 
     def test_proxies_gemini_when_base_set(self):
-        with patch("src.ai_client.settings.llm_api_base", "https://proxy.example"):
+        with patch("evlampiy.ai_client.settings.llm_api_base", "https://proxy.example"):
             base = _api_base("gemini", "https://generativelanguage.googleapis.com")
             assert base == "https://proxy.example/gemini"
 
     def test_does_not_proxy_deepseek(self):
         # DeepSeek is reachable directly, so it keeps its own base even with a proxy set.
-        with patch("src.ai_client.settings.llm_api_base", "https://proxy.example"):
+        with patch("evlampiy.ai_client.settings.llm_api_base", "https://proxy.example"):
             assert _api_base("deepseek", "https://api.deepseek.com/v1") == "https://api.deepseek.com/v1"
 
     def test_returns_default_when_base_empty(self):
-        with patch("src.ai_client.settings.llm_api_base", ""):
+        with patch("evlampiy.ai_client.settings.llm_api_base", ""):
             assert _api_base("groq", "https://api.groq.com") == "https://api.groq.com"
 
 
@@ -331,10 +331,10 @@ class TestLlmProxyRouting:
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
         with (
-            patch("src.ai_client.settings.llm_api_base", "https://proxy.example"),
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.gemini_model", "gemini-2.0-flash"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.llm_api_base", "https://proxy.example"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.gemini_model", "gemini-2.0-flash"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test prompt")
 
@@ -347,9 +347,9 @@ class TestLlmProxyRouting:
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
         with (
-            patch("src.ai_client.settings.llm_api_base", "https://proxy.example"),
-            patch("src.ai_client.settings.deepseek_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "deepseek"),
+            patch("evlampiy.ai_client.settings.llm_api_base", "https://proxy.example"),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "deepseek"),
         ):
             result = await classify_text("Test prompt")
 

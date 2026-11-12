@@ -21,4 +21,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 RUN useradd --create-home --uid 1000 appuser
 USER appuser
 
-CMD ["python", "-m", "src.main"]
+CMD ["python", "-m", "evlampiy.main"]

@@ -41,12 +41,12 @@ jobs:
         run: uv run ruff check
 
       - name: Run type checker
-        run: uv run ty check src
+        run: uv run ty check evlampiy
 
       - name: Run tests with coverage
         env:
           MONGO_URI: mongodb://localhost:27017/
-        run: uv run pytest --cov=src --cov-report=xml --cov-fail-under=85
+        run: uv run pytest --cov=evlampiy --cov-report=xml --cov-fail-under=85
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4

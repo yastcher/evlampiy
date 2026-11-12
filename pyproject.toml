@@ -63,7 +63,7 @@ fixable = ["ALL"]
 [tool.ruff.lint.per-file-ignores]
 # S603/S607: tests run git and the repository's own scripts with fixed arguments.
 "tests/*" = ["S101", "PLR2004", "S105", "S106", "S603", "S607"]
-"src/localization.py" = ["RUF001"]
+"evlampiy/localization.py" = ["RUF001"]
 
 [tool.ruff.lint.pylint]
 max-args = 6
@@ -71,7 +71,7 @@ max-args = 6
 [tool.ruff.lint.isort]
 known-third-party = ["telegram"]
 known-local-folder = [
-    "src",
+    "evlampiy",
     "tests",
 ]
 
@@ -96,7 +96,7 @@ unresolved-import = "ignore"
 [tool.pytest.ini_options]
 addopts = [
     "-p", "pytest_cov",
-    "--cov=src",
+    "--cov=evlampiy",
     "--cov-report=term-missing",
     "--cov-report=json:coverage.json",
     "--cov-branch",

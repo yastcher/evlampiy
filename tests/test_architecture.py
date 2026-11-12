@@ -6,13 +6,13 @@ import pathlib
 from pytestarch import Rule, get_evaluable_architecture
 
 _ROOT = str(pathlib.Path(__file__).resolve().parents[1])
-_SRC = str(pathlib.Path(__file__).resolve().parents[1] / "src")
+_SRC = str(pathlib.Path(__file__).resolve().parents[1] / "evlampiy")
 
 _arch = get_evaluable_architecture(_ROOT, _SRC)
 
 # Prefix depends on the project directory name (differs locally vs CI).
-# Detect it from the graph nodes: find node ending with ".src.const" and strip ".const".
-_PREFIX = next(n.removesuffix(".const") for n in _arch._graph._graph.nodes() if n.endswith(".src.const"))
+# Detect it from the graph nodes: find node ending with ".evlampiy.const" and strip ".const".
+_PREFIX = next(n.removesuffix(".const") for n in _arch._graph._graph.nodes() if n.endswith(".evlampiy.const"))
 
 
 # --- Rule 1: telegram <-> whatsapp domain isolation ---
@@ -73,7 +73,7 @@ class TestTranscriptionIndependence:
 
 
 class TestServicesFrameworkIsolation:
-    """`src/services/*` must not import aiogram / pywa / fastapi.
+    """`evlampiy/services/*` must not import aiogram / pywa / fastapi.
 
     Catches regressions where a use-case service starts depending on a delivery channel.
     """

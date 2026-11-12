@@ -2,7 +2,7 @@
 
 ## Module structure
 
-Each domain module in src/ contains:
+Each domain module in evlampiy/ contains:
 
 - router.py — endpoints
 - schemas.py — Pydantic models (request/response)

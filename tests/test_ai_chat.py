@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import httpx
 
-from src.ai_chat import (
+from evlampiy.ai_chat import (
     _messages_to_anthropic,
     _messages_to_gemini,
     _parse_anthropic_response,
@@ -295,8 +295,8 @@ class TestChatComplete:
         messages = [{"role": "user", "content": "Hello"}]
 
         with (
-            patch("src.ai_client.settings.deepseek_api_key", "test-key"),
-            patch("src.ai_client.settings.deepseek_model", "deepseek-chat"),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.deepseek_model", "deepseek-chat"),
         ):
             result = await chat_complete(["deepseek"], messages)
 
@@ -323,9 +323,9 @@ class TestChatComplete:
         messages = [{"role": "user", "content": "Hello"}]
 
         with (
-            patch("src.ai_client.settings.deepseek_api_key", "test-key"),
-            patch("src.ai_client.settings.deepseek_model", "deepseek-chat"),
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.deepseek_model", "deepseek-chat"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
         ):
             result = await chat_complete(["deepseek", "gemini"], messages)
 
@@ -349,8 +349,8 @@ class TestChatComplete:
         messages = [{"role": "user", "content": "Hello"}]
 
         with (
-            patch("src.ai_client.settings.deepseek_api_key", "test-key"),
-            patch("src.ai_client.settings.deepseek_model", "deepseek-chat"),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.deepseek_model", "deepseek-chat"),
         ):
             result = await chat_complete(["deepseek"], messages, tools=SAMPLE_TOOLS)
 
@@ -369,8 +369,8 @@ class TestChatComplete:
         messages = [{"role": "user", "content": "Hello"}]
 
         with (
-            patch("src.ai_client.settings.deepseek_api_key", "test-key"),
-            patch("src.ai_client.settings.deepseek_model", "deepseek-chat"),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.deepseek_model", "deepseek-chat"),
         ):
             result = await chat_complete(["deepseek"], messages)
 
@@ -388,7 +388,7 @@ class TestChatComplete:
             {"role": "user", "content": "Hello"},
         ]
 
-        with patch("src.ai_client.settings.gemini_api_key", "test-key"):
+        with patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"):
             result = await chat_complete(["gemini"], messages)
 
         assert result is not None
@@ -411,7 +411,7 @@ class TestChatComplete:
 
         messages = [{"role": "user", "content": "Show notes"}]
 
-        with patch("src.ai_client.settings.gemini_api_key", "test-key"):
+        with patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"):
             result = await chat_complete(["gemini"], messages, tools=SAMPLE_TOOLS)
 
         assert result is not None
@@ -429,7 +429,7 @@ class TestChatComplete:
         """Gemini 429 exhausts retries and returns None."""
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=429)
 
-        with patch("src.ai_client.settings.gemini_api_key", "test-key"):
+        with patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"):
             result = await chat_complete(["gemini"], [{"role": "user", "content": "Hi"}])
 
         assert result is None
@@ -446,7 +446,7 @@ class TestChatComplete:
             {"role": "user", "content": "Hello"},
         ]
 
-        with patch("src.ai_client.settings.anthropic_bot_api_key", "test-key"):
+        with patch("evlampiy.ai_client.settings.anthropic_bot_api_key", "test-key"):
             result = await chat_complete(["anthropic"], messages)
 
         assert result is not None
@@ -470,7 +470,7 @@ class TestChatComplete:
 
         messages = [{"role": "user", "content": "Show notes"}]
 
-        with patch("src.ai_client.settings.anthropic_bot_api_key", "test-key"):
+        with patch("evlampiy.ai_client.settings.anthropic_bot_api_key", "test-key"):
             result = await chat_complete(["anthropic"], messages, tools=SAMPLE_TOOLS)
 
         assert result is not None
@@ -488,7 +488,7 @@ class TestChatComplete:
         """Anthropic 429 exhausts retries and returns None."""
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=429)
 
-        with patch("src.ai_client.settings.anthropic_bot_api_key", "test-key"):
+        with patch("evlampiy.ai_client.settings.anthropic_bot_api_key", "test-key"):
             result = await chat_complete(["anthropic"], [{"role": "user", "content": "Hi"}])
 
         assert result is None
@@ -505,8 +505,8 @@ class TestChatComplete:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=500)
 
         with (
-            patch("src.ai_client.settings.deepseek_api_key", "test-key"),
-            patch("src.ai_client.settings.deepseek_model", "deepseek-chat"),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.deepseek_model", "deepseek-chat"),
         ):
             result = await chat_complete(["deepseek"], [{"role": "user", "content": "Hi"}])
 

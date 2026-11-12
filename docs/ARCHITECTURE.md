@@ -7,7 +7,7 @@ Evlampiy Notes Bot is an async Python application that transcribes voice message
 ## Directory Structure
 
 ```
-src/
+evlampiy/
 ├── telegram/               # Telegram bot (aiogram)
 │   ├── handlers/           - Per-domain handler modules (PR6 of architecture-isolation)
 │   │   ├── common.py       - Core handlers (/start, stats, hub router, GPT command conversation)
@@ -244,7 +244,7 @@ Fallback chains (configurable at runtime via admin panel):
 
 ### DDD with Modular Structure
 
-The codebase is organized by domain (`telegram/`, `whatsapp/`, `transcription/`) rather than by technical layer. Each platform handler is self-contained, while shared services (`credits`, `ai_client`, `categorization`) live at the `src/` root level. This keeps related logic together and makes it easy to add new platforms.
+The codebase is organized by domain (`telegram/`, `whatsapp/`, `transcription/`) rather than by technical layer. Each platform handler is self-contained, while shared services (`credits`, `ai_client`, `categorization`) live at the `evlampiy/` root level. This keeps related logic together and makes it easy to add new platforms.
 
 ### Trophy Testing
 
@@ -254,7 +254,7 @@ In addition to integration tests, three contract test suites guard structural in
 
 - **`test_architecture.py`** — pytestarch rules enforce domain isolation (telegram ↔ whatsapp never import each other, transcription is channel-independent) and stdlib import style (`import datetime`, not `from datetime import ...`).
 - **`test_api_contracts.py`** — every command in `COMMAND_HANDLERS` is async with `(update, context)` signature; all `BOT_COMMANDS` / `ADMIN_COMMANDS` menu entries map to registered handlers; all callback query handlers exist; `/health` endpoint returns expected schema.
-- **`test_docs.py`** — all internal markdown links resolve to existing files; every `.py` file in `src/` is listed in `ARCHITECTURE.md` (and vice versa); all READMEs have a Documentation table; CHANGELOG subsection names are from the allowed set.
+- **`test_docs.py`** — all internal markdown links resolve to existing files; every `.py` file in `evlampiy/` is listed in `ARCHITECTURE.md` (and vice versa); all READMEs have a Documentation table; CHANGELOG subsection names are from the allowed set.
 
 ### Token Bucket Rate Limiting
 

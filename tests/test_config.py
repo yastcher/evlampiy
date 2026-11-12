@@ -1,4 +1,4 @@
-from src.config import Settings, _parse_comma_separated_ids
+from evlampiy.config import Settings, _parse_comma_separated_ids
 
 
 class TestSettingsExtraEnv:

@@ -2,9 +2,9 @@
 
 from unittest.mock import AsyncMock, patch
 
-from src.ai_chat import ChatResponse, ToolCall
-from src.tool_calling import run_tool_conversation
-from src.tools import ToolDef
+from evlampiy.ai_chat import ChatResponse, ToolCall
+from evlampiy.tool_calling import run_tool_conversation
+from evlampiy.tools import ToolDef
 
 
 def _make_tool(name: str = "test_tool", result: str = "tool_result") -> ToolDef:
@@ -49,7 +49,7 @@ class TestNoToolCalls:
         mock_complete = AsyncMock(return_value=_text_response("Hello!"))
         messages = [{"role": "user", "content": "Hi"}]
 
-        with patch("src.tool_calling.chat_complete", mock_complete):
+        with patch("evlampiy.tool_calling.chat_complete", mock_complete):
             result = await run_tool_conversation(messages, [], ["deepseek"])
 
         assert result == "Hello!"
@@ -58,7 +58,7 @@ class TestNoToolCalls:
         mock_complete = AsyncMock(return_value=None)
         messages = [{"role": "user", "content": "Hi"}]
 
-        with patch("src.tool_calling.chat_complete", mock_complete):
+        with patch("evlampiy.tool_calling.chat_complete", mock_complete):
             result = await run_tool_conversation(messages, [], ["deepseek"])
 
         assert result is None
@@ -79,7 +79,7 @@ class TestSingleToolCall:
 
         messages = [{"role": "user", "content": "Show notes"}]
 
-        with patch("src.tool_calling.chat_complete", mock_complete):
+        with patch("evlampiy.tool_calling.chat_complete", mock_complete):
             result = await run_tool_conversation(messages, [tool], ["deepseek"])
 
         assert result == "Here are your notes: note1"
@@ -98,7 +98,7 @@ class TestSingleToolCall:
 
         messages = [{"role": "user", "content": "Show notes"}]
 
-        with patch("src.tool_calling.chat_complete", side_effect=capture_complete):
+        with patch("evlampiy.tool_calling.chat_complete", side_effect=capture_complete):
             await run_tool_conversation(messages, [tool], ["deepseek"])
 
         # Second call should include tool result
@@ -132,7 +132,7 @@ class TestSingleToolCall:
             ]
         )
 
-        with patch("src.tool_calling.chat_complete", mock_complete):
+        with patch("evlampiy.tool_calling.chat_complete", mock_complete):
             await run_tool_conversation(
                 [{"role": "user", "content": "notes"}], [tool], ["deepseek"]
             )
@@ -164,7 +164,7 @@ class TestMultipleToolCalls:
 
         mock_complete = AsyncMock(side_effect=[two_calls, _text_response("Combined result")])
 
-        with patch("src.tool_calling.chat_complete", mock_complete):
+        with patch("evlampiy.tool_calling.chat_complete", mock_complete):
             result = await run_tool_conversation(
                 [{"role": "user", "content": "both"}], [tool_a, tool_b], ["deepseek"]
             )
@@ -183,7 +183,7 @@ class TestErrorHandling:
             ]
         )
 
-        with patch("src.tool_calling.chat_complete", mock_complete):
+        with patch("evlampiy.tool_calling.chat_complete", mock_complete):
             result = await run_tool_conversation(
                 [{"role": "user", "content": "test"}], [], ["deepseek"]
             )
@@ -210,7 +210,7 @@ class TestErrorHandling:
                 return _tool_call_response("broken")
             return _text_response("Tool error occurred")
 
-        with patch("src.tool_calling.chat_complete", side_effect=capture_complete):
+        with patch("evlampiy.tool_calling.chat_complete", side_effect=capture_complete):
             result = await run_tool_conversation(
                 [{"role": "user", "content": "test"}], [tool], ["deepseek"]
             )
@@ -231,7 +231,7 @@ class TestMaxIterations:
             return_value=_tool_call_response("loopy"),
         )
 
-        with patch("src.tool_calling.chat_complete", mock_complete):
+        with patch("evlampiy.tool_calling.chat_complete", mock_complete):
             result = await run_tool_conversation(
                 [{"role": "user", "content": "loop"}], [tool], ["deepseek"]
             )

@@ -3,8 +3,8 @@
 import pymongo.errors
 import pytest
 
-from src.dto import UserCredits, UserMonthlyUsage, UserRole, UserSettings
-from src.mongo import get_or_create
+from evlampiy.dto import UserCredits, UserMonthlyUsage, UserRole, UserSettings
+from evlampiy.mongo import get_or_create
 
 
 class TestUniqueIndexes:

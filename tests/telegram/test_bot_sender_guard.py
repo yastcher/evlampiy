@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 from aiogram.types import Message, Update
 
-from src.telegram.chat_params import is_bot_sender
-from src.telegram.setup import BotSenderRejectMiddleware
+from evlampiy.telegram.chat_params import is_bot_sender
+from evlampiy.telegram.setup import BotSenderRejectMiddleware
 
 
 class TestIsBotSender:
