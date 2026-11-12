@@ -10,6 +10,7 @@ SCOPE_PROBE = "systemd-run --user --scope --quiet true"
 GATE_COMMANDS = [
     SCOPE_PROBE,
     "uv lock --locked",
+    "uv run scripts/audit_deps.py",
     "uv run ruff check",
     "uv run ruff format --check",
     "uv run ty check evlampiy",

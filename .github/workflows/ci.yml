@@ -49,6 +49,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
+      # Known vulnerabilities in every pin of uv.lock, the dev group included.
+      - name: Dependency audit
+        run: uv run scripts/audit_deps.py
+
       - name: Lint
         run: uv run ruff check
 

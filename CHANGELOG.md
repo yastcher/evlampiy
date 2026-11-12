@@ -9,6 +9,7 @@
 - A runaway test can no longer take the machine down: the gate caps the tests at 2 GB without swap, and a hung test fails after 2 minutes
 - Hypothesis fuzzes the WhatsApp webhook: unsigned and forged updates never reach the handlers
 - SAST: Semgrep in the gate and CI, CodeQL in CI with its findings in the Security tab
+- The gate and CI audit every pin of `uv.lock` for known vulnerabilities (pip-audit)
 
 ### Changed
 

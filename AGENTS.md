@@ -130,7 +130,7 @@ it, ruff owns it.
 
 ## Security review
 
-SAST runs on its own: Semgrep in the gate and CI (`p/python`, `p/dockerfile`, `p/github-actions`), CodeQL in CI (`codeql.yml`, findings in the Security tab). A finding is fixed, or suppressed on its line with `# nosemgrep: <rule>` and a comment saying why.
+SAST runs on its own: Semgrep in the gate and CI (`p/python`, `p/dockerfile`, `p/github-actions`), CodeQL in CI (`codeql.yml`, findings in the Security tab). A finding is fixed, or suppressed on its line with `# nosemgrep: <rule>` and a comment saying why. Dependencies: `scripts/audit_deps.py` (pip-audit over every pin of `uv.lock`) in the gate and CI; an advisory we live with goes into its `ACCEPTED` with a reason and a date to look again.
 
 Before finishing any task, check for:
 

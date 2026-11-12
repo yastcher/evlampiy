@@ -62,6 +62,7 @@ step() {
 }
 
 step "lockfile"     uv lock --locked
+step "audit"        uv run scripts/audit_deps.py
 step "ruff check"   uv run ruff check
 step "ruff format"  uv run ruff format --check
 step "ty"           uv run ty check evlampiy
