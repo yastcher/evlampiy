@@ -144,7 +144,7 @@ pytest_add_cli_args_test_selection = [
 
 [tool.coverage.report]
 # A ratchet: raise it as coverage grows, never lower it. The README badges show this number.
-fail_under = 91.4
+fail_under = 91.6
 precision = 2
 exclude_also = [
     # PTB handler guards - framework guarantees effective_user/message/etc. non-None in handler context
