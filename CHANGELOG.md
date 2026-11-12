@@ -6,6 +6,7 @@
 ### Added
 
 - `scripts/gate.sh` runs every CI check locally, in CI's order; a test keeps the two in step
+- A runaway test can no longer take the machine down: the gate caps the tests at 2 GB without swap, and a hung test fails after 2 minutes
 
 ### Changed
 

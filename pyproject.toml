@@ -29,6 +29,7 @@ dev = [
     "pytest-asyncio~=1.4",
     "pytest-mock==3.17.0",
     "pytest-cov~=7.1.0",
+    "pytest-timeout>=2.4",
     "pytestarch>=5.1",
     "cosmic-ray>=8.9",
     "testcontainers[mongodb]>=4.15",
@@ -107,6 +108,10 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 # Every async fixture is per test, the database client included.
 asyncio_default_fixture_loop_scope = "function"
+# A test that hangs fails after this many seconds, with the stack where it hung, instead of
+# holding the run and its memory until something kills it. Generous on purpose: the first
+# test's setup starts the MongoDB container, an image pull included.
+timeout = 120
 
 [tool.coverage.report]
 # A ratchet: raise it as coverage grows, never lower it. The README badges show this number.

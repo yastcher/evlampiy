@@ -133,7 +133,7 @@ def run_gate(tmp_path):
     )
     stubs = tmp_path / "bin"
     stubs.mkdir()
-    for name in ("uv", "shellcheck"):
+    for name in ("uv", "shellcheck", "systemd-run"):
         (stubs / name).write_text(stub)
         (stubs / name).chmod(0o755)
     log = tmp_path / "commands.log"

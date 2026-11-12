@@ -20,6 +20,8 @@ jobs:
   lint-and-test:
     # Pinned: `ubuntu-latest` moves on its own schedule.
     runs-on: ubuntu-24.04
+    # A green run takes about three minutes; one that hangs must not hold a runner for six hours.
+    timeout-minutes: 20
 
     # The tests' MongoDB, reached through TEST_MONGO_URI: the image docker-compose.yml
     # runs in production (tests/test_mongo_image.py keeps the two equal).

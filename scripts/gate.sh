@@ -5,10 +5,11 @@
 #
 # Every step below is a step of the `lint-and-test` job in `.github/workflows/ci.yml`,
 # in the same order and with the same command — `tests/scripts/test_gate.py` fails when
-# the two drift apart. One deliberate difference: CI installs with `uv sync --locked`,
+# the two drift apart. Two deliberate differences: CI installs with `uv sync --locked`,
 # which here would rewrite the developer's environment, so the gate asks the only
 # question that flag answers — is uv.lock current? — with `uv lock --locked`, which
-# changes nothing.
+# changes nothing; and the tests run under a memory cap (below), which a laptop needs
+# and a CI runner does not.
 #
 # The verdict is the exit code and the last line, never the output in between:
 # "630 passed" is not the coverage floor that refused the run two lines further down.
@@ -34,6 +35,18 @@ if [ -t 1 ]; then
   bold=$'\033[1m' green=$'\033[32m' red=$'\033[31m' reset=$'\033[0m'
 fi
 
+# The tests run in a scope with a memory limit and no swap: a runaway test then kills the
+# run, not the IDE the kernel's OOM killer would pick on an 8 GB laptop — a test run once
+# grew to 9 GB, most of it in swap. The suite peaks near 320 MB. Stopping a scope also stops
+# every process in it, so an interrupted run leaves no pytest behind. Without a systemd user
+# session (the devcontainer, macOS) the tests run as CI runs them, uncapped.
+capped=()
+if systemd-run --user --scope --quiet true >/dev/null 2>&1; then
+  capped=(systemd-run --user --scope --quiet -p MemoryMax=2G -p MemorySwapMax=0)
+else
+  printf 'note: no systemd user session, so pytest runs without a memory cap\n'
+fi
+
 # A failed step does not stop the gate: the next one still runs, and the summary
 # names every step that failed.
 step() {
@@ -52,7 +65,7 @@ step "lockfile"     uv lock --locked
 step "ruff check"   uv run ruff check
 step "ruff format"  uv run ruff format --check
 step "ty"           uv run ty check evlampiy
-step "pytest"       uv run pytest
+step "pytest"       "${capped[@]}" uv run pytest
 step "shellcheck"   shellcheck scripts/*.sh
 
 printf '\n'

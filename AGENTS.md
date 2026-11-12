@@ -56,6 +56,7 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Format: `uv run ruff format`
 - Typecheck: `uv run ty check evlampiy`
 - Test: `uv run pytest`; a partial run needs `--no-cov` (`uv run pytest tests/test_x.py --no-cov`) — the coverage floor applies to the whole suite
+- Heavy local runs go under a memory cap with no swap — `systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 <command>`; the gate caps its pytest step itself. On an 8 GB laptop the kernel's OOM killer otherwise picks the IDE
 - Coverage floor: `fail_under` in pyproject.toml is a ratchet — raise it when coverage grows, never lower it; the README badges show it (`tests/test_docs.py` checks)
 - Changelog entry: `scripts/changelog_add.py <Added|Changed|Fixed|Removed|Docs> "- text"` (`--top` puts a user-facing entry above infrastructure ones)
 - Release (maintainer, on main): `scripts/release.sh patch|minor|major`
@@ -88,6 +89,8 @@ it, ruff owns it.
 - Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление. Round-trip:
   `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`, нет `@`, нет двух подряд capitalized слов.
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
+- **Patch `asyncio` only where the code under test looks it up**: `sleep_replaced(module)` from `tests/fixtures.py`, never `patch("<module>.asyncio.sleep")` — that replaces `asyncio` itself, under the event loop and pymongo's heartbeat (a run grew to 9 GB); `tests/test_architecture.py` enforces it
+- A test that hangs fails after `timeout` seconds (pytest-timeout, pyproject.toml) with the stack where it hung
 - **All fixtures in fixture modules, never in test files** — `tests/fixtures.py` for the app, `tests/script_fixtures.py` for the repository's own scripts (release, changelog, gate); both are registered in `tests/conftest.py`. Test files have zero fixture definitions and minimal inline mocks: check for an existing fixture before adding one.
 - **Prefer integration tests over unit tests with heavy mocking** — don't create tests that mock half the system. Trophy
   style: real DB, real logic, mock only external I/O.
