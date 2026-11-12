@@ -9,8 +9,9 @@
 #   3. stack       — scripts/stack_smoke.sh: the release image and MongoDB in a stack of
 #                    their own, healthy and not restarting a minute later
 #   4. mutation    — mutmut over the slice in [tool.mutmut], from scratch, in a
-#                    memory-capped scope, against one MongoDB started for it;
-#                    about 11 minutes with two workers
+#                    memory-capped scope, against one MongoDB started for it, with as
+#                    many workers as the free memory fits; a mutant killed or timed out
+#                    beside others runs again alone; about 11 minutes with two workers
 #
 # Needs Docker and a systemd user session.
 #
@@ -50,11 +51,29 @@ stage "mutation"
 # file unmutated when only the slice changed. mutmut runs a test session per mutant, so they
 # share one MongoDB of the image production runs, started here — each session takes a database
 # of its own (tests/db_fixtures.py) — rather than a container each. Capped in memory: a mutant
-# can make code allocate without end, and the cap kills that worker, counted as died, instead
-# of the desktop. The cap allows 1.2 GB for mutmut and its fork server and 0.5 GB per worker.
-children=${MUTMUT_CHILDREN:-2}
-if ! [[ $children =~ ^[1-9][0-9]*$ ]]; then
-  echo "pre_release_qa: MUTMUT_CHILDREN must be a positive whole number, not '$children'" >&2
+# can make code allocate without end, and the cap kills that worker instead of the desktop.
+# The cap allows 1.2 GB for mutmut and its fork server and 0.5 GB per worker, and it protects
+# only while that much is free: a run started with less lets the kernel kill the desktop
+# before the cap is reached, as it did twice on an 8 GB laptop. So the workers are as many as
+# the memory available fits beside the MongoDB's 0.5 GB, two at most, and none means no run.
+if [ -n "${MUTMUT_CHILDREN:-}" ] && ! [[ $MUTMUT_CHILDREN =~ ^[1-9][0-9]*$ ]]; then
+  echo "pre_release_qa: MUTMUT_CHILDREN must be a positive whole number, not '$MUTMUT_CHILDREN'" >&2
+  exit 1
+fi
+workers_that_fit() {
+  local available fit
+  available="$(free -m | awk '/^Mem:/ {print $7}')"
+  fit=$(((available - 1200 - 512) / 500))
+  echo $((fit > 0 ? fit : 0))
+}
+fit="$(workers_that_fit)"
+if ((fit < 1)); then
+  echo "pre_release_qa: the memory available fits no mutation worker: close something and run again" >&2
+  exit 1
+fi
+children=${MUTMUT_CHILDREN:-$((fit < 2 ? fit : 2))}
+if ((children > fit)); then
+  echo "pre_release_qa: the memory available fits only $fit of the $children mutation workers asked for" >&2
   exit 1
 fi
 image="$(sed -n '/^  mongodb:/,/^  [a-z]/{s/^    image: //p}' docker-compose.yml)"
@@ -78,9 +97,25 @@ if [ "$ready" -ne 1 ]; then
   exit 1
 fi
 rm -rf mutants
-TEST_MONGO_URI="mongodb://$(docker port "$mongo" 27017)/" \
+mongo_uri="mongodb://$(docker port "$mongo" 27017)/"
+TEST_MONGO_URI="$mongo_uri" \
   systemd-run --user --scope --quiet -p MemoryMax=$((1200 + 500 * children))M \
   -p MemorySwapMax=0 -p OOMPolicy=continue uv run mutmut run --max-children "$children"
+# The cap is one for the whole run, and the kernel kills its largest process, which need not
+# be the mutant that allocated: whatever died or timed out beside others is judged again,
+# alone, so a survivor cannot hide among the runaways. The statuses are read first, so a
+# failing `mutmut results` stops the run instead of reading as nothing to run again.
+results="$(uv run mutmut results --all true)"
+mapfile -t again < <(awk -F': ' '$2 == "segfault" || $2 == "timeout" {sub(/^ +/, "", $1); print $1}' <<<"$results")
+if ((${#again[@]})); then
+  if (($(workers_that_fit) < 1)); then
+    echo "pre_release_qa: ${#again[@]} mutants to run again alone, and the memory available fits no worker: close something and run again" >&2
+    exit 1
+  fi
+  TEST_MONGO_URI="$mongo_uri" \
+    systemd-run --user --scope --quiet -p MemoryMax=1700M \
+    -p MemorySwapMax=0 -p OOMPolicy=continue uv run mutmut run --max-children 1 "${again[@]}"
+fi
 uv run mutmut export-cicd-stats
 uv run python scripts/mutation_ratchet.py mutants/mutmut-cicd-stats.json \
   --survived-max 195 --no-tests-max 49

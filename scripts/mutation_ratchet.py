@@ -9,9 +9,10 @@ Reads the counts `mutmut export-cicd-stats` writes. Exit 0 within both maxima, 1
 either or when the run did not finish, 2 when the counts cannot be read. A count under
 its maximum asks for the maximum to come down, so the gain cannot be spent later.
 
-A worker killed by a signal is what mutmut calls a segfault. Under the memory cap
-`pre_release_qa.sh` sets, it is a mutant that allocated without end: its tests did not
-pass, so it died rather than survived.
+A worker killed by a signal is what mutmut calls a segfault. `pre_release_qa.sh` runs every
+mutant that died or timed out beside others again, alone under its own memory cap, so a
+segfault left here is a mutant that allocated without end by itself: its tests did not pass,
+so it died rather than survived.
 """
 
 import argparse

@@ -52,6 +52,7 @@
 - `/stats` and the revenue alerts count the Telegram Stars paid, not the tokens they bought; Stars are recorded from this release on
 - A revenue milestone is announced on any payment that crosses it, not only on the month's first payment
 - WhatsApp transcriptions count toward the Wit.ai monthly limit and stop at it, as Telegram's do
+- Pre-release QA runs a mutant that died or timed out beside others again, alone, and starts mutation testing only with as many workers as the free memory fits
 
 ### Removed
 

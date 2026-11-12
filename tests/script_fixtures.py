@@ -150,13 +150,23 @@ def run_gate(tmp_path):
     return run
 
 
-# What the stage stubs answer: `docker port` an address, a `mongosh` ping its 1.
+# What the stage stubs answer: `docker port` an address, a `mongosh` ping its 1, `free -m` the
+# memory available (QA_AVAILABLE_MB, or QA_AVAILABLE_AFTER_RUN_MB once mutmut has run), and
+# `mutmut results` the statuses in QA_MUTMUT_RESULTS.
 _QA_STUB = """#!/usr/bin/env bash
 printf "%s%s %s\\n" "${TEST_MONGO_URI:+TEST_MONGO_URI=$TEST_MONGO_URI }" "${0##*/}" "$*" >> "$QA_LOG"
 if [ "${0##*/} $*" = "$QA_FAIL" ]; then exit 1; fi
-case "${0##*/} $1" in
-  "docker port") echo 127.0.0.1:27999 ;;
-  "docker exec") echo 1 ;;
+case "${0##*/} $*" in
+  "docker port"*) echo 127.0.0.1:27999 ;;
+  "docker exec"*) echo 1 ;;
+  "free -m")
+    available=${QA_AVAILABLE_MB:-4000}
+    if [ -n "${QA_AVAILABLE_AFTER_RUN_MB:-}" ] && grep -q "mutmut run" "$QA_LOG"; then
+      available=$QA_AVAILABLE_AFTER_RUN_MB
+    fi
+    echo "               total        used        free      shared  buff/cache   available"
+    echo "Mem:            7798        5000         800         600        2000        $available" ;;
+  "uv run mutmut results --all true") printf "%b" "${QA_MUTMUT_RESULTS:-}" ;;
 esac
 """
 
@@ -184,6 +194,7 @@ def run_qa(tmp_path):
         stubs / "uv",
         stubs / "docker",
         stubs / "systemd-run",
+        stubs / "free",
     ):
         path.write_text(_QA_STUB)
         path.chmod(0o755)

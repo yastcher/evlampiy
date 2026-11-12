@@ -83,7 +83,7 @@ Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config. Do not dupli
 - pytest_plugins already configured in conftest.py
 - asyncio_mode = "auto" in pyproject.toml — pytestmark not needed
 - Architectural tests in tests/test_architecture.py — enforced by pytestarch + AST
-- Mutation testing: mutmut over the slice in `[tool.mutmut]`, run from scratch by `scripts/pre_release_qa.sh`, which also starts the one MongoDB the mutants' test sessions share; survivors and untested mutants only come down (`--survived-max`, `--no-tests-max` there). `uv run mutmut browse` shows the survivors of the last run
+- Mutation testing: mutmut over the slice in `[tool.mutmut]`, run from scratch by `scripts/pre_release_qa.sh`, which also starts the one MongoDB the mutants' test sessions share; survivors and untested mutants only come down (`--survived-max`, `--no-tests-max` there). The run takes as many workers as the free memory fits, two at most, and refuses to start when none fits — a cap above the free memory protects nothing; a mutant that died or timed out beside others runs again alone before the ratchet reads the counts. `uv run mutmut browse` shows the survivors of the last run
 
 ### Writing effective tests
 
