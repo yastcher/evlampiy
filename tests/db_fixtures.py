@@ -52,7 +52,7 @@ def mongo_uri() -> Iterator[str]:
         container = (
             MongoDbContainer(compose_mongo_image(_PRODUCTION_COMPOSE))
             .with_command(f"--wiredTigerCacheSizeGB {_MONGO_CACHE_GB}")
-            .with_kwargs(mem_limit=_MONGO_MEMORY_LIMIT, ulimits=[_MONGO_OPEN_FILES])
+            .with_kwargs(mem_limit=_MONGO_MEMORY_LIMIT, memswap_limit=_MONGO_MEMORY_LIMIT, ulimits=[_MONGO_OPEN_FILES])
         )
         container.start()
     except DockerException as error:

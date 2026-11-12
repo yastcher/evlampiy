@@ -55,7 +55,7 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Format: `uv run ruff format`
 - Typecheck: `uv run ty check evlampiy`
 - Test: `uv run pytest`; a partial run needs `--no-cov` (`uv run pytest tests/test_x.py --no-cov`) — the coverage floor applies to the whole suite
-- Heavy local runs go under a memory cap with no swap — `systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 <command>`; the gate caps its pytest step itself. On an 8 GB laptop the kernel's OOM killer otherwise picks the IDE
+- Heavy local runs go under a memory cap with no swap — `systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 <command>`; the gate caps its pytest step itself. A container is not inside that scope — it runs under dockerd — so cap it with `docker run --memory=… --memory-swap=…` (compose: `mem_limit`); image scans (Trivy) run in CI, never locally. On an 8 GB laptop the kernel's OOM killer otherwise picks the IDE, free swap or not
 - Coverage floor: `fail_under` in pyproject.toml is a ratchet — raise it when coverage grows, never lower it; the README badges show it (`tests/test_docs.py` checks)
 - Changelog entry: `scripts/changelog_add.py <Added|Changed|Fixed|Removed|Docs> "- text"` (`--top` puts a user-facing entry above infrastructure ones)
 - Release (maintainer, on main): `mkdir -p tmp && scripts/pre_release_qa.sh > tmp/qa.log 2>&1`, then `scripts/release.sh patch|minor|major` — the QA run (the gate, a CRAP limit, a smoke of the release image's stack, mutation testing) stamps the tree it passed, and `release.sh` tags no other; `SKIP_PRERELEASE_QA=1` is for a hotfix that cannot wait

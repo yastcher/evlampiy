@@ -2,10 +2,13 @@
 # top, under a project name of its own. Never the developer's .env — its token would poll
 # Telegram next to production's bot — nor the bind-mounted database, nor a published port
 # another stack may hold. Health is probed every few seconds so the run does not wait out
-# production's 30-second interval.
+# production's 30-second interval. Each container has a memory cap of its own: on a laptop
+# the stack shares the memory with the IDE, and a container is outside any systemd scope.
 services:
   mongodb:
     container_name: !reset null
+    mem_limit: 512m
+    memswap_limit: 512m
     volumes: !override
       - mongo_data:/data/db
     healthcheck:
@@ -13,6 +16,8 @@ services:
 
   evlampiy_notes:
     env_file: !reset []
+    mem_limit: 512m
+    memswap_limit: 512m
     environment:
       # main() refuses to start without a token: this one has the form aiogram checks, and
       # nothing else. The Bot API is a closed local port, so polling fails as the network

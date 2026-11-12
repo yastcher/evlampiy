@@ -61,7 +61,8 @@ image="$(sed -n '/^  mongodb:/,/^  [a-z]/{s/^    image: //p}' docker-compose.yml
 mongo="evlampiy-qa-mongo-$$"
 # 64000 open files, as MongoDB asks: at Docker's 1024 the mutants' churn of databases and
 # indexes made mongod abort (EMFILE) a few hundred sessions in.
-docker run -d --rm --name "$mongo" -p 127.0.0.1::27017 --memory 512m --ulimit nofile=64000:64000 \
+docker run -d --rm --name "$mongo" -p 127.0.0.1::27017 --memory 512m --memory-swap 512m \
+  --ulimit nofile=64000:64000 \
   "$image" --wiredTigerCacheSizeGB 0.25 >/dev/null
 trap 'docker stop "$mongo" >/dev/null 2>&1 || true' EXIT
 ready=0

@@ -27,6 +27,7 @@
 - Tests run against a real MongoDB 8.0.3 (a testcontainers container locally, a service container in CI) instead of mongomock
 - MongoDB is reached through pymongo's async client instead of the deprecated motor
 - Every GitHub Action is pinned to a commit
+- The containers the tests and pre-release QA start have memory caps of their own, swap included
 
 ### Fixed
 
