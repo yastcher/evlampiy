@@ -118,9 +118,8 @@ class TestArchitectureFreshness:
                 continue
             actual_files.add(rel)
         undocumented = actual_files - tree_files
-        assert not undocumented, (
-            "Python files in evlampiy/ not listed in ARCHITECTURE.md tree:\n"
-            + "\n".join(f"  evlampiy/{f}" for f in sorted(undocumented))
+        assert not undocumented, "Python files in evlampiy/ not listed in ARCHITECTURE.md tree:\n" + "\n".join(
+            f"  evlampiy/{f}" for f in sorted(undocumented)
         )
 
 
@@ -141,9 +140,7 @@ class TestReadmeDocTable:
         for readme in _READMES:
             text = readme.read_text()
             # Match ## Documentation / ## Документация / ## Documentacion / ## Dokumentation
-            if not re.search(
-                r"^## (Documentation|Документация|Documentacion|Dokumentation)", text, re.M
-            ):
+            if not re.search(r"^## (Documentation|Документация|Documentacion|Dokumentation)", text, re.M):
                 missing.append(readme.name)
         assert not missing, f"READMEs without Documentation section: {missing}"
 
@@ -172,6 +169,5 @@ class TestChangelogStructure:
             if name not in _ALLOWED_CHANGELOG_SUBSECTIONS:
                 invalid.append(name)
         assert not invalid, (
-            f"Invalid CHANGELOG subsections: {invalid}. "
-            f"Allowed: {sorted(_ALLOWED_CHANGELOG_SUBSECTIONS)}"
+            f"Invalid CHANGELOG subsections: {invalid}. Allowed: {sorted(_ALLOWED_CHANGELOG_SUBSECTIONS)}"
         )

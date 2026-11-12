@@ -55,9 +55,7 @@ async def build_stats_text() -> str:
         parts = [f"{p}{_provider_rpm(p)} {_provider_icon(p, keys)}" for p in chain]
         return " → ".join(parts)
 
-    categ_primary = await get_bot_config(
-        "categorization_provider", settings.categorization_provider
-    )
+    categ_primary = await get_bot_config("categorization_provider", settings.categorization_provider)
     gpt_primary = await get_bot_config("gpt_provider", settings.gpt_provider)
     categ_chain = _chain_str(categ_primary, CATEGORIZATION_FALLBACK_CHAIN)
     gpt_chain = _chain_str(gpt_primary, GPT_FALLBACK_CHAIN)

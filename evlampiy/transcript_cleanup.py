@@ -21,15 +21,10 @@ def _build_cleanup_prompt(
     parts = [CLEANUP_PROMPT_BASE]
     if context:
         context_notes = "\n---\n".join(context)
-        parts.append(
-            f"\nContext from recent notes in this chat "
-            f"(use to understand garbled words):\n{context_notes}\n"
-        )
+        parts.append(f"\nContext from recent notes in this chat (use to understand garbled words):\n{context_notes}\n")
     if vocabulary:
         flat_keywords = ", ".join(kw for keywords in vocabulary.values() for kw in keywords)
-        parts.append(
-            f"\nDomain vocabulary (may appear garbled in transcription): {flat_keywords}\n"
-        )
+        parts.append(f"\nDomain vocabulary (may appear garbled in transcription): {flat_keywords}\n")
     parts.append(f"\nTranscription:\n{text}")
     return "".join(parts)
 
@@ -56,7 +51,5 @@ async def cleanup_transcript(
         logger.warning("Transcript cleanup returned empty, text_length=%d", len(text))
         return text
 
-    logger.debug(
-        "Transcript cleaned, original_length=%d, cleaned_length=%d", len(text), len(result)
-    )
+    logger.debug("Transcript cleaned, original_length=%d, cleaned_length=%d", len(text), len(result))
     return result

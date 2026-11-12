@@ -55,11 +55,7 @@ async def link_whatsapp(event: EventLike, bot: Bot) -> None:
     user_id = str(event.from_user.id)
     code = await generate_link_code(user_id)
 
-    text = (
-        translates["whatsapp_link_prompt"]
-        .get(language, translates["whatsapp_link_prompt"]["en"])
-        .format(code=code)
-    )
+    text = translates["whatsapp_link_prompt"].get(language, translates["whatsapp_link_prompt"]["en"]).format(code=code)
     await reply_text(event, text)
 
 
@@ -82,9 +78,7 @@ async def unlink_whatsapp(event: EventLike, bot: Bot) -> None:
     else:
         await reply_text(
             event,
-            translates["whatsapp_not_linked"].get(
-                language, translates["whatsapp_not_linked"]["en"]
-            ),
+            translates["whatsapp_not_linked"].get(language, translates["whatsapp_not_linked"]["en"]),
         )
 
 
@@ -104,12 +98,14 @@ async def account_hub(message: Message, bot: Bot) -> None:
         [InlineKeyboardButton(text=translates["btn_buy"][language], callback_data="hub_buy")],
         [
             InlineKeyboardButton(
-                text=translates["btn_balance"][language], callback_data="hub_balance",
+                text=translates["btn_balance"][language],
+                callback_data="hub_balance",
             )
         ],
         [
             InlineKeyboardButton(
-                text=translates["btn_mystats"][language], callback_data="hub_mystats",
+                text=translates["btn_mystats"][language],
+                callback_data="hub_mystats",
             )
         ],
     ]

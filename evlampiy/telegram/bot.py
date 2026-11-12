@@ -30,8 +30,7 @@ async def send_response(
     if chat_id is None:
         return
     chunks = [
-        response[i : i + MAX_TELEGRAM_MESSAGE_LENGTH]
-        for i in range(0, len(response), MAX_TELEGRAM_MESSAGE_LENGTH)
+        response[i : i + MAX_TELEGRAM_MESSAGE_LENGTH] for i in range(0, len(response), MAX_TELEGRAM_MESSAGE_LENGTH)
     ]
 
     for i, chunk in enumerate(chunks):

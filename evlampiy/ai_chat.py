@@ -368,9 +368,7 @@ async def _gemini_chat_complete(
     if response.status_code >= _HTTP_5XX_MIN:
         raise _ServerError(f"Gemini server error: {response.status_code}")
 
-    logger.error(
-        "Gemini chat API error, status: %s, body: %.300s", response.status_code, response.text
-    )
+    logger.error("Gemini chat API error, status: %s, body: %.300s", response.status_code, response.text)
     return None
 
 

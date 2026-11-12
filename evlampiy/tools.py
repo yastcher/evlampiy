@@ -105,8 +105,7 @@ _TOOL_DEFS: list[
     ),
     (
         "get_user_settings",
-        "Get the user's current bot settings"
-        " (language, obsidian sync, auto-categorize, auto-cleanup)",
+        "Get the user's current bot settings (language, obsidian sync, auto-categorize, auto-cleanup)",
         {"type": "object", "properties": {}, "required": []},
         _get_user_settings,
     ),

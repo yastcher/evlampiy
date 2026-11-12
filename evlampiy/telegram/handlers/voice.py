@@ -109,9 +109,7 @@ async def _validate_voice_input(message: Message, bot: Bot) -> _VoiceContext | N
         await send_response(
             message,
             bot,
-            response=translates["blocked_message"].get(
-                language, translates["blocked_message"]["en"]
-            ),
+            response=translates["blocked_message"].get(language, translates["blocked_message"]["en"]),
         )
         return None
 
@@ -124,9 +122,7 @@ async def _validate_voice_input(message: Message, bot: Bot) -> _VoiceContext | N
         await send_response(
             message,
             bot,
-            response=translates["service_unavailable"].get(
-                language, translates["service_unavailable"]["en"]
-            ),
+            response=translates["service_unavailable"].get(language, translates["service_unavailable"]["en"]),
         )
         return None
 
@@ -136,9 +132,7 @@ async def _validate_voice_input(message: Message, bot: Bot) -> _VoiceContext | N
             await send_response(
                 message,
                 bot,
-                response=translates["insufficient_credits"].get(
-                    language, translates["insufficient_credits"]["en"]
-                ),
+                response=translates["insufficient_credits"].get(language, translates["insufficient_credits"]["en"]),
             )
             return None
 

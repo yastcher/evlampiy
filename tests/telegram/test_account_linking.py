@@ -197,9 +197,7 @@ class TestWhatsAppLinkHandler:
 
         mock_wa.send_message.assert_called_once()
         call_kwargs = mock_wa.send_message.call_args
-        assert (
-            "success" in call_kwargs.kwargs["text"].lower() or "success" in str(call_kwargs).lower()
-        )
+        assert "success" in call_kwargs.kwargs["text"].lower() or "success" in str(call_kwargs).lower()
 
         assert await get_linked_telegram_id(phone) == user_id
 

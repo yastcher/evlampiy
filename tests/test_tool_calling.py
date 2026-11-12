@@ -133,9 +133,7 @@ class TestSingleToolCall:
         )
 
         with patch("evlampiy.tool_calling.chat_complete", mock_complete):
-            await run_tool_conversation(
-                [{"role": "user", "content": "notes"}], [tool], ["deepseek"]
-            )
+            await run_tool_conversation([{"role": "user", "content": "notes"}], [tool], ["deepseek"])
 
         assert received_args == {"limit": 5}
 
@@ -165,9 +163,7 @@ class TestMultipleToolCalls:
         mock_complete = AsyncMock(side_effect=[two_calls, _text_response("Combined result")])
 
         with patch("evlampiy.tool_calling.chat_complete", mock_complete):
-            result = await run_tool_conversation(
-                [{"role": "user", "content": "both"}], [tool_a, tool_b], ["deepseek"]
-            )
+            result = await run_tool_conversation([{"role": "user", "content": "both"}], [tool_a, tool_b], ["deepseek"])
 
         assert result == "Combined result"
 
@@ -184,9 +180,7 @@ class TestErrorHandling:
         )
 
         with patch("evlampiy.tool_calling.chat_complete", mock_complete):
-            result = await run_tool_conversation(
-                [{"role": "user", "content": "test"}], [], ["deepseek"]
-            )
+            result = await run_tool_conversation([{"role": "user", "content": "test"}], [], ["deepseek"])
 
         assert result == "Sorry, could not find that tool"
 
@@ -211,9 +205,7 @@ class TestErrorHandling:
             return _text_response("Tool error occurred")
 
         with patch("evlampiy.tool_calling.chat_complete", side_effect=capture_complete):
-            result = await run_tool_conversation(
-                [{"role": "user", "content": "test"}], [tool], ["deepseek"]
-            )
+            result = await run_tool_conversation([{"role": "user", "content": "test"}], [tool], ["deepseek"])
 
         assert result == "Tool error occurred"
         tool_result = next(m for m in captured_messages[1] if m.get("role") == "tool")
@@ -232,9 +224,7 @@ class TestMaxIterations:
         )
 
         with patch("evlampiy.tool_calling.chat_complete", mock_complete):
-            result = await run_tool_conversation(
-                [{"role": "user", "content": "loop"}], [tool], ["deepseek"]
-            )
+            result = await run_tool_conversation([{"role": "user", "content": "loop"}], [tool], ["deepseek"])
 
         # Should stop at GPT_MAX_TOOL_ITERATIONS (5)
         assert mock_complete.call_count == 5

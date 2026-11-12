@@ -246,9 +246,7 @@ class TestAdminCommands:
         call_text = mock_private_update.answer.call_args[0][0]
         assert "not found" in call_text.lower()
 
-    async def test_admin_callback_vip_list(
-        self, mock_private_update, mock_context, mock_callback_query, admin_auth
-    ):
+    async def test_admin_callback_vip_list(self, mock_private_update, mock_context, mock_callback_query, admin_auth):
         """Admin callback shows VIP list."""
         await add_user_role("111", const.ROLE_VIP, "admin")
 
@@ -295,9 +293,7 @@ class TestAdminCommands:
         call_text = mock_callback_query.message.edit_text.call_args[0][0]
         assert "/add_credits" in call_text
 
-    async def test_admin_callback_stats(
-        self, mock_private_update, mock_context, mock_callback_query, admin_auth
-    ):
+    async def test_admin_callback_stats(self, mock_private_update, mock_context, mock_callback_query, admin_auth):
         """Admin stats callback builds stats text and updates message."""
         mock_private_update.from_user.id = 999
         mock_callback_query.data = "adm_stats"
@@ -472,9 +468,7 @@ class TestAlerts:
         # $10 / 0.014 ≈ 714.3 stars needed for $10 milestone
         credits_sold = 715
         credits_just_sold = 10
-        await MonthlyStats(
-            month_key=month, total_payments=1, total_credits_sold=credits_sold
-        ).insert()
+        await MonthlyStats(month_key=month, total_payments=1, total_credits_sold=credits_sold).insert()
 
         await check_and_send_alerts(mock_context, credits_just_sold=credits_just_sold)
 
@@ -489,9 +483,7 @@ class TestAlerts:
         # Both prev and current above $10 → no milestone crossing
         credits_sold = 800
         credits_just_sold = 5  # prev = 795 stars ≈ $11.13, current ≈ $11.20
-        await MonthlyStats(
-            month_key=month, total_payments=1, total_credits_sold=credits_sold
-        ).insert()
+        await MonthlyStats(month_key=month, total_payments=1, total_credits_sold=credits_sold).insert()
 
         await check_and_send_alerts(mock_context, credits_just_sold=credits_just_sold)
 
@@ -649,9 +641,7 @@ class TestAdminProviderPanel:
         saved = await get_bot_config("gpt_provider", "")
         assert saved == const.PROVIDER_OPENROUTER
 
-    async def test_invalid_provider_ignored(
-        self, mock_private_update, mock_context, mock_callback_query, admin_auth
-    ):
+    async def test_invalid_provider_ignored(self, mock_private_update, mock_context, mock_callback_query, admin_auth):
         """Unknown provider name is ignored (not persisted)."""
 
         mock_private_update.from_user.id = 999
@@ -665,9 +655,7 @@ class TestAdminProviderPanel:
         saved = await get_bot_config("categorization_provider", "")
         assert saved != "unknown_provider"
 
-    async def test_back_button_returns_to_hub(
-        self, mock_private_update, mock_context, mock_callback_query, admin_auth
-    ):
+    async def test_back_button_returns_to_hub(self, mock_private_update, mock_context, mock_callback_query, admin_auth):
         """Back button returns to admin hub."""
         mock_private_update.from_user.id = 999
         mock_callback_query.data = "adm_back"

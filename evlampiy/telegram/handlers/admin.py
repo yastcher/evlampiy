@@ -58,12 +58,7 @@ async def _build_providers_panel() -> tuple[str, InlineKeyboardMarkup]:
     categ = await get_bot_config("categorization_provider", settings.categorization_provider)
     gpt = await get_bot_config("gpt_provider", settings.gpt_provider)
 
-    text = (
-        f"🤖 <b>LLM Providers</b>\n\n"
-        f"• Categ: <code>{categ}</code>\n"
-        f"• GPT:   <code>{gpt}</code>\n\n"
-        f"Select to change:"
-    )
+    text = f"🤖 <b>LLM Providers</b>\n\n• Categ: <code>{categ}</code>\n• GPT:   <code>{gpt}</code>\n\nSelect to change:"
 
     def _btn(prefix: str, current: str, p: str) -> InlineKeyboardButton:
         label = f"✓ {p}" if p == current else p

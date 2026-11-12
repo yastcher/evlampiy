@@ -286,9 +286,7 @@ class TestParseAnthropicResponse:
 class TestChatComplete:
     """Test the chat_complete orchestration function."""
 
-    async def test_returns_response_on_success(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_returns_response_on_success(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         api_response = {"choices": [{"message": {"content": "Hi!", "role": "assistant"}}]}
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
@@ -340,9 +338,7 @@ class TestChatComplete:
         result = await chat_complete(["deepseek"], messages)
         assert result is None
 
-    async def test_passes_tools_in_request(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_passes_tools_in_request(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         api_response = {"choices": [{"message": {"content": "ok", "role": "assistant"}}]}
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
@@ -361,9 +357,7 @@ class TestChatComplete:
         assert "tools" in payload
         assert payload["tools"][0]["type"] == "function"
 
-    async def test_network_error_returns_none(
-        self, mock_ai_http, mock_rate_limiter, no_fallback_keys
-    ):
+    async def test_network_error_returns_none(self, mock_ai_http, mock_rate_limiter, no_fallback_keys):
         mock_ai_http.post.side_effect = httpx.ConnectError("Connection refused")
 
         messages = [{"role": "user", "content": "Hello"}]
@@ -376,9 +370,7 @@ class TestChatComplete:
 
         assert result is None
 
-    async def test_gemini_chat_complete(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_gemini_chat_complete(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Gemini provider returns ChatResponse via chat_complete."""
         api_response = {"candidates": [{"content": {"parts": [{"text": "Gemini says hi"}]}}]}
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
@@ -394,18 +386,10 @@ class TestChatComplete:
         assert result is not None
         assert result.content == "Gemini says hi"
 
-    async def test_gemini_with_tool_call(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_gemini_with_tool_call(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Gemini returns function call in response."""
         api_response = {
-            "candidates": [
-                {
-                    "content": {
-                        "parts": [{"functionCall": {"name": "get_notes", "args": {"limit": 2}}}]
-                    }
-                }
-            ]
+            "candidates": [{"content": {"parts": [{"functionCall": {"name": "get_notes", "args": {"limit": 2}}}]}}]
         }
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
 
@@ -434,9 +418,7 @@ class TestChatComplete:
 
         assert result is None
 
-    async def test_anthropic_chat_complete(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_anthropic_chat_complete(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Anthropic provider returns ChatResponse via chat_complete."""
         api_response = {"content": [{"type": "text", "text": "Claude says hi"}]}
         mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
@@ -452,9 +434,7 @@ class TestChatComplete:
         assert result is not None
         assert result.content == "Claude says hi"
 
-    async def test_anthropic_with_tool_use(
-        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
-    ):
+    async def test_anthropic_with_tool_use(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Anthropic returns tool_use block in response."""
         api_response = {
             "content": [

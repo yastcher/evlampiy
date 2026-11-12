@@ -56,9 +56,7 @@ class TestRetryOn429:
         self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter, mock_ai_sleep
     ):
         """Provider is retried on 429 and returns result on second attempt."""
-        ok_response = mock_httpx_response_factory(
-            {"candidates": [{"content": {"parts": [{"text": "result"}]}}]}, 200
-        )
+        ok_response = mock_httpx_response_factory({"candidates": [{"content": {"parts": [{"text": "result"}]}}]}, 200)
         rate_limited = mock_httpx_response_factory(status_code=429)
         mock_ai_http.post.side_effect = [rate_limited, ok_response]
 
@@ -104,9 +102,7 @@ class TestFallbackOnExhausted:
     ):
         """When Gemini exhausts retries on 429, request falls back to Groq."""
         gemini_429 = mock_httpx_response_factory(status_code=429)
-        groq_ok = mock_httpx_response_factory(
-            {"choices": [{"message": {"content": "groq_result"}}]}, 200
-        )
+        groq_ok = mock_httpx_response_factory({"choices": [{"message": {"content": "groq_result"}}]}, 200)
 
         async def fake_post(url: str, **kwargs):
             if "generateContent" in url:

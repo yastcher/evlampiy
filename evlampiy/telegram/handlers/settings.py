@@ -45,9 +45,7 @@ async def choose_language(message: Message, bot: Bot) -> None:
 
     chat_id = get_chat_id(message)
     language = await get_chat_language(chat_id)
-    prompt = translates["choose_language_prompt"].get(
-        language, translates["choose_language_prompt"]["en"]
-    )
+    prompt = translates["choose_language_prompt"].get(language, translates["choose_language_prompt"]["en"])
     await message.answer(prompt, reply_markup=_build_language_keyboard())
 
 
@@ -93,16 +91,8 @@ async def settings_hub(message: Message, bot: Bot) -> None:
     language = await get_chat_language(chat_id)
 
     keyboard: list[list[InlineKeyboardButton]] = [
-        [
-            InlineKeyboardButton(
-                text=translates["btn_language"][language], callback_data="hub_language"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text=translates["btn_gpt_command"][language], callback_data="hub_gpt_command"
-            )
-        ],
+        [InlineKeyboardButton(text=translates["btn_language"][language], callback_data="hub_language")],
+        [InlineKeyboardButton(text=translates["btn_gpt_command"][language], callback_data="hub_gpt_command")],
     ]
 
     if message.from_user is not None:
@@ -142,9 +132,7 @@ async def _show_provider_menu(callback: CallbackQuery) -> None:
     language = await get_chat_language(chat_id)
     current = await get_preferred_provider(chat_id)
 
-    prompt = translates["choose_provider_prompt"].get(
-        language, translates["choose_provider_prompt"]["en"]
-    )
+    prompt = translates["choose_provider_prompt"].get(language, translates["choose_provider_prompt"]["en"])
 
     check = "✅ "
     keyboard: list[list[InlineKeyboardButton]] = [
@@ -181,9 +169,7 @@ async def hub_show_language_menu(event: EventLike, bot: Bot) -> None:
         return
     chat_id = get_chat_id(event)
     language = await get_chat_language(chat_id)
-    prompt = translates["choose_language_prompt"].get(
-        language, translates["choose_language_prompt"]["en"]
-    )
+    prompt = translates["choose_language_prompt"].get(language, translates["choose_language_prompt"]["en"])
     await event.message.edit_text(prompt, reply_markup=_build_language_keyboard())
 
 
@@ -211,6 +197,4 @@ async def provider_buttons(callback: CallbackQuery, bot: Bot) -> None:
     language = await get_chat_language(chat_id)
     translate_key = await set_chat_provider_choice(chat_id, choice)
     if isinstance(callback.message, Message):
-        await callback.message.edit_text(
-            text=translates[translate_key].get(language, translates[translate_key]["en"])
-        )
+        await callback.message.edit_text(text=translates[translate_key].get(language, translates[translate_key]["en"]))
