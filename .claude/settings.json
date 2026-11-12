@@ -35,8 +35,17 @@
       "Bash(ls:*)"
     ],
     "deny": [
+      "Read(**/.env)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Bash(cat *.env)",
+      "Bash(head *.env)",
+      "Bash(tail *.env)",
+      "Bash(grep * .env)",
+      "Bash(cat *.pem)",
+      "Bash(cat *.key)",
       "Bash(rm -rf*)",
-      "Bash(* rm *)",
+      "Bash(rm *)",
       "Bash(sudo*)",
       "Bash(git push*)",
       "Bash(git checkout*)",
