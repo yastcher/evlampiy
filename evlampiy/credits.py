@@ -299,11 +299,18 @@ async def record_groq_usage(duration_seconds: int) -> None:
     )
 
 
-async def increment_payment_stats(credits_sold: int) -> None:
+async def increment_payment_stats(credits_sold: int, stars: int) -> None:
+    """Count a payment: the tokens it bought and the Telegram Stars it paid, which are the revenue."""
     month = current_month_key()
     await MonthlyStats.find_one(MonthlyStats.month_key == month).upsert(
-        Inc({MonthlyStats.total_payments: 1, MonthlyStats.total_credits_sold: credits_sold}),
-        on_insert=MonthlyStats(month_key=month, total_payments=1, total_credits_sold=credits_sold),
+        Inc(
+            {
+                MonthlyStats.total_payments: 1,
+                MonthlyStats.total_credits_sold: credits_sold,
+                MonthlyStats.total_stars: stars,
+            }
+        ),
+        on_insert=MonthlyStats(month_key=month, total_payments=1, total_credits_sold=credits_sold, total_stars=stars),
     )
 
 

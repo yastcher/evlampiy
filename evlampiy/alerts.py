@@ -1,4 +1,8 @@
-"""Admin alert service."""
+"""Admin alerts: the month's first payment, revenue milestones, and Wit usage.
+
+They go out through the Telegram bot `register_admin_bot` takes when the Telegram side
+starts, so a voice message from WhatsApp raises the Wit alerts too.
+"""
 
 import contextlib
 import logging
@@ -17,7 +21,25 @@ logger = logging.getLogger(__name__)
 REVENUE_MILESTONES = [10, 50, 100, 500, 1000]
 
 
-async def send_admin_alert(bot: Bot, message: str) -> None:
+class _AdminBotHolder:
+    """Holder for the bot that writes to the admins — avoids ``global`` keyword."""
+
+    bot: Bot | None = None
+
+
+admin_bot = _AdminBotHolder()
+
+
+def register_admin_bot(bot: Bot) -> None:
+    """Send the admin alerts through `bot` from now on."""
+    admin_bot.bot = bot
+
+
+async def send_admin_alert(message: str) -> None:
+    bot = admin_bot.bot
+    if bot is None:
+        logger.warning("No Telegram bot registered for admin alerts, dropped: %s", message)
+        return
     for admin_id in settings.admin_user_ids:
         try:
             await bot.send_message(chat_id=int(admin_id), text=message, parse_mode="HTML")
@@ -39,31 +61,39 @@ async def _mark_alert_sent(alert_type: str, month: str) -> None:
         await AlertState(alert_type=alert_type, month_key=month).insert()
 
 
-async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1) -> None:
+async def check_payment_alerts(stars_just_paid: int) -> None:
+    """After a payment: the month's first payment, and any revenue milestone it crossed.
+
+    Revenue is the Telegram Stars paid, not the tokens they bought: a package sells more
+    tokens than Stars.
+    """
     if not settings.admin_user_ids:
         return
 
     month = current_month_key()
     stats = await get_monthly_stats(month)
+    if stats is None:
+        return
 
-    if stats and stats.total_payments == 1:
-        if await _should_send_alert("first_payment", month):
-            await send_admin_alert(bot, "🎉 <b>First payment received!</b>\n\nCongratulations!")
-            await _mark_alert_sent("first_payment", month)
+    if stats.total_payments == 1 and await _should_send_alert("first_payment", month):
+        await send_admin_alert("🎉 <b>First payment received!</b>\n\nCongratulations!")
+        await _mark_alert_sent("first_payment", month)
 
-        revenue = stats.total_credits_sold * const.STAR_TO_DOLLAR
-        for milestone in REVENUE_MILESTONES:
-            prev_revenue = (
-                (stats.total_credits_sold - credits_just_sold) * const.STAR_TO_DOLLAR
-                if stats.total_credits_sold >= credits_just_sold
-                else 0
-            )
-            if prev_revenue < milestone <= revenue:
-                alert_type = f"revenue_{milestone}"
-                if await _should_send_alert(alert_type, month):
-                    await send_admin_alert(bot, f"🎉 <b>Revenue milestone!</b>\n\nReached ${milestone}!")
-                    await _mark_alert_sent(alert_type, month)
+    revenue = stats.total_stars * const.STAR_TO_DOLLAR
+    previous = max(stats.total_stars - stars_just_paid, 0) * const.STAR_TO_DOLLAR
+    for milestone in REVENUE_MILESTONES:
+        alert_type = f"revenue_{milestone}"
+        if previous < milestone <= revenue and await _should_send_alert(alert_type, month):
+            await send_admin_alert(f"🎉 <b>Revenue milestone!</b>\n\nReached ${milestone}!")
+            await _mark_alert_sent(alert_type, month)
 
+
+async def check_wit_alerts() -> None:
+    """After Wit use on either channel: a language past 80 % or 95 % of the monthly free limit."""
+    if not settings.admin_user_ids:
+        return
+
+    month = current_month_key()
     wit_limit = settings.wit_free_monthly_limit
     usage_by_lang = await get_all_wit_usage_this_month()
 
@@ -71,7 +101,6 @@ async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1) -> None:
         if wit_usage > wit_limit * 0.95:
             if await _should_send_alert(f"wit_95_{lang}", month):
                 await send_admin_alert(
-                    bot,
                     f"🚨 <b>Wit.ai CRITICAL ({lang})</b>\n\n"
                     f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)\n\n"
                     f"Free tier almost exhausted!",
@@ -79,7 +108,6 @@ async def check_and_send_alerts(bot: Bot, credits_just_sold: int = 1) -> None:
                 await _mark_alert_sent(f"wit_95_{lang}", month)
         elif wit_usage > wit_limit * 0.8 and await _should_send_alert(f"wit_80_{lang}", month):
             await send_admin_alert(
-                bot,
                 f"⚠️ <b>Wit.ai Warning ({lang})</b>\n\n"
                 f"Usage: {wit_usage:,} / {wit_limit:,} ({wit_usage / wit_limit * 100:.1f}%)",
             )

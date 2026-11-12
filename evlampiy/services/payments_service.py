@@ -85,7 +85,7 @@ async def award_tokens(user_id: UserId, payload: str, total_amount: int, charge_
 
     tokens_to_add = tokens_for_payload(payload, total_amount)
     new_purchased = await add_credits(user_id, tokens_to_add)
-    await increment_payment_stats(tokens_to_add)
+    await increment_payment_stats(tokens_to_add, stars=total_amount)
     # "tokens" are the credits a payment buys, not credentials.
     logger.info(  # nosemgrep: python-logger-credential-disclosure
         "User %s purchased %s tokens, purchased balance: %s",

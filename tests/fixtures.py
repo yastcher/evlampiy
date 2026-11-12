@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, Chat, Message, User
 from fastapi.testclient import TestClient
 
 import evlampiy.ai_client
+import evlampiy.alerts
 import evlampiy.telegram.handlers.obsidian as obsidian_handlers
 import evlampiy.whatsapp.client
 from evlampiy.whatsapp.app import create_fastapi_app
@@ -234,7 +235,7 @@ def voice_external_mocks():
 
     transcribe_audio / save_transcription_to_obsidian / cleanup_transcript / categorize_note
     live in `evlampiy.services.voice_pipeline` after PR2 of architecture-isolation.
-    send_response / check_and_send_alerts stay in the telegram adapter.
+    send_response / check_wit_alerts stay in the telegram adapter.
     """
     with (
         patch(
@@ -246,7 +247,7 @@ def voice_external_mocks():
             "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
             AsyncMock(return_value=(False, None)),
         ) as mock_obsidian,
-        patch("evlampiy.telegram.handlers.voice.check_and_send_alerts", AsyncMock()) as mock_alerts,
+        patch("evlampiy.telegram.handlers.voice.check_wit_alerts", AsyncMock()) as mock_alerts,
         patch(
             "evlampiy.services.voice_pipeline.cleanup_transcript",
             AsyncMock(side_effect=lambda t, **kwargs: t),
@@ -374,6 +375,13 @@ def _patch_settings(tmp_path):
         mock_settings.deepseek_api_key = "test-key"
         mock_settings.wit_ru_token = "test-token"
         yield mock_settings
+
+
+@pytest.fixture
+def alerts_bot(mock_context):
+    """The bot the admin alerts go out through, registered as the Telegram side does at start."""
+    with patch.object(evlampiy.alerts.admin_bot, "bot", mock_context):
+        yield mock_context
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ from aiogram import Bot
 from aiogram.types import Audio, Message, Voice
 
 from evlampiy import const
-from evlampiy.alerts import check_and_send_alerts
+from evlampiy.alerts import check_wit_alerts
 from evlampiy.config import settings
 from evlampiy.credits import (
     calculate_token_cost,
@@ -189,7 +189,7 @@ async def from_voice_to_text(message: Message, bot: Bot) -> None:
 
     if ctx.provider == const.PROVIDER_WIT:
         await increment_wit_usage(result.wit_requests, language=ctx.language)
-        await check_and_send_alerts(bot)
+        await check_wit_alerts()
     elif ctx.provider == const.PROVIDER_GROQ:
         await record_groq_usage(result.duration)
 

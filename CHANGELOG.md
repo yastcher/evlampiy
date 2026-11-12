@@ -46,6 +46,8 @@
 - Local image builds no longer copy `tmp/`, `mutants/` and `.hypothesis/` into the image
 - The bot's port is published on the host's loopback only: Docker opened it to the internet past the firewall; the WhatsApp webhook comes in through the TLS proxy
 - Tests run on `Settings`' defaults, never the developer's `.env` or shell keys; a real vendor call needs `LIVE_VENDOR_TESTS=1`
+- `/stats` and the revenue alerts count the Telegram Stars paid, not the tokens they bought; Stars are recorded from this release on
+- A revenue milestone is announced on any payment that crosses it, not only on the month's first payment
 
 ### Removed
 

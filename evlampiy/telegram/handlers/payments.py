@@ -13,7 +13,7 @@ from aiogram.types import (
 )
 
 from evlampiy import const
-from evlampiy.alerts import check_and_send_alerts
+from evlampiy.alerts import check_payment_alerts
 from evlampiy.config import settings
 from evlampiy.credits import current_month_key, get_credits
 from evlampiy.dto import UserMonthlyUsage
@@ -92,7 +92,7 @@ async def handle_successful_payment(message: Message, bot: Bot) -> None:
     if result is None:
         # Telegram redelivered an already-processed payment — don't re-credit or re-notify.
         return
-    await check_and_send_alerts(bot, credits_just_sold=result.tokens_added)
+    await check_payment_alerts(payment.total_amount)
 
     await bot.send_message(
         chat_id=message.chat.id,

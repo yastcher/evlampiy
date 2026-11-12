@@ -30,9 +30,10 @@ async def build_stats_text() -> str:
     total_transcriptions = stats.total_transcriptions if stats else 0
     total_payments = stats.total_payments if stats else 0
     total_credits_sold = stats.total_credits_sold if stats else 0
+    total_stars = stats.total_stars if stats else 0
     groq_audio_seconds = stats.groq_audio_seconds if stats else 0
 
-    revenue = total_credits_sold * const.STAR_TO_DOLLAR
+    revenue = total_stars * const.STAR_TO_DOLLAR
     groq_cost = groq_audio_seconds / 3600 * 0.04
 
     def _wit_status(usage: int) -> str:
@@ -70,8 +71,8 @@ async def build_stats_text() -> str:
         f"• Total transcriptions: {total_transcriptions:,}\n"
         f"• Payments: {total_payments}\n\n"
         f"<b>Revenue</b>\n"
-        f"• Stars received: {total_credits_sold}★\n"
-        f"• Credits sold: {total_credits_sold}\n"
+        f"• Stars received: {total_stars}★\n"
+        f"• Tokens sold: {total_credits_sold}\n"
         f"• Revenue: ${revenue:.2f}\n\n"
         f"<b>Costs</b>\n"
         f"• Wit.ai / {wit_limit:,} req/mo:\n"

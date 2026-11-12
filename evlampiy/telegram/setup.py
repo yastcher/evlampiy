@@ -19,6 +19,7 @@ from aiogram.types import (
     Update,
 )
 
+from evlampiy.alerts import register_admin_bot
 from evlampiy.config import settings
 from evlampiy.gpt_commands import evlampiy_command
 from evlampiy.selftest import run_selftest
@@ -248,6 +249,7 @@ async def _run_polling_with_retry(dp: Dispatcher, bot: Bot) -> None:
 async def run_bot() -> None:
     """Initialize bot, register commands, run self-test, and start polling."""
     bot = build_bot()
+    register_admin_bot(bot)
     dp = build_dispatcher()
     selftest_task: asyncio.Task[None] | None = None
     try:

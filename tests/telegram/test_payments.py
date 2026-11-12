@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from evlampiy import const
-from evlampiy.alerts import check_and_send_alerts
+from evlampiy.alerts import check_payment_alerts
 from evlampiy.credits import add_credits, get_total_credits, get_user_tier, increment_payment_stats
 from evlampiy.dto import UserTier
 from evlampiy.mongo import set_chat_language
@@ -140,13 +140,13 @@ class TestMilestoneAlerts:
 
     async def test_milestone_triggers_on_bulk_purchase(self, mock_private_update, mock_context):
         """Milestone alert triggers when buying crossing threshold."""
-        credits_for_10_dollars = int(10 / const.STAR_TO_DOLLAR) + 1
+        stars_for_10_dollars = int(10 / const.STAR_TO_DOLLAR) + 1
 
-        await increment_payment_stats(credits_for_10_dollars)
+        await increment_payment_stats(stars_for_10_dollars, stars=stars_for_10_dollars)
 
         alerts_sent = []
 
-        async def capture_alert(bot, message):
+        async def capture_alert(message):
             alerts_sent.append(message)
 
         with (
@@ -154,8 +154,7 @@ class TestMilestoneAlerts:
             patch("evlampiy.alerts.settings") as mock_settings,
         ):
             mock_settings.admin_user_ids = ["123"]
-            mock_settings.wit_free_monthly_limit = 500
-            await check_and_send_alerts(mock_context, credits_just_sold=credits_for_10_dollars)
+            await check_payment_alerts(stars_just_paid=stars_for_10_dollars)
 
         milestone_alerts = [a for a in alerts_sent if "$10" in a]
         assert len(milestone_alerts) == 1

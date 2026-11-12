@@ -119,6 +119,7 @@ class MonthlyStats(Document):
     total_transcriptions: int = 0
     total_payments: int = 0
     total_credits_sold: int = 0
+    total_stars: int = 0  # Telegram Stars paid; recorded since 2026-11-12
     groq_audio_seconds: int = 0
 
     class Settings:
