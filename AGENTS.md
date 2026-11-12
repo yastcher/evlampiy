@@ -116,8 +116,7 @@ it, ruff owns it.
 
 - Conventional commits (feat:, fix:, docs:, refactoring:)
 - Always PR, never push to main. The one exception is the release commit that `scripts/release.sh` pushes before its tag.
-- **Do not run git commit, checkout, reset, clean, stash, rebase** — these are blocked in settings.json. Ask user if
-  needed.
+- **Do not run git checkout, reset, clean, stash, rebase** — these are blocked in settings.json. Ask user if needed. Commit finished, verified changes yourself.
 - Max ~500 lines of diff per commit — stop and propose a commit before continuing
 - Always work in the current branch — never switch branches
 - Do not run unnecessary git network operations (remote, fetch) — work with local state
