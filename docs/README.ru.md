@@ -7,9 +7,27 @@
 
 [English](../README.md) | Русский | [Español](README.es.md) | [Deutsch](README.de.md)
 
-Telegram и WhatsApp бот для транскрипции голосовых сообщений с поддержкой нескольких языков.
+Бот для Telegram и WhatsApp, который переводит голос в текст на четырёх языках: расшифровывает
+голосовое сообщение, чистит текст через LLM и сохраняет его заметкой в ваше хранилище Obsidian
+на GitHub, в папку по теме.
 
 **Попробовать:** https://t.me/evlampiy_notes_bot
+
+## Как проходит голосовое сообщение
+
+```mermaid
+flowchart TD
+    tg["Telegram<br/>aiogram"] --> admit
+    wa["WhatsApp<br/>вебхук pywa"] -->|"привязанный номер —<br/>аккаунт Telegram"| admit
+    admit["Допуск<br/>блокировка · тариф · токены"] --> stt["Распознавание речи<br/>Wit.ai или Groq Whisper"]
+    stt --> cleanup["Очистка через LLM<br/>выше бесплатного тарифа"]
+    cleanup --> note["Заметка Obsidian<br/>через GitHub API"]
+    note --> sort["Категоризация<br/>LLM выбирает папку"]
+    sort --> settle["Расчёт<br/>токены · счётчик Wit.ai · статистика"]
+    settle --> reply["Ответ в чат"]
+    cleanup & sort <-.-> mask{{"Маска ПД<br/>имена · телефоны · email"}}
+    mask <-.-> llm(["LLM-провайдеры<br/>Gemini · DeepSeek · Groq<br/>OpenRouter · Anthropic"])
+```
 
 ## Возможности
 
@@ -48,6 +66,16 @@ Telegram и WhatsApp бот для транскрипции голосовых �
 - **Статистика использования** — Транскрипции, доход, расходы за месяц
 - **Мониторинг здоровья** — Алерты админам о расходе Wit.ai, первом платеже и вехах дохода
 
+## Инженерные практики
+
+- **Границы держат тесты** — адаптеры Telegram и WhatsApp не импортируют друг друга, а сценарии в `services/` не импортируют aiogram, pywa и FastAPI: иначе падает `tests/test_architecture.py` (pytestarch).
+- **Настоящая база в тестах** — MongoDB 8.0.3, тот же образ, что в продакшене, в контейнере testcontainers; моки только на внешних API, а ключей разработчика тесты не видят.
+- **Один гейт — двойник CI** — `scripts/gate.sh` запускает то же, что CI, в том же порядке: pip-audit по каждой закреплённой версии, ruff, ty, Semgrep, тесты с порогом покрытия, который только растёт, shellcheck; тест падает, если они разойдутся.
+- **Проверки перед релизом** — `scripts/pre_release_qa.sh` добавляет лимит CRAP, смоук стека из релизного образа и мутационное тестирование (mutmut), в котором выживших мутантов становится только меньше; `scripts/release.sh` не тегирует дерево, которое эти проверки не прошло.
+- **Релиз — это тег** — CI сверяет тег с деревом, собирает образ и сканирует его Trivy, выкатывает с дампом базы, минутой наблюдения и автоматическим откатом, затем публикует GitHub Release ([конвейер](DEPLOY.md#деплой-на-сервер-cicd)).
+- **Персональные данные не попадают в промпты** — имена, телефоны и email заменяются токенами перед любым запросом к LLM и возвращаются в ответе ([ADR-002](adr/ADR-002-pii-is-masked-where-each-llm-client-hands-a-request-to-providers.md)).
+- **Решения записаны** — [docs/adr/](adr/README.md) хранит действующие решения с их причинами.
+
 ## Требования
 
 - Python 3.14+
@@ -82,47 +110,21 @@ uv run python -m evlampiy.main
 
 ## Конфигурация
 
-Создайте файл `.env`:
+В `.env.example` перечислены все настройки с комментариями. Минимум:
 
 ```env
-TELEGRAM_BOT_TOKEN=ваш_токен_бота
+TELEGRAM_BOT_TOKEN=ваш_токен_бота        # от @BotFather
 MONGO_URI=mongodb://localhost:27017/
-
-# Токены Wit.ai (получить на https://wit.ai/)
-WIT_EN_TOKEN=токен_английский
-WIT_RU_TOKEN=токен_русский
-WIT_ES_TOKEN=токен_испанский
-WIT_DE_TOKEN=токен_немецкий
-
-# Опционально: интеграция с GPT
-GPT_TOKEN=ваш_openai_токен
-GPT_MODEL=gpt-4o-mini
-
-# Опционально: интеграция с WhatsApp (см. WHATSAPP_SETUP.md)
-WHATSAPP_TOKEN=ваш_whatsapp_токен
-WHATSAPP_PHONE_ID=ваш_phone_id
-WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
-
-# Опционально: GitHub OAuth (для интеграции с Obsidian)
-# Для ручной настройки токена см. docs/GITHUB_TOKEN_SETUP.md
-GITHUB_CLIENT_ID=ваш_github_oauth_app_client_id
-
-# Опционально: Монетизация
-GROQ_API_KEY=ваш_groq_api_ключ
-VIP_USER_IDS=123456,789012   # env fallback; управление через /admin в Telegram
-ADMIN_USER_IDS=123456789
-FREE_MONTHLY_TOKENS=10
-WIT_FREE_MONTHLY_LIMIT=500
-
-# Опционально: AI-провайдер для категоризации и GPT (deepseek / groq / gemini / openrouter / anthropic)
-# Рекомендуется deepseek — быстрый, доступный из России
-# Цепочка фоллбэков (авто): primary, затем deepseek → openrouter → gemini → groq
-CATEGORIZATION_PROVIDER=deepseek
-GPT_PROVIDER=deepseek
-GEMINI_API_KEY=ваш_gemini_api_ключ  # опциональный фоллбэк
+WIT_RU_TOKEN=ваш_токен_wit               # по одному на каждый язык речи: WIT_EN_TOKEN, WIT_ES_TOKEN, WIT_DE_TOKEN
 ```
 
-Инструкции по настройке WhatsApp: [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
+Остальные включают возможности:
+
+- WhatsApp — `WHATSAPP_*`, см. [Настройка WhatsApp](WHATSAPP_SETUP.md)
+- хранилище Obsidian — `GITHUB_CLIENT_ID`, см. [GitHub OAuth App](GITHUB_TOKEN_SETUP.md)
+- запасной Whisper — `GROQ_API_KEY`
+- очистка через LLM, сортировка и GPT-чат — `CATEGORIZATION_PROVIDER` и `GPT_PROVIDER` (по умолчанию Gemini) с ключом этого провайдера; если он не отвечает, цепочка пробует deepseek → openrouter → gemini → groq; хост, которому они недоступны, ходит через `LLM_API_BASE` ([DEPLOY.md](DEPLOY.md#llm-провайдеры-заблокированы-на-хосте))
+- админы — `ADMIN_USER_IDS`; VIP-пользователей и тестировщиков назначают через `/admin` в Telegram
 
 ## Команды бота
 
@@ -135,14 +137,6 @@ GEMINI_API_KEY=ваш_gemini_api_ключ  # опциональный фоллб
 
 ## Разработка
 
-### Подход
-
-- **DDD** — Domain-driven design с чёткими границами модулей (`transcription/`, `telegram/`, `whatsapp/`)
-- **TDD** — Сначала тесты, потом реализация
-- **Trophy Testing** — Интеграционные тесты на настоящей MongoDB в Docker, моки только на внешних границах
-
-### Команды
-
 ```bash
 # Установка dev-зависимостей
 uv sync --group dev
@@ -154,7 +148,7 @@ uv run pytest
 uv run ruff check
 
 # Проверка типов
-uv run ty check evlampiy
+uv run ty check evlampiy tests
 
 # Всё, что проверяет CI, в том же порядке (тесты — с порогом покрытия)
 scripts/gate.sh
@@ -166,7 +160,8 @@ scripts/gate.sh
 |----------|----------|
 | [Архитектура](ARCHITECTURE.md) | Структура каталогов, поток данных, инженерные решения, лимиты (English) |
 | [Глоссарий](GLOSSARY.md) | Слова проекта: чаты, тарифы, токены, маска, хранилище (English) |
-| [Деплой](DEPLOY.md) | Docker, nginx, health checks, логи |
+| [Деплой](DEPLOY.md) | Docker, конвейер релиза, дампы базы и откат, health checks, логи |
+| [Решения](adr/README.md) | Действующие архитектурные решения, каждое со своей причиной (English) |
 | [Администрирование](ADMIN.md) | Команды администратора, роли, алерты, мониторинг |
 | [Настройка WhatsApp](WHATSAPP_SETUP.md) | Конфигурация WhatsApp Business API |
 | [Привязка аккаунтов](WHATSAPP_LINKING.md) | Привязка Telegram ↔ WhatsApp |

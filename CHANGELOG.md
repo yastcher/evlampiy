@@ -68,6 +68,7 @@
 - The docs describe the bot the code runs: provider chains, tiers, retries, the self-test, the event loop; the category vocabulary serves categorization only
 - `GITHUB_TOKEN_SETUP.md` explains the OAuth App behind `GITHUB_CLIENT_ID` instead of a token the bot never read
 - `DEPLOY.md` describes the tag release, the database dumps and the rollback, with a diagram of the pipeline
+- The READMEs draw a voice message's path, list the engineering behind the bot and keep the configuration to the minimum, `.env.example` holding the rest
 
 ## [0.9.7] — 2026-07-15
 

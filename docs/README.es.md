@@ -7,9 +7,27 @@
 
 [English](../README.md) | [Русский](README.ru.md) | Español | [Deutsch](README.de.md)
 
-Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
+Bot de voz a texto para Telegram y WhatsApp en cuatro idiomas: transcribe un mensaje de voz,
+limpia el texto con un LLM y lo guarda como nota en tu vault de Obsidian en GitHub, en una
+carpeta elegida por tema.
 
 **Pruébalo:** https://t.me/evlampiy_notes_bot
+
+## Cómo viaja un mensaje de voz
+
+```mermaid
+flowchart TD
+    tg["Telegram<br/>aiogram"] --> admit
+    wa["WhatsApp<br/>webhook de pywa"] -->|"un número vinculado<br/>es su cuenta de Telegram"| admit
+    admit["Admisión<br/>bloqueo · nivel · tokens"] --> stt["Voz a texto<br/>Wit.ai o Groq Whisper"]
+    stt --> cleanup["Limpieza con LLM<br/>por encima del nivel gratuito"]
+    cleanup --> note["Nota de Obsidian<br/>vía la API de GitHub"]
+    note --> sort["Categorización<br/>el LLM elige la carpeta"]
+    sort --> settle["Liquidación<br/>tokens · contador de Wit.ai · estadísticas"]
+    settle --> reply["Respuesta en el chat"]
+    cleanup & sort <-.-> mask{{"Máscara de datos personales<br/>nombres · teléfonos · emails"}}
+    mask <-.-> llm(["Proveedores LLM<br/>Gemini · DeepSeek · Groq<br/>OpenRouter · Anthropic"])
+```
 
 ## Características
 
@@ -48,6 +66,16 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Estadísticas de uso** — Transcripciones, ingresos, costos mensuales
 - **Monitoreo de salud** — Alertas a los administradores sobre el uso de Wit.ai, el primer pago y los hitos de ingresos
 
+## Ingeniería
+
+- **Límites que sostienen los tests** — los adaptadores de Telegram y WhatsApp nunca se importan entre sí, y los casos de uso en `services/` no importan aiogram, pywa ni FastAPI: si no, falla `tests/test_architecture.py` (pytestarch).
+- **Una base de datos real en los tests** — MongoDB 8.0.3, la imagen que corre en producción, en un contenedor de testcontainers; los mocks están solo en las APIs externas, y los tests nunca ven las claves del desarrollador.
+- **Un gate, gemelo de CI** — `scripts/gate.sh` ejecuta lo mismo que CI, en el mismo orden: pip-audit sobre cada versión fijada, ruff, ty, Semgrep, los tests con un umbral de cobertura que solo sube, shellcheck; un test falla si los dos se separan.
+- **QA antes del release** — `scripts/pre_release_qa.sh` añade un límite de CRAP, un smoke del stack con la imagen del release y mutation testing (mutmut) cuyos supervivientes solo bajan; `scripts/release.sh` no etiqueta un árbol que no lo haya pasado.
+- **Un tag es el release** — CI comprueba el tag contra el árbol, construye la imagen y la escanea con Trivy, la despliega con un dump de la base de datos, un minuto de observación y rollback automático, y luego publica un GitHub Release ([el pipeline](DEPLOY.md#server-deploy-cicd)).
+- **Los datos personales no llegan a los prompts** — nombres, teléfonos y emails se convierten en tokens antes de cualquier petición a un LLM y vuelven en la respuesta ([ADR-002](adr/ADR-002-pii-is-masked-where-each-llm-client-hands-a-request-to-providers.md)).
+- **Decisiones registradas** — [docs/adr/](adr/README.md) guarda las decisiones vigentes con sus razones.
+
 ## Requisitos
 
 - Python 3.14+
@@ -82,47 +110,21 @@ uv run python -m evlampiy.main
 
 ## Configuración
 
-Crea el archivo `.env`:
+`.env.example` lista cada ajuste con un comentario. Lo mínimo:
 
 ```env
-TELEGRAM_BOT_TOKEN=tu_token_de_bot
+TELEGRAM_BOT_TOKEN=tu_token_de_bot       # de @BotFather
 MONGO_URI=mongodb://localhost:27017/
-
-# Tokens Wit.ai (obtener en https://wit.ai/)
-WIT_EN_TOKEN=tu_token_ingles
-WIT_RU_TOKEN=tu_token_ruso
-WIT_ES_TOKEN=tu_token_espanol
-WIT_DE_TOKEN=tu_token_aleman
-
-# Opcional: integración GPT
-GPT_TOKEN=tu_token_openai
-GPT_MODEL=gpt-4o-mini
-
-# Opcional: integración WhatsApp (ver WHATSAPP_SETUP.md)
-WHATSAPP_TOKEN=tu_token_whatsapp
-WHATSAPP_PHONE_ID=tu_phone_id
-WHATSAPP_VERIFY_TOKEN=tu_verify_token
-
-# Opcional: GitHub OAuth (para integración con Obsidian)
-# Para configuración manual del token, ver docs/GITHUB_TOKEN_SETUP.md
-GITHUB_CLIENT_ID=tu_github_oauth_app_client_id
-
-# Opcional: Monetización
-GROQ_API_KEY=tu_groq_api_key
-VIP_USER_IDS=123456,789012   # env fallback; gestionar vía /admin en Telegram
-ADMIN_USER_IDS=123456789
-FREE_MONTHLY_TOKENS=10
-WIT_FREE_MONTHLY_LIMIT=500
-
-# Opcional: Proveedor IA para categorización y GPT (deepseek / groq / gemini / openrouter / anthropic)
-# Se recomienda deepseek — rápido, sin problemas de rate-limit
-# Cadena de respaldo (auto): primary, luego deepseek → openrouter → gemini → groq
-CATEGORIZATION_PROVIDER=deepseek
-GPT_PROVIDER=deepseek
-GEMINI_API_KEY=tu_gemini_api_key  # respaldo opcional
+WIT_ES_TOKEN=tu_token_de_wit             # uno por idioma hablado: WIT_EN_TOKEN, WIT_RU_TOKEN, WIT_DE_TOKEN
 ```
 
-Para instrucciones de configuración de WhatsApp, consulta [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
+El resto activa funciones:
+
+- WhatsApp — `WHATSAPP_*`, ver [Configuración de WhatsApp](WHATSAPP_SETUP.md)
+- el vault de Obsidian — `GITHUB_CLIENT_ID`, ver [GitHub OAuth App](GITHUB_TOKEN_SETUP.md)
+- el respaldo de Whisper — `GROQ_API_KEY`
+- limpieza con LLM, clasificación y el chat GPT — `CATEGORIZATION_PROVIDER` y `GPT_PROVIDER` (Gemini por defecto) con la clave de ese proveedor; si falla, la cadena prueba deepseek → openrouter → gemini → groq; un host que no los alcanza pasa por `LLM_API_BASE` ([DEPLOY.md](DEPLOY.md#llm-providers-blocked-on-the-host))
+- administradores — `ADMIN_USER_IDS`; los usuarios VIP y testers se gestionan con `/admin` en Telegram
 
 ## Comandos del Bot
 
@@ -135,14 +137,6 @@ Para instrucciones de configuración de WhatsApp, consulta [WHATSAPP_SETUP.md](W
 
 ## Desarrollo
 
-### Enfoque
-
-- **DDD** — Diseño guiado por dominio con límites claros de módulos (`transcription/`, `telegram/`, `whatsapp/`)
-- **TDD** — Primero tests, luego implementación
-- **Trophy Testing** — Tests de integración contra un MongoDB real en Docker, mocks solo en límites externos
-
-### Comandos
-
 ```bash
 # Instalar dependencias de desarrollo
 uv sync --group dev
@@ -154,7 +148,7 @@ uv run pytest
 uv run ruff check
 
 # Ejecutar verificación de tipos
-uv run ty check evlampiy
+uv run ty check evlampiy tests
 
 # Todo lo que comprueba CI, en el mismo orden (los tests incluyen el umbral de cobertura)
 scripts/gate.sh
@@ -166,7 +160,8 @@ scripts/gate.sh
 |-----------|-------------|
 | [Arquitectura](ARCHITECTURE.md) | Estructura de directorios, flujo de datos, decisiones de ingenieria, limites (English) |
 | [Glosario](GLOSSARY.md) | Las palabras del proyecto: chats, niveles, tokens, la mascara, el vault (English) |
-| [Despliegue](DEPLOY.md) | Docker, nginx, health checks, logs |
+| [Despliegue](DEPLOY.md) | Docker, el pipeline de release, dumps de la base de datos y rollback, health checks, logs |
+| [Decisiones](adr/README.md) | Decisiones de arquitectura vigentes, cada una con su razón (English) |
 | [Administracion](ADMIN.md) | Comandos de administrador, roles, alertas, monitoreo |
 | [Configuracion WhatsApp](WHATSAPP_SETUP.md) | Configuracion de WhatsApp Business API |
 | [Vinculacion de cuentas](WHATSAPP_LINKING.md) | Vinculacion Telegram ↔ WhatsApp |
