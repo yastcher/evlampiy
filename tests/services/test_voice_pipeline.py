@@ -15,7 +15,7 @@ from evlampiy.services.voice_pipeline import VoicePipelineResult, process_voice
 
 
 class TestProcessVoiceTranscription:
-    """Trophy: real DB (mongomock); mock only external boundaries."""
+    """Trophy: real DB; mock only external boundaries."""
 
     async def test_empty_transcription_returns_none(self):
         """Empty transcription → service returns None (caller skips reply)."""

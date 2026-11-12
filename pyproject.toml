@@ -12,7 +12,7 @@ dependencies = [
     "wit~=6.0.1",
     "pydub~=0.25.1",
     "audioop-lts>=0.2; python_version>='3.13'",
-    # beanie 2.1+ passes listCollections options at every init, which mongomock (the test database) rejects.
+    # Held at 2.0 while the app connects through motor: beanie 2 is built on pymongo's async client.
     "beanie~=2.0.1",
     "motor==3.7.1",
     "pywa~=4.5",
@@ -32,7 +32,7 @@ dev = [
     "pytest-cov~=7.1.0",
     "pytestarch>=5.1",
     "cosmic-ray>=8.9",
-    "mongomock-motor~=0.0.36",
+    "testcontainers[mongodb]>=4.15",
     "responses~=0.26.3",
     # Starlette's TestClient runs on httpx2 and deprecates httpx.
     "httpx2>=2.16",
@@ -106,6 +106,8 @@ addopts = [
 ]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# Every async fixture is per test, the database client included.
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.report]
 # A ratchet: raise it as coverage grows, never lower it. The README badges show this number.

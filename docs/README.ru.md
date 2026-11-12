@@ -53,6 +53,7 @@ Telegram и WhatsApp бот для транскрипции голосовых �
 - Python 3.14+
 - MongoDB
 - FFmpeg (для обработки аудио)
+- Docker (тесты поднимают MongoDB в контейнере)
 - API токены [Wit.ai](https://wit.ai/)
 - Токен Telegram бота от [@BotFather](https://t.me/BotFather)
 - (Опционально) Данные WhatsApp Business API
@@ -138,7 +139,7 @@ GEMINI_API_KEY=ваш_gemini_api_ключ  # опциональный фоллб
 
 - **DDD** — Domain-driven design с чёткими границами модулей (`transcription/`, `telegram/`, `whatsapp/`)
 - **TDD** — Сначала тесты, потом реализация
-- **Trophy Testing** — Интеграционные тесты с реальной БД (mongomock), моки только на внешних границах
+- **Trophy Testing** — Интеграционные тесты на настоящей MongoDB в Docker, моки только на внешних границах
 
 ### Команды
 

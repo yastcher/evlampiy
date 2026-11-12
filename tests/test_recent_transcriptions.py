@@ -4,7 +4,7 @@ from evlampiy.mongo import get_recent_transcriptions, save_recent_transcription
 
 
 class TestRecentTranscriptionPipeline:
-    """Pipeline integration tests: real DB (mongomock), no external mocks."""
+    """Pipeline integration tests: real DB, no external mocks."""
 
     async def test_save_and_retrieve(self):
         """Saved transcription is returned for the same chat."""

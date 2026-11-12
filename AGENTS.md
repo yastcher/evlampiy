@@ -84,7 +84,7 @@ it, ruff owns it.
 
 ## Testing
 
-- Trophy testing: fast integration tests, real DB (mongomock), minimal mocks
+- Trophy testing: fast integration tests, a real MongoDB (the image production runs: a testcontainers container locally, so Docker must be running, or the server `TEST_MONGO_URI` names — CI's service, the devcontainer's), minimal mocks. Never `MONGO_URI`: that is the app's own database
 - Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление. Round-trip:
   `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`, нет `@`, нет двух подряд capitalized слов.
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
@@ -105,8 +105,7 @@ it, ruff owns it.
   test `assert len(code) == 6`, not `== LINK_CODE_LENGTH`
 - **One assertion per behavior**: a test that checks too many things at once may pass even when one check is meaningless
 - **Test both branches of conditionals**: if code has `if x: return A else: return B`, test both paths
-- **Mongomock caveat**: `find_one(Field == val)` with a single record won't distinguish `==` from `>=`/`<=`. Use
-  multiple records or verify the returned record's field matches exactly
+- **Single-record caveat**: `find_one(Field == val)` with a single record won't distinguish `==` from `>=`/`<=`. Use multiple records or verify the returned record's field matches exactly
 - **Bug fix workflow**: every fix MUST start with a failing test that reproduces the bug. Write the test first, verify
   it fails, then apply the fix and verify the test passes. This prevents regressions and documents the exact failure
   scenario.

@@ -16,6 +16,7 @@
 - Python 3.14 is pinned in `.python-version`
 - All dependencies updated (pywa 4, FastAPI 0.162, Starlette 1, aiogram 3.31); beanie stays on 2.0 while tests run on mongomock
 - CI lives in `.github/workflows/ci.yml` with pinned actions, a format check, shellcheck and a 91.2% coverage floor that only goes up
+- Tests run against a real MongoDB 8.0.3 (a testcontainers container locally, a service container in CI) instead of mongomock
 
 ### Fixed
 

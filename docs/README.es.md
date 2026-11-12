@@ -53,6 +53,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - Python 3.14+
 - MongoDB
 - FFmpeg (para procesamiento de audio)
+- Docker (los tests levantan MongoDB en un contenedor)
 - Tokens API de [Wit.ai](https://wit.ai/)
 - Token de bot Telegram de [@BotFather](https://t.me/BotFather)
 - (Opcional) Credenciales de WhatsApp Business API
@@ -138,7 +139,7 @@ Para instrucciones de configuración de WhatsApp, consulta [WHATSAPP_SETUP.md](W
 
 - **DDD** — Diseño guiado por dominio con límites claros de módulos (`transcription/`, `telegram/`, `whatsapp/`)
 - **TDD** — Primero tests, luego implementación
-- **Trophy Testing** — Tests de integración con BD real (mongomock), mocks solo en límites externos
+- **Trophy Testing** — Tests de integración contra un MongoDB real en Docker, mocks solo en límites externos
 
 ### Comandos
 
