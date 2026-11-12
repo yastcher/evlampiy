@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 def create_fastapi_app() -> FastAPI:
     """Create FastAPI application with WhatsApp webhook."""
+    # WARNING: FastAPI serves /docs, /redoc and /openapi.json by default, and the nginx example in
+    # docs/DEPLOY.md proxies `/` — the API's map goes to anyone. Safe: docs_url=None, redoc_url=None,
+    # openapi_url=None here; nothing in the bot reads them.
     app = FastAPI(title="Evlampiy Bot API")
 
     wa = init_whatsapp_client(app)

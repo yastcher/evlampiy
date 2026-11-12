@@ -30,6 +30,9 @@ def init_whatsapp_client(server: FastAPI) -> WhatsApp | None:
             token=settings.whatsapp_token,
             server=server,
             app_id=int(settings.whatsapp_app_id) if settings.whatsapp_app_id else None,
+            # WARNING: without an app secret pywa only warns and stops checking X-Hub-Signature-256,
+            # so anyone can post forged updates — any phone number's messages and link codes.
+            # Safe: refuse to serve the webhook (return None above) when whatsapp_app_secret is empty.
             app_secret=settings.whatsapp_app_secret or None,
             verify_token=settings.whatsapp_verify_token or None,
         )
