@@ -27,3 +27,4 @@ mutants/
 __pycache__/
 # Agents' and scripts' scratch: gate logs, QA reports
 /tmp/
+.playwright-mcp
