@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, patch
 
-from evlampiy.ai_chat import ChatResponse, ToolCall
+from evlampiy.ai.chat_formats import ChatResponse, ToolCall
 from evlampiy.tool_calling import run_tool_conversation
 from evlampiy.tools import ToolDef
 

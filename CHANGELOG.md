@@ -30,6 +30,7 @@
 - Every GitHub Action is pinned to a commit
 - The containers the tests and pre-release QA start have memory caps of their own, swap included
 - ty checks the tests as well as the package, in the gate and CI
+- The GPT chat's provider formats moved from `ai_chat.py` to `ai/chat_formats.py`, apart from the calls
 
 ### Fixed
 

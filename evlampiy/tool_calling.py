@@ -5,7 +5,8 @@ import logging
 import typing
 
 from evlampiy import const
-from evlampiy.ai_chat import ChatResponse, chat_complete
+from evlampiy.ai.chat_formats import ChatResponse
+from evlampiy.ai_chat import chat_complete
 from evlampiy.tools import ToolDef
 
 logger = logging.getLogger(__name__)

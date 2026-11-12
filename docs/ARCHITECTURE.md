@@ -38,7 +38,8 @@ evlampiy/
 │   ├── voice_access.py     - Who may transcribe and what it costs, for both channels (ADR-001)
 │   └── voice_pipeline.py   - Transcription → cleanup → Obsidian → categorize pipeline
 ├── ai/                     # LLM-client cross-cutting helpers
-│   └── _mask.py            - PII masking (<PHONE_N>/<EMAIL_N>/<NAME_N>) at the LLM boundary (152-ФЗ)
+│   ├── _mask.py            - PII masking (<PHONE_N>/<EMAIL_N>/<NAME_N>) at the LLM boundaries (152-ФЗ, ADR-002)
+│   └── chat_formats.py     - The GPT chat's provider formats: tool schemas, messages, reply parsing
 ├── ai_client.py            - Multi-provider LLM client with token bucket rate limiter
 ├── ai_chat.py              - Messages-based chat completion with tool calling support
 ├── tools.py                - Tool definitions and implementations for GPT tool calling
