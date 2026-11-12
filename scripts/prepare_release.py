@@ -7,7 +7,7 @@
 Prints the new version on stdout; `scripts/release.sh` reads it. The version lives in
 pyproject.toml and in uv.lock's entry for the project itself, and both move together.
 `## [Unreleased]` becomes `## [X.Y.Z] — YYYY-MM-DD` under a fresh `[Unreleased]`.
-An empty `[Unreleased]` is refused: that section is the release notes.
+An `[Unreleased]` without entries is refused: that section is the release notes.
 """
 
 import argparse
@@ -27,7 +27,6 @@ SCAFFOLD = (
 
 _SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 _SECTION = re.compile(r"^## \[(?P<version>[^\]]+)\]")
-_COMMENT = re.compile(r"^\s*<!--.*-->\s*$")
 # The first `version = "..."` line is [project]'s; a pin further down must never be taken for it.
 _PROJECT_VERSION = re.compile(r'^version = "[^"]*"$', re.M)
 
@@ -56,13 +55,14 @@ def close_unreleased(text: str, *, version: str, today: datetime.date) -> str:
             "so the last tag was cut by hand instead of through scripts/release.sh."
         )
     following = next((i for i in range(top + 1, len(lines)) if _SECTION.match(lines[i])), len(lines))
-    kept = [line for line in lines[top + 1 : following] if not _COMMENT.match(line)]
+    # The scaffold is the tooling's and opens the next section; every other line is the maintainer's.
+    kept = [line for line in lines[top + 1 : following] if line not in SCAFFOLD]
     while kept and not kept[0].strip():
         kept.pop(0)
     while kept and not kept[-1].strip():
         kept.pop()
-    if not kept:
-        raise SystemExit(f"the `{UNRELEASED}` section is empty: nothing to release")
+    if not any(line.startswith("- ") for line in kept):
+        raise SystemExit(f"the `{UNRELEASED}` section has no entries: nothing to release")
 
     opened = [UNRELEASED, "", *SCAFFOLD, ""]
     closed = [f"## [{version}] — {today.isoformat()}", "", *kept, ""]

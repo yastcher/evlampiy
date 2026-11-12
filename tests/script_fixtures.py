@@ -7,6 +7,8 @@ import subprocess
 
 import pytest
 
+from scripts import prepare_release
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 _RELEASE_PYPROJECT = """\
@@ -35,22 +37,12 @@ version = "1.2.3"
 source = { virtual = "." }
 """
 
-_RELEASE_CHANGELOG = """\
-## [Unreleased]
-
-<!-- New entries go here. -->
-<!-- Subsections, in order. -->
-
-### Fixed
-
-- The next fix.
-
-## [1.2.3] — 2026-10-05
-
-### Fixed
-
-- The fix.
-"""
+# The scaffold is the real one: closing the section drops exactly those lines.
+_RELEASE_CHANGELOG = (
+    "## [Unreleased]\n\n"
+    + "\n".join(prepare_release.SCAFFOLD)
+    + "\n\n### Fixed\n\n- The next fix.\n\n## [1.2.3] — 2026-10-05\n\n### Fixed\n\n- The fix.\n"
+)
 
 # Git for the release tests, deaf to the developer's own config (signing, hooks, templates).
 _GIT_ENV = {

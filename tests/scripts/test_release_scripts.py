@@ -9,6 +9,7 @@ from scripts import prepare_release, release_from_tag
 from tests.script_fixtures import REPO_ROOT, git
 
 TODAY = datetime.date(2026, 11, 11)
+SCAFFOLD = "\n".join(prepare_release.SCAFFOLD)
 
 
 # --- prepare_release ---
@@ -78,11 +79,32 @@ def test_a_refusal_leaves_every_file_as_it_was(release_tree):
     assert (release_tree / "pyproject.toml").read_text() == pyproject
 
 
-def test_an_empty_unreleased_section_is_refused():
-    empty = "## [Unreleased]\n\n<!-- hint -->\n\n## [1.2.3] — 2026-10-05\n\n- x\n"
+def test_an_unreleased_section_with_only_the_scaffold_is_refused():
+    empty = f"## [Unreleased]\n\n{SCAFFOLD}\n\n## [1.2.3] — 2026-10-05\n\n- x\n"
 
-    with pytest.raises(SystemExit, match="empty: nothing to release"):
+    with pytest.raises(SystemExit, match="no entries: nothing to release"):
         prepare_release.close_unreleased(empty, version="1.2.4", today=TODAY)
+
+
+def test_an_unreleased_section_of_headings_without_entries_is_refused():
+    headings = f"## [Unreleased]\n\n{SCAFFOLD}\n\n### Fixed\n\n## [1.2.3] — 2026-10-05\n\n- x\n"
+
+    with pytest.raises(SystemExit, match="no entries: nothing to release"):
+        prepare_release.close_unreleased(headings, version="1.2.4", today=TODAY)
+
+
+def test_a_comment_of_the_maintainers_own_goes_out_with_the_entries():
+    """The scaffold is the only thing the tooling put there: closing drops it and keeps every other line."""
+    text = (
+        f"## [Unreleased]\n\n{SCAFFOLD}\n\n### Fixed\n\n<!-- verify on staging first -->\n- The fix.\n\n"
+        "## [1.2.3] — 2026-10-05\n\n- x\n"
+    )
+
+    closed = prepare_release.close_unreleased(text, version="1.2.4", today=TODAY)
+
+    assert (
+        "## [1.2.4] — 2026-11-11\n\n### Fixed\n\n<!-- verify on staging first -->\n- The fix.\n\n## [1.2.3]" in closed
+    )
 
 
 def test_a_version_that_already_has_a_section_is_refused(release_tree):
