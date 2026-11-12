@@ -27,6 +27,7 @@
 
 ### Fixed
 
+- MongoDB gets the 64000 open files it asks for: at Docker's default 1024 it aborted once its collections and indexes outgrew the limit
 - The WhatsApp webhook stays off without `WHATSAPP_APP_SECRET`, where pywa accepted unsigned, forgeable updates; `/health` reports its state
 - Services-isolation architecture tests matched no module and always passed; now they catch violations
 - Tests replace `asyncio.sleep` only where the code under test looks it up: a process-wide patch ran pymongo's heartbeat hot until a run took 9 GB

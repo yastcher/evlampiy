@@ -6,6 +6,7 @@ import re
 from collections.abc import Iterator
 
 import pymongo
+import docker.types
 import pytest
 from beanie import init_beanie
 from docker.errors import DockerException
@@ -22,6 +23,9 @@ _TEST_DATABASE = "evlampiy_test"
 # with the IDE, and by default it sizes its cache by the whole machine.
 _MONGO_CACHE_GB = "0.25"
 _MONGO_MEMORY_LIMIT = "512m"
+# Docker gives a container 1024 open files; WiredTiger keeps one per collection and index,
+# and at the limit mongod aborts (EMFILE). 64000 is what MongoDB asks for.
+_MONGO_OPEN_FILES = docker.types.Ulimit(name="nofile", soft=64000, hard=64000)
 # The image starts mongod twice — the first one creates the user — and the container counts
 # as started at the first: the first ping waits this long for the server that stays.
 _MONGO_START_TIMEOUT_MS = 60_000
@@ -54,7 +58,7 @@ def mongo_uri() -> Iterator[str]:
         container = (
             MongoDbContainer(compose_mongo_image(_PRODUCTION_COMPOSE))
             .with_command(f"--wiredTigerCacheSizeGB {_MONGO_CACHE_GB}")
-            .with_kwargs(mem_limit=_MONGO_MEMORY_LIMIT)
+            .with_kwargs(mem_limit=_MONGO_MEMORY_LIMIT, ulimits=[_MONGO_OPEN_FILES])
         )
         container.start()
     except DockerException as error:

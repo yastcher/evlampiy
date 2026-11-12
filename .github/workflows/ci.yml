@@ -30,7 +30,9 @@ jobs:
         image: mongo:8.0.3
         ports:
           - 27017:27017
+        # Docker's 1024 open files would abort mongod (EMFILE); MongoDB asks for 64000.
         options: >-
+          --ulimit nofile=64000:64000
           --health-cmd "mongosh --quiet --eval 'db.runCommand({ping: 1}).ok'"
           --health-interval 2s
           --health-timeout 5s
