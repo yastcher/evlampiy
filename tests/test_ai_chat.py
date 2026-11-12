@@ -426,6 +426,39 @@ class TestChatComplete:
         assert result is not None
         assert result.content == "Here are your notes"
 
+    async def test_gemini_chat_goes_through_the_llm_proxy(
+        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
+    ):
+        """On a host where Gemini is blocked, the GPT chat reaches it the way cleanup does: through LLM_API_BASE."""
+        api_response = {"candidates": [{"content": {"parts": [{"text": "ok"}]}}]}
+        mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
+
+        with (
+            patch("evlampiy.ai_client.settings.llm_api_base", "https://proxy.example"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.gemini_model", "gemini-2.0-flash"),
+        ):
+            await chat_complete(["gemini"], [{"role": "user", "content": "Hello"}])
+
+        posted_url = mock_ai_http.post.call_args.args[0]
+        assert posted_url == "https://proxy.example/gemini/v1beta/models/gemini-2.0-flash:generateContent"
+
+    async def test_anthropic_chat_goes_through_the_llm_proxy(
+        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
+    ):
+        """On a host where Anthropic is blocked, the GPT chat reaches it through LLM_API_BASE too."""
+        api_response = {"content": [{"type": "text", "text": "ok"}]}
+        mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
+
+        with (
+            patch("evlampiy.ai_client.settings.llm_api_base", "https://proxy.example"),
+            patch("evlampiy.ai_client.settings.anthropic_bot_api_key", "test-key"),
+        ):
+            await chat_complete(["anthropic"], [{"role": "user", "content": "Hello"}])
+
+        posted_url = mock_ai_http.post.call_args.args[0]
+        assert posted_url == "https://proxy.example/anthropic/v1/messages"
+
     async def test_gemini_with_tool_call(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Gemini returns function call in response."""
         api_response = {

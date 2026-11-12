@@ -32,6 +32,7 @@
 
 ### Fixed
 
+- The GPT chat reaches Gemini and Anthropic through `LLM_API_BASE`, as cleanup and sorting already did
 - The GPT chat masks names, phones and emails before they leave for a provider, as cleanup and sorting already did
 - A tool call whose arguments a provider cut short no longer fails the next GPT chat turn on Gemini or Anthropic
 - MongoDB comes back on its own after a crash or a reboot, as the bot already did

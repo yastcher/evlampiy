@@ -15,7 +15,7 @@ import uuid
 
 import httpx
 
-from evlampiy import ai_client, const
+from evlampiy import ai_client, const, llm_proxy
 from evlampiy.ai import _mask
 from evlampiy.ai_client import OpenAIEndpoint, RateLimitError
 from evlampiy.config import settings
@@ -366,7 +366,8 @@ async def _gemini_chat_complete(
     if tools:
         payload["tools"] = tools_to_gemini(tools)
 
-    url = f"{const.GEMINI_API_BASE}/v1beta/models/{settings.gemini_model}:generateContent"
+    base = llm_proxy.api_base(const.PROVIDER_GEMINI, const.GEMINI_API_BASE)
+    url = f"{base}/v1beta/models/{settings.gemini_model}:generateContent"
 
     client = await ai_client.get_http_client()
     response = await client.post(url, headers=headers, json=payload)
@@ -454,7 +455,7 @@ async def _anthropic_chat_complete(
 
     client = await ai_client.get_http_client()
     response = await client.post(
-        f"{const.ANTHROPIC_API_BASE}/v1/messages",
+        f"{llm_proxy.api_base(const.PROVIDER_ANTHROPIC, const.ANTHROPIC_API_BASE)}/v1/messages",
         headers=headers,
         json=payload,
     )
