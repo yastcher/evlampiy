@@ -125,6 +125,49 @@ translates = {
             "La transcripción se procesó de todos modos. Usa /buy para comprar más tokens."
         ),
     },
+    # WhatsApp is the linked Telegram account (ADR-001) and sells nothing: these point to Telegram.
+    "whatsapp_link_required": {
+        ENGLISH: (
+            "To use the bot on WhatsApp, link it to your Telegram account: send /link_whatsapp "
+            "to the bot in Telegram, then send the code here as: link XXXXXX"
+        ),
+        GERMAN: (
+            "Um den Bot in WhatsApp zu nutzen, verknüpfen Sie ihn mit Ihrem Telegram-Konto: "
+            "Senden Sie /link_whatsapp an den Bot in Telegram und schicken Sie den Code dann hier als: link XXXXXX"
+        ),
+        RUSSIAN: (
+            "Чтобы пользоваться ботом в WhatsApp, привяжите его к своему Telegram: отправьте /link_whatsapp "
+            "боту в Telegram, а сюда пришлите код в виде: link XXXXXX"
+        ),
+        SPANISH: (
+            "Para usar el bot en WhatsApp, vincúlalo a tu cuenta de Telegram: envía /link_whatsapp "
+            "al bot en Telegram y luego manda aquí el código así: link XXXXXX"
+        ),
+    },
+    "whatsapp_insufficient_credits": {
+        ENGLISH: "Not enough tokens. Top up in the bot in Telegram with /buy.",
+        GERMAN: "Nicht genügend Tokens. Laden Sie im Bot in Telegram mit /buy auf.",
+        RUSSIAN: "Недостаточно токенов. Пополните баланс у бота в Telegram командой /buy.",
+        SPANISH: "No tienes suficientes tokens. Recarga en el bot de Telegram con /buy.",
+    },
+    "whatsapp_credits_exhausted_warning": {
+        ENGLISH: (
+            "Your token balance is exhausted. The transcription was still processed. "
+            "Top up in the bot in Telegram with /buy."
+        ),
+        GERMAN: (
+            "Ihr Token-Guthaben ist erschöpft. Die Transkription wurde trotzdem verarbeitet. "
+            "Laden Sie im Bot in Telegram mit /buy auf."
+        ),
+        RUSSIAN: (
+            "Ваш баланс токенов исчерпан. Транскрипция всё равно была обработана. "
+            "Пополните баланс у бота в Telegram командой /buy."
+        ),
+        SPANISH: (
+            "Tu saldo de tokens se ha agotado. La transcripción se procesó de todos modos. "
+            "Recarga en el bot de Telegram con /buy."
+        ),
+    },
     "buy_packages_prompt": {
         ENGLISH: "Choose a token package:",
         GERMAN: "Wählen Sie ein Token-Paket:",

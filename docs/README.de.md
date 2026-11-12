@@ -39,7 +39,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **Bereinigungskontext** — Neueste Transkriptionen aus demselben Chat werden dem LLM zur präziseren Bereinigung übergeben
 
 ### Kontoverknüpfung
-- **Telegram ↔ WhatsApp** — Konten mit Einmalcodes verknüpfen
+- **Telegram ↔ WhatsApp** — Eine per Einmalcode verknüpfte WhatsApp-Nummer ist dein Telegram-Konto: dieselben Tokens, Einstellungen und derselbe Vault
 - **Rate Limiting** — Schutz gegen Brute-Force-Angriffe
 
 ### Administration

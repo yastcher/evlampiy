@@ -100,7 +100,7 @@ WHATSAPP_APP_ID=your_app_id
 
 ### Account Linking
 
-To link a WhatsApp account to Telegram for shared credit balance, see [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).
+The bot transcribes only a number linked to a Telegram account, which then shares that account's tokens and settings: see [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).
 
 ---
 
@@ -200,4 +200,4 @@ WHATSAPP_APP_ID=ваш_app_id
 
 ### Привязка аккаунтов
 
-Для привязки WhatsApp к Telegram и общего баланса кредитов см. [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).
+Бот транскрибирует только номер, привязанный к аккаунту Telegram: номер получает токены и настройки этого аккаунта, см. [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).

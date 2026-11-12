@@ -12,6 +12,7 @@ import evlampiy.ai_client
 import evlampiy.alerts
 import evlampiy.telegram.handlers.obsidian as obsidian_handlers
 import evlampiy.whatsapp.client
+from evlampiy.account_linking import confirm_link, generate_link_code
 from evlampiy.whatsapp.app import create_fastapi_app
 
 
@@ -308,6 +309,7 @@ def whatsapp_voice_external_mocks(mock_httpx_download_response):
             "evlampiy.services.voice_pipeline.cleanup_transcript",
             AsyncMock(side_effect=lambda t, **kwargs: t),
         ) as mock_cleanup,
+        patch("evlampiy.whatsapp.handlers.check_wit_alerts", AsyncMock()) as mock_alerts,
     ):
         mock_client_class.return_value.__aenter__.return_value = mock_client
         yield {
@@ -316,7 +318,18 @@ def whatsapp_voice_external_mocks(mock_httpx_download_response):
             "save": mock_save,
             "categorize": mock_categorize,
             "cleanup": mock_cleanup,
+            "alerts": mock_alerts,
         }
+
+
+@pytest.fixture
+def link_whatsapp():
+    """Link a WhatsApp number to a Telegram user the real way: the code from Telegram, `link <code>` from WhatsApp."""
+
+    async def _link(phone: str, telegram_user_id: str) -> None:
+        await confirm_link(await generate_link_code(telegram_user_id), phone)
+
+    return _link
 
 
 @pytest.fixture

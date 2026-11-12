@@ -39,7 +39,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Contexto de limpieza** — Las transcripciones recientes del mismo chat se pasan al LLM para mayor precisión
 
 ### Vinculación de cuentas
-- **Telegram ↔ WhatsApp** — Vincula cuentas con códigos de un solo uso
+- **Telegram ↔ WhatsApp** — Un número de WhatsApp vinculado con un código de un solo uso es tu cuenta de Telegram: los mismos tokens, ajustes y bóveda
 - **Rate limiting** — Protección contra ataques de fuerza bruta
 
 ### Administración

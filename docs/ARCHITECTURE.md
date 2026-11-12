@@ -35,6 +35,7 @@ evlampiy/
 │   ├── payments_service.py - Token packages + award_tokens on successful Stars payment
 │   ├── settings_service.py - Toggle auto-cleanup, persist transcription provider choice
 │   ├── stats_service.py    - Admin /stats text builder
+│   ├── voice_access.py     - Who may transcribe and what it costs, for both channels (ADR-001)
 │   └── voice_pipeline.py   - Transcription → cleanup → Obsidian → categorize pipeline
 ├── ai/                     # LLM-client cross-cutting helpers
 │   └── _mask.py            - PII masking (<PHONE_N>/<EMAIL_N>/<NAME_N>) at the LLM boundary (152-ФЗ)

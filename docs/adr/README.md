@@ -8,4 +8,5 @@ Sections: Status (the date and the files that implement it), Context, Decision, 
 Consequences. A decision that changes keeps its text and gains a dated line,
 "Now (date): …", or a new ADR that names the old one.
 
+- [ADR-001](ADR-001-whatsapp-is-the-linked-telegram-account.md) — WhatsApp is the linked Telegram account.
 - [ADR-002](ADR-002-pii-is-masked-where-each-llm-client-hands-a-request-to-providers.md) — PII is masked where each LLM client hands a request to its providers.

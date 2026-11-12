@@ -5,10 +5,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import evlampiy.whatsapp.client
-from evlampiy.dto import UserTier
+from evlampiy.credits import add_credits, current_month_key, deduct_credits, get_credits
+from evlampiy.dto import WitUsageStats
 from evlampiy.mongo import set_auto_categorize, set_chat_language, set_github_settings
+from evlampiy.services.admin_service import block_user
 from evlampiy.whatsapp.client import WHATSAPP_CHAT_PREFIX, init_whatsapp_client, whatsapp_state
 from evlampiy.whatsapp.handlers import handle_link_command, handle_voice_message, register_handlers
+from evlampiy.wit_tracking import get_wit_usage_this_month
 
 
 class TestWhatsAppClient:
@@ -90,71 +93,80 @@ class TestWhatsAppWebhook:
 
 
 class TestHandleVoiceMessage:
-    """Test WhatsApp voice message handler."""
+    """A linked number is its Telegram user's private chat (ADR-001); an unlinked one is told how to link."""
 
     async def test_handles_voice_message(
-        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
     ):
-        """Voice message is transcribed and sent back."""
-        phone_number = "1234567890"
-        chat_id = f"{WHATSAPP_CHAT_PREFIX}{phone_number}"
-        await set_chat_language(chat_id, "en")
-        mock_whatsapp_message.from_user.wa_id = phone_number
-
-        mocks = whatsapp_voice_external_mocks
-        mocks["transcribe"].return_value = ("Hello world", 5, 1)
+        """A linked number's voice message is transcribed and sent back."""
+        await link_whatsapp("1234567890", "70001")
+        mock_whatsapp_message.from_user.wa_id = "1234567890"
 
         await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
-        mock_whatsapp_client.send_message.assert_called_once_with(to=phone_number, text="Hello world")
+        mock_whatsapp_client.send_message.assert_called_once_with(to="1234567890", text="Hello world")
 
-    async def test_skips_empty_transcription(
+    async def test_an_unlinked_number_is_told_how_to_link(
         self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
     ):
-        """Empty transcription produces no response."""
-        phone_number = "2234567890"
-        chat_id = f"{WHATSAPP_CHAT_PREFIX}{phone_number}"
-        await set_chat_language(chat_id, "en")
-        mock_whatsapp_message.from_user.wa_id = phone_number
+        """No Telegram account behind the number: no transcription, only the way to link."""
+        await set_chat_language("wa_1234567891", "en")
+        mock_whatsapp_message.from_user.wa_id = "1234567891"
 
-        mocks = whatsapp_voice_external_mocks
-        mocks["transcribe"].return_value = ("", 0, 0)
+        await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        whatsapp_voice_external_mocks["transcribe"].assert_not_called()
+        mock_whatsapp_client.send_message.assert_called_once_with(
+            to="1234567891",
+            text=(
+                "To use the bot on WhatsApp, link it to your Telegram account: send /link_whatsapp "
+                "to the bot in Telegram, then send the code here as: link XXXXXX"
+            ),
+        )
+
+    async def test_skips_empty_transcription(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
+    ):
+        """Empty transcription produces no response."""
+        await link_whatsapp("2234567890", "70002")
+        mock_whatsapp_message.from_user.wa_id = "2234567890"
+        whatsapp_voice_external_mocks["transcribe"].return_value = ("", 0, 0)
 
         await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_not_called()
 
-    async def test_uses_whatsapp_chat_prefix(
-        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
+    async def test_the_language_is_the_linked_users(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
     ):
-        """Chat ID uses WhatsApp prefix for language lookup."""
-        phone_number = "3234567890"
-        chat_id = f"{WHATSAPP_CHAT_PREFIX}{phone_number}"
-        await set_chat_language(chat_id, "de")
-        mock_whatsapp_message.from_user.wa_id = phone_number
-
-        mocks = whatsapp_voice_external_mocks
-        mocks["transcribe"].return_value = ("Test", 3, 1)
+        """The language set in the user's private Telegram chat is the one WhatsApp transcribes in."""
+        await link_whatsapp("3234567890", "70003")
+        await set_chat_language("u_70003", "de")
+        mock_whatsapp_message.from_user.wa_id = "3234567890"
 
         await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
-        # Verify transcribe_audio was called with correct language from DB
-        call_kwargs = mocks["transcribe"].call_args.kwargs
-        assert call_kwargs["language"] == "de"
+        assert whatsapp_voice_external_mocks["transcribe"].call_args.kwargs["language"] == "de"
+
+    async def test_the_note_goes_to_the_linked_users_vault(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
+    ):
+        """The note is saved with the settings of the user's private Telegram chat, its vault included."""
+        await link_whatsapp("3334567890", "70013")
+        mock_whatsapp_message.from_user.wa_id = "3334567890"
+
+        await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        assert whatsapp_voice_external_mocks["save"].call_args.kwargs["settings_chat_id"] == "u_70013"
 
     async def test_handles_download_error(
-        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
     ):
         """Download error is logged, no crash."""
-        phone_number = "4234567890"
-        chat_id = f"{WHATSAPP_CHAT_PREFIX}{phone_number}"
-        await set_chat_language(chat_id, "en")
-        mock_whatsapp_message.from_user.wa_id = phone_number
+        await link_whatsapp("4234567890", "70004")
+        mock_whatsapp_message.from_user.wa_id = "4234567890"
+        whatsapp_voice_external_mocks["http_client"].get.side_effect = Exception("Download failed")
 
-        mocks = whatsapp_voice_external_mocks
-        mocks["http_client"].get.side_effect = Exception("Download failed")
-
-        # Should not raise
         await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_not_called()
@@ -188,64 +200,111 @@ class TestHandleVoiceMessage:
         mock_whatsapp_client.send_message.assert_not_called()
 
     async def test_auto_categorize_flow(
-        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
     ):
-        """Voice message triggers auto-categorization when enabled."""
-        phone_number = "5234567890"
-        chat_id = f"{WHATSAPP_CHAT_PREFIX}{phone_number}"
-        await set_chat_language(chat_id, "en")
-        await set_github_settings(chat_id, "owner", "repo", "token")
-        await set_auto_categorize(chat_id, True)
-        mock_whatsapp_message.from_user.wa_id = phone_number
-
-        mocks = whatsapp_voice_external_mocks
-        mocks["transcribe"].return_value = ("Note text", 5, 1)
+        """Auto-sorting set in the user's private Telegram chat sorts the WhatsApp note too."""
+        await link_whatsapp("5234567890", "70005")
+        await set_github_settings("u_70005", "owner", "repo", "token")
+        await set_auto_categorize("u_70005", True)
+        mock_whatsapp_message.from_user.wa_id = "5234567890"
 
         await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
-        mocks["categorize"].assert_called_once()
+        whatsapp_voice_external_mocks["categorize"].assert_called_once()
         mock_whatsapp_client.send_message.assert_called_once()
 
     async def test_cleanup_called_for_linked_paid_user(
-        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
     ):
         """Transcript cleanup is called for paid users with auto_cleanup enabled."""
-        phone_number = "6234567890"
-        mock_whatsapp_message.from_user.wa_id = phone_number
-
+        await link_whatsapp("6234567890", "70006")
+        await add_credits("70006", 50)  # a purchase makes the tier paid
+        mock_whatsapp_message.from_user.wa_id = "6234567890"
         mocks = whatsapp_voice_external_mocks
         mocks["transcribe"].return_value = ("raw text", 5, 1)
         mocks["cleanup"].side_effect = lambda t, **kwargs: f"clean {t}"
 
-        with (
-            patch("evlampiy.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99999")),
-            patch("evlampiy.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)),
-            patch("evlampiy.whatsapp.handlers.get_user_tier", AsyncMock(return_value=UserTier.PAID)),
-        ):
+        with patch("evlampiy.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)):
             await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
         mocks["cleanup"].assert_called_once_with("raw text", context=[])
-        mock_whatsapp_client.send_message.assert_called_once_with(to=phone_number, text="clean raw text")
+        mock_whatsapp_client.send_message.assert_called_once_with(to="6234567890", text="clean raw text")
 
     async def test_cleanup_skipped_for_free_user(
-        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
     ):
         """Transcript cleanup is NOT called for free users."""
-        phone_number = "7234567890"
-        mock_whatsapp_message.from_user.wa_id = phone_number
-
+        await link_whatsapp("7234567890", "70007")
+        mock_whatsapp_message.from_user.wa_id = "7234567890"
         mocks = whatsapp_voice_external_mocks
         mocks["transcribe"].return_value = ("raw text", 5, 1)
 
-        with (
-            patch("evlampiy.whatsapp.handlers.get_linked_telegram_id", AsyncMock(return_value="99998")),
-            patch("evlampiy.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)),
-            patch("evlampiy.whatsapp.handlers.get_user_tier", AsyncMock(return_value=UserTier.FREE)),
-        ):
+        with patch("evlampiy.services.voice_pipeline.get_auto_cleanup", AsyncMock(return_value=True)):
             await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
         mocks["cleanup"].assert_not_called()
-        mock_whatsapp_client.send_message.assert_called_once_with(to=phone_number, text="raw text")
+        mock_whatsapp_client.send_message.assert_called_once_with(to="7234567890", text="raw text")
+
+    async def test_a_blocked_users_number_is_refused(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
+    ):
+        """Blocking the Telegram user blocks the number linked to them."""
+        await link_whatsapp("8234567890", "70008")
+        await block_user("70008", admin_id="999")
+        await set_chat_language("u_70008", "en")
+        mock_whatsapp_message.from_user.wa_id = "8234567890"
+
+        await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        whatsapp_voice_external_mocks["transcribe"].assert_not_called()
+        mock_whatsapp_client.send_message.assert_called_once_with(
+            to="8234567890", text="You are blocked from using this bot."
+        )
+
+    async def test_a_message_spends_the_users_tokens_and_counts_wit(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
+    ):
+        """Five seconds through Wit.ai: one of the 10 free tokens, one Wit request, and the Wit alerts checked."""
+        await link_whatsapp("9234567890", "70009")
+        mock_whatsapp_message.from_user.wa_id = "9234567890"
+
+        await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        assert await get_credits("70009") == (9, 0)
+        assert await get_wit_usage_this_month("ru") == 1
+        whatsapp_voice_external_mocks["alerts"].assert_called_once_with()
+
+    async def test_without_tokens_the_reply_points_to_telegram(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
+    ):
+        """WhatsApp sells nothing: a user out of tokens is sent to /buy in Telegram."""
+        await link_whatsapp("9334567890", "70010")
+        await deduct_credits("70010", 10)  # the month's free tokens, spent
+        await set_chat_language("u_70010", "en")
+        mock_whatsapp_message.from_user.wa_id = "9334567890"
+
+        await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        whatsapp_voice_external_mocks["transcribe"].assert_not_called()
+        mock_whatsapp_client.send_message.assert_called_once_with(
+            to="9334567890", text="Not enough tokens. Top up in the bot in Telegram with /buy."
+        )
+
+    async def test_at_the_wit_limit_a_free_user_is_refused(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
+    ):
+        """500 of the 500 free Wit requests used: a free user has no provider left."""
+        await link_whatsapp("9434567890", "70011")
+        await set_chat_language("u_70011", "en")
+        await WitUsageStats(month_key=current_month_key(), language="en", request_count=500).insert()
+        mock_whatsapp_message.from_user.wa_id = "9434567890"
+
+        await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        whatsapp_voice_external_mocks["transcribe"].assert_not_called()
+        mock_whatsapp_client.send_message.assert_called_once_with(
+            to="9434567890", text="Transcription service is temporarily unavailable. Please try again later."
+        )
 
 
 class TestHandleMessageRouter:

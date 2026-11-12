@@ -246,8 +246,8 @@ class TestVoiceMessageFlow:
         mock_private_update.voice = mock_telegram_voice
 
         with (
-            patch("evlampiy.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=False)),
-            patch("evlampiy.telegram.handlers.voice.settings.groq_api_key", ""),
+            patch("evlampiy.services.voice_access.is_wit_available", AsyncMock(return_value=False)),
+            patch("evlampiy.services.voice_access.settings.groq_api_key", ""),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -267,7 +267,7 @@ class TestVoiceMessageFlow:
         await deduct_credits(user_id, 100)
         mock_private_update.voice = mock_telegram_voice
 
-        with patch("evlampiy.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=True)):
+        with patch("evlampiy.services.voice_access.is_wit_available", AsyncMock(return_value=True)):
             await from_voice_to_text(mock_private_update, mock_context)
 
         call_kwargs = voice_external_mocks["send"].call_args.kwargs
@@ -288,8 +288,8 @@ class TestVoiceMessageFlow:
         voice_external_mocks["transcribe"].return_value = ("Hello", 10, 1)
 
         with (
-            patch("evlampiy.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=False)),
-            patch("evlampiy.telegram.handlers.voice.settings.groq_api_key", "test-key"),
+            patch("evlampiy.services.voice_access.is_wit_available", AsyncMock(return_value=False)),
+            patch("evlampiy.services.voice_access.settings.groq_api_key", "test-key"),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 

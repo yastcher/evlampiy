@@ -17,6 +17,7 @@
 
 ### Changed
 
+- WhatsApp works through the linked Telegram account: its tokens, settings, vault and block; an unlinked number is told how to link
 - WhatsApp users who hide their number behind a username get a reply that such accounts are not supported yet
 - Releases are cut from `main` by `scripts/release.sh patch|minor|major` and ship as `vX.Y.Z` tags
 - CHANGELOG entries go under `[Unreleased]` via `scripts/changelog_add.py`; the release picks the version
@@ -48,6 +49,7 @@
 - Tests run on `Settings`' defaults, never the developer's `.env` or shell keys; a real vendor call needs `LIVE_VENDOR_TESTS=1`
 - `/stats` and the revenue alerts count the Telegram Stars paid, not the tokens they bought; Stars are recorded from this release on
 - A revenue milestone is announced on any payment that crosses it, not only on the month's first payment
+- WhatsApp transcriptions count toward the Wit.ai monthly limit and stop at it, as Telegram's do
 
 ### Removed
 

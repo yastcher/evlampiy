@@ -8,9 +8,13 @@
 
 ### Why link accounts?
 
-Linking your WhatsApp account to Telegram allows you to:
-- Use credits purchased via Telegram Stars for WhatsApp transcriptions
-- Manage your balance from a single Telegram account
+The bot transcribes a WhatsApp number only once it is linked to a Telegram account; an
+unlinked number is told how to link. A linked number then works as your private chat with
+the bot in Telegram:
+- It spends your tokens: the month's free ones first, then those bought with Telegram Stars.
+  WhatsApp sells nothing, so top up with `/buy` in Telegram
+- It uses your Telegram settings: language, cleanup, and the Obsidian vault notes go to
+- Blocking your Telegram account blocks the number too
 
 ### How to link
 
@@ -37,9 +41,13 @@ Send `/unlink_whatsapp` in Telegram.
 
 ### Зачем привязывать аккаунты?
 
-Привязка WhatsApp к Telegram позволяет:
-- Использовать кредиты, купленные через Telegram Stars, для транскрипций в WhatsApp
-- Управлять балансом из одного аккаунта Telegram
+Бот транскрибирует номер WhatsApp только после привязки к аккаунту Telegram; непривязанному
+номеру он отвечает, как привязаться. Привязанный номер работает как ваш личный чат с ботом
+в Telegram:
+- Тратит ваши токены: сначала бесплатные за месяц, потом купленные за Telegram Stars.
+  В WhatsApp ничего не продаётся, пополнять — командой `/buy` в Telegram
+- Берёт ваши настройки из Telegram: язык, очистку текста и хранилище Obsidian для заметок
+- Блокировка аккаунта Telegram блокирует и номер
 
 ### Как привязать
 
@@ -66,9 +74,13 @@ Send `/unlink_whatsapp` in Telegram.
 
 ### ¿Por qué vincular cuentas?
 
-Vincular tu cuenta de WhatsApp con Telegram te permite:
-- Usar créditos comprados con Telegram Stars para transcripciones en WhatsApp
-- Gestionar tu saldo desde una sola cuenta de Telegram
+El bot transcribe un número de WhatsApp solo cuando está vinculado a una cuenta de Telegram;
+a un número sin vincular le explica cómo vincularlo. Un número vinculado funciona como tu
+chat privado con el bot en Telegram:
+- Gasta tus tokens: primero los gratuitos del mes, luego los comprados con Telegram Stars.
+  En WhatsApp no se vende nada: recarga con `/buy` en Telegram
+- Usa tu configuración de Telegram: idioma, limpieza y la bóveda de Obsidian de las notas
+- Bloquear tu cuenta de Telegram también bloquea el número
 
 ### Cómo vincular
 
@@ -95,9 +107,13 @@ Envía `/unlink_whatsapp` en Telegram.
 
 ### Warum Konten verknüpfen?
 
-Die Verknüpfung deines WhatsApp-Kontos mit Telegram ermöglicht:
-- Über Telegram Stars gekaufte Credits für WhatsApp-Transkriptionen nutzen
-- Dein Guthaben über ein einziges Telegram-Konto verwalten
+Der Bot transkribiert eine WhatsApp-Nummer erst, wenn sie mit einem Telegram-Konto verknüpft
+ist; einer nicht verknüpften Nummer erklärt er, wie das geht. Eine verknüpfte Nummer
+funktioniert wie dein privater Chat mit dem Bot in Telegram:
+- Sie verbraucht deine Tokens: zuerst die kostenlosen des Monats, dann die mit Telegram Stars
+  gekauften. In WhatsApp wird nichts verkauft, aufladen mit `/buy` in Telegram
+- Sie nutzt deine Telegram-Einstellungen: Sprache, Bereinigung und den Obsidian-Vault für Notizen
+- Wird dein Telegram-Konto gesperrt, ist auch die Nummer gesperrt
 
 ### So verknüpfst du
 

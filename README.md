@@ -39,7 +39,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Cleanup context** — Recent transcriptions from the same chat are passed to the cleanup LLM for better accuracy
 
 ### Account Linking
-- **Telegram ↔ WhatsApp** — Link accounts with one-time codes
+- **Telegram ↔ WhatsApp** — A WhatsApp number linked with a one-time code is your Telegram account: the same tokens, settings and vault
 - **Rate limiting** — Protection against brute-force attacks
 
 ### Administration
