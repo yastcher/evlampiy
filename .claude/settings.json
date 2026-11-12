@@ -1,4 +1,5 @@
 {
+  "plansDirectory": "docs/spec",
   "permissions": {
     "defaultMode": "default",
     "allow": [
