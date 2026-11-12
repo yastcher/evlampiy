@@ -80,7 +80,8 @@ The `docker-compose.yml` includes:
 - MongoDB database
 - Bot service with auto-restart
 
-For WhatsApp integration, port 8000 is exposed for webhook callbacks.
+The bot's HTTP server (`/health` and the WhatsApp webhook) listens on port 8000 of the host's
+loopback only: the internet reaches the webhook through a TLS proxy on the same host.
 
 #### Telegram blocked on the host
 
@@ -145,9 +146,9 @@ docker compose up -d
 
 If using WhatsApp integration:
 
-1. **Port forwarding**: Ensure port 8000 is accessible from the internet
-2. **HTTPS**: WhatsApp requires HTTPS. Use a reverse proxy (nginx, Caddy) with SSL
-3. **Webhook URL**: Configure in Meta Developer Console as `https://your-domain.com/`
+1. **HTTPS**: WhatsApp requires HTTPS. Run a reverse proxy (nginx, Caddy) with SSL on the bot's
+   host and open 443, not 8000: the bot listens on the host's loopback only
+2. **Webhook URL**: Configure in Meta Developer Console as `https://your-domain.com/`
 
 Example nginx configuration:
 
@@ -284,7 +285,8 @@ docker compose up -d
 - База данных MongoDB
 - Сервис бота с авто-перезапуском
 
-Для интеграции с WhatsApp порт 8000 открыт для webhook-колбэков.
+HTTP-сервер бота (`/health` и вебхук WhatsApp) слушает порт 8000 только на loopback хоста:
+из интернета вебхук доходит через TLS-прокси на том же хосте.
 
 #### Telegram заблокирован на хосте
 
@@ -349,9 +351,9 @@ docker compose up -d
 
 При использовании WhatsApp:
 
-1. **Проброс портов**: Порт 8000 должен быть доступен из интернета
-2. **HTTPS**: WhatsApp требует HTTPS. Используйте reverse proxy (nginx, Caddy) с SSL
-3. **URL Webhook**: Настройте в Meta Developer Console как `https://ваш-домен.com/`
+1. **HTTPS**: WhatsApp требует HTTPS. Поднимите reverse proxy (nginx, Caddy) с SSL на хосте бота
+   и откройте 443, а не 8000: бот слушает только loopback хоста
+2. **URL Webhook**: Настройте в Meta Developer Console как `https://ваш-домен.com/`
 
 Пример конфигурации nginx:
 

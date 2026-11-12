@@ -48,7 +48,9 @@ services:
     environment:
       FASTAPI_HOST: "0.0.0.0"
     ports:
-      - "8000:8000"  # HTTP server: /health + WhatsApp webhook
+      # The host's loopback alone: Docker publishes a port past the firewall, and the
+      # WhatsApp webhook comes in from the internet through the TLS proxy on this host.
+      - "127.0.0.1:8000:8000"  # HTTP server: /health + WhatsApp webhook
     volumes:
       - ./data:/app/data:ro
     depends_on:

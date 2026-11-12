@@ -39,6 +39,7 @@
 - The HTTP app no longer serves `/docs`, `/redoc` and `/openapi.json` to anyone the proxy lets through
 - The Gemini review workflow no longer splices the pull request's base branch into a shell command
 - Local image builds no longer copy `tmp/`, `mutants/` and `.hypothesis/` into the image
+- The bot's port is published on the host's loopback only: Docker opened it to the internet past the firewall; the WhatsApp webhook comes in through the TLS proxy
 
 ### Removed
 

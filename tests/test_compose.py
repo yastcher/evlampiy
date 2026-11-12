@@ -26,6 +26,19 @@ def test_mongodb_is_never_published(compose):
     assert "    ports:" not in mongodb
 
 
+def test_production_publishes_ports_on_the_loopback_only():
+    """Docker opens a published port past the host's firewall, as it opened MongoDB's: the internet reaches
+    the app through the TLS proxy on the host, and nothing but the host reaches the app."""
+    published = [
+        entry
+        for block in _services((REPO_ROOT / "docker-compose.yml").read_text()).values()
+        for ports in re.findall(r"^    ports:\n((?:      .*\n)+)", block, re.M)
+        for entry in re.findall(r'^      - "([^"]+)"', ports, re.M)
+    ]
+
+    assert published == ["127.0.0.1:8000:8000"]
+
+
 @pytest.mark.parametrize("service", ["mongodb", "evlampiy_notes"])
 def test_every_production_service_restarts_on_its_own(service):
     """A stack that comes back half-way after a crash or a reboot hides the failure behind the live container."""
