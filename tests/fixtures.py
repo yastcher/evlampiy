@@ -1,6 +1,9 @@
+import asyncio
+import contextlib
 import os
 import pathlib
 import re
+import typing
 from collections.abc import Iterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,7 +12,7 @@ import pytest
 from aiogram.types import CallbackQuery, Chat, Message, User
 from beanie import init_beanie
 from docker.errors import DockerException
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 from testcontainers.community.mongodb import MongoDbContainer
 
 import evlampiy.ai_client
@@ -17,6 +20,28 @@ import evlampiy.telegram.handlers.obsidian as obsidian_handlers
 import evlampiy.whatsapp.client
 from evlampiy.mongo import ALL_DOCUMENT_MODELS
 from evlampiy.whatsapp.app import create_fastapi_app
+
+
+class _AsyncioWithSleep:
+    """`asyncio` as one module under test sees it: the real module, its `sleep` replaced."""
+
+    def __init__(self, sleep: AsyncMock) -> None:
+        self.sleep = sleep
+
+    def __getattr__(self, name: str) -> typing.Any:
+        return getattr(asyncio, name)
+
+
+@contextlib.contextmanager
+def sleep_replaced(module: str, sleep: AsyncMock | None = None) -> Iterator[AsyncMock]:
+    """Replace `asyncio.sleep` where `module` looks it up, and nowhere else.
+
+    `patch(f"{module}.asyncio.sleep")` would replace it in `asyncio` itself, under the event
+    loop and the database driver too (tests/test_architecture.py, rule 5).
+    """
+    replacement = AsyncMock() if sleep is None else sleep
+    with patch(f"{module}.asyncio", _AsyncioWithSleep(replacement)):
+        yield replacement
 
 
 def _build_user_mock(user_id: int = 12345, *, is_bot: bool = False) -> MagicMock:
@@ -194,23 +219,20 @@ def no_fallback_keys():
 
 @pytest.fixture
 def mock_ai_sleep():
-    """Mock asyncio.sleep in ai_client and ai_chat (no-op, suppress actual sleeping)."""
-    with (
-        patch("evlampiy.ai_client.asyncio.sleep", new_callable=AsyncMock),
-        patch("evlampiy.ai_chat.asyncio.sleep", new_callable=AsyncMock),
-    ):
+    """No sleeping in ai_client and ai_chat."""
+    with sleep_replaced("evlampiy.ai_client"), sleep_replaced("evlampiy.ai_chat"):
         yield
 
 
 @pytest.fixture
 def capture_ai_sleep():
-    """Mock asyncio.sleep in ai_client and capture call durations."""
+    """No sleeping in ai_client; the durations it asks for are recorded."""
     calls: list[float] = []
 
     async def _fake_sleep(seconds: float) -> None:
         calls.append(seconds)
 
-    with patch("evlampiy.ai_client.asyncio.sleep", side_effect=_fake_sleep):
+    with sleep_replaced("evlampiy.ai_client", AsyncMock(side_effect=_fake_sleep)):
         yield calls
 
 
@@ -459,9 +481,9 @@ def mongo_uri() -> Iterator[str]:
 @pytest.fixture(autouse=True)
 async def init_db(mongo_uri):
     """Bind the app's models to the test database; empty their collections after the test."""
-    client = AsyncIOMotorClient(mongo_uri)
+    client = AsyncMongoClient(mongo_uri)
     await init_beanie(database=client[_TEST_DATABASE], document_models=ALL_DOCUMENT_MODELS)
     yield
     for model in ALL_DOCUMENT_MODELS:
         await model.delete_all()
-    client.close()
+    await client.close()

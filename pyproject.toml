@@ -12,9 +12,8 @@ dependencies = [
     "wit~=6.0.1",
     "pydub~=0.25.1",
     "audioop-lts>=0.2; python_version>='3.13'",
-    # Held at 2.0 while the app connects through motor: beanie 2 is built on pymongo's async client.
-    "beanie~=2.0.1",
-    "motor==3.7.1",
+    "beanie~=2.2.0",
+    "pymongo~=4.19",
     "pywa~=4.5",
     "fastapi~=0.162",
     "uvicorn~=0.54",

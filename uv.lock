@@ -242,7 +242,7 @@ wheels = [
 
 [[package]]
 name = "beanie"
-version = "2.0.1"
+version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -251,9 +251,9 @@ dependencies = [
     { name = "pymongo" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/af/c0/85857d44d1c59d8bb546bd01e7d128ae08fc9e84e3f3c5c84b365b55ea48/beanie-2.0.1.tar.gz", hash = "sha256:aad0365cba578f5686446ed0960ead140a2231cbbfa8d492220f712c5e0c06b4", size = 171502 }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/a1/4abc93d5437999c55465f68c3c81e4735cdfe22827072c0e9cab00f63d11/beanie-2.2.0.tar.gz", hash = "sha256:2dc116e7f4a6650f8066f95851d34d898983af6ffaf5366dcfef892993537a51", size = 70115 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/54/8c9a4ab2d82242074671cc35b1dd2a906c3c36b3a5c80e914c76fa9f45b7/beanie-2.0.1-py3-none-any.whl", hash = "sha256:3aad6cc0e40fb8d256a0a3fdeca92a7b3d3c1f9f47ff377c9ecd2221285e1009", size = 87693 },
+    { url = "https://files.pythonhosted.org/packages/c5/ae/2584fb9871b58f3c5334110f8ce00bd1421fe5fbda28eeac9a8d01d10ba6/beanie-2.2.0-py3-none-any.whl", hash = "sha256:4074f893ef00c52b8538b814c9dfd55130eea4ed0579abfae72853657c9029e4", size = 93116 },
 ]
 
 [[package]]
@@ -521,9 +521,9 @@ dependencies = [
     { name = "beanie" },
     { name = "fastapi" },
     { name = "httpx", extra = ["http2"] },
-    { name = "motor" },
     { name = "pydantic-settings" },
     { name = "pydub" },
+    { name = "pymongo" },
     { name = "python-dotenv" },
     { name = "pywa" },
     { name = "uvicorn" },
@@ -550,12 +550,12 @@ requires-dist = [
     { name = "aiogram", specifier = "~=3.31" },
     { name = "aiohttp", specifier = ">=3.14.5" },
     { name = "audioop-lts", marker = "python_full_version >= '3.13'", specifier = ">=0.2" },
-    { name = "beanie", specifier = "~=2.0.1" },
+    { name = "beanie", specifier = "~=2.2.0" },
     { name = "fastapi", specifier = "~=0.162" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.28.1" },
-    { name = "motor", specifier = "==3.7.1" },
     { name = "pydantic-settings", specifier = ">=2.16,<3" },
     { name = "pydub", specifier = "~=0.25.1" },
+    { name = "pymongo", specifier = "~=4.19" },
     { name = "python-dotenv", specifier = "~=1.2.4" },
     { name = "pywa", specifier = "~=4.5" },
     { name = "uvicorn", specifier = "~=0.54" },
@@ -838,18 +838,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979 },
-]
-
-[[package]]
-name = "motor"
-version = "3.7.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pymongo" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/93/ae/96b88362d6a84cb372f7977750ac2a8aed7b2053eed260615df08d5c84f4/motor-3.7.1.tar.gz", hash = "sha256:27b4d46625c87928f331a6ca9d7c51c2f518ba0e270939d395bc1ddc89d64526", size = 280997 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/9a/35e053d4f442addf751ed20e0e922476508ee580786546d699b0567c4c67/motor-3.7.1-py3-none-any.whl", hash = "sha256:8a63b9049e38eeeb56b4fdd57c3312a6d1f25d01db717fe7d82222393c410298", size = 74996 },
 ]
 
 [[package]]

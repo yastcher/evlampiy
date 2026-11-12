@@ -278,7 +278,7 @@ Free users get Wit.ai only (no Groq fallback, no provider choice). This keeps co
 
 ### Async Throughout
 
-The entire stack is async: FastAPI for WhatsApp webhooks, aiogram for Telegram polling, httpx for outbound HTTP, and Beanie (async Motor) for MongoDB. The entry point (`main.py`) runs Telegram polling in the main thread and FastAPI in a daemon thread.
+The entire stack is async: FastAPI for WhatsApp webhooks, aiogram for Telegram polling, httpx for outbound HTTP, and Beanie (on pymongo's async client) for MongoDB. The entry point (`main.py`) runs Telegram polling in the main thread and FastAPI in a daemon thread.
 
 ### Context-Aware Cleanup
 

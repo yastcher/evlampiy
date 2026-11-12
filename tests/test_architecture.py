@@ -2,6 +2,7 @@
 
 import ast
 import pathlib
+import re
 
 from pytestarch import Rule, get_evaluable_architecture
 
@@ -155,3 +156,35 @@ class TestStdlibImportStyle:
         assert not violations, "Stdlib modules must be imported as `import X`, not `from X import ...`:\n" + "\n".join(
             f"  {v}" for v in violations
         )
+
+
+# --- Rule 5: tests patch asyncio only as one module sees it ---
+
+_TESTS = pathlib.Path(__file__).resolve().parent
+
+
+class TestAsyncioPatching:
+    def test_tests_never_patch_the_shared_asyncio_module(self):
+        """`patch("evlampiy.x.asyncio.sleep")` replaces the sleep of `asyncio` itself, for the whole process.
+
+        pymongo's heartbeat is a loop on `asyncio.sleep`: under the mock it spins without a pause, the
+        mock records every turn, and a test run grew to 9 GB before the kernel killed it and the IDE.
+        Patch the name the module under test looks up instead: `tests/fixtures.py::sleep_replaced`.
+        """
+        violations = []
+        for py_file in sorted(_TESTS.rglob("*.py")):
+            for node in ast.walk(ast.parse(py_file.read_text(), filename=str(py_file))):
+                if _patches_shared_asyncio(node):
+                    violations.append(f"{py_file.relative_to(_TESTS)}:{node.lineno}")
+        assert not violations, "Tests patch the shared asyncio module:\n" + "\n".join(f"  {v}" for v in violations)
+
+
+def _patches_shared_asyncio(node: ast.AST) -> bool:
+    """A patch whose target is an attribute of the `asyncio` module itself."""
+    if not isinstance(node, ast.Call) or not node.args:
+        return False
+    called = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", None)
+    target = node.args[0]
+    if called in ("patch", "setattr") and isinstance(target, ast.Constant) and isinstance(target.value, str):
+        return re.search(r"(^|\.)asyncio\.\w+$", target.value) is not None
+    return called in ("object", "setattr") and isinstance(target, ast.Name) and target.id == "asyncio"

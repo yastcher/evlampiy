@@ -578,7 +578,9 @@ class TestConnectGithub:
                 "evlampiy.telegram.handlers.obsidian.get_github_device_code",
                 AsyncMock(return_value=device_info),
             ),
-            patch("evlampiy.telegram.handlers.obsidian.asyncio.create_task"),
+            # The background poll is another test's subject: here it times out at once. Not
+            # `asyncio.create_task` — that is the event loop's, and the database driver runs on it.
+            patch("evlampiy.telegram.handlers.obsidian.poll_github_for_token", AsyncMock(return_value=None)),
         ):
             await connect_github(mock_private_update, mock_context)
 

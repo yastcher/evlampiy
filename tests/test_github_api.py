@@ -13,6 +13,7 @@ from evlampiy.github_api import (
     list_user_repos,
     put_github_file,
 )
+from tests.fixtures import sleep_replaced
 
 _TEST_REPO = GitHubRepo(token="ghp_token", owner="testuser", repo="testrepo")
 
@@ -207,7 +208,7 @@ class TestPutGithubFile:
         """Returns False after all retries exhausted due to network errors."""
         with (
             patch("evlampiy.github_api.httpx.AsyncClient") as mock_client_cls,
-            patch("evlampiy.github_api.asyncio.sleep"),
+            sleep_replaced("evlampiy.github_api"),
         ):
             mock_client = mock_httpx_client_factory(mock_client_cls)
             mock_client.put.side_effect = httpx.HTTPError("connection refused")

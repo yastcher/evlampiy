@@ -3,7 +3,7 @@ import typing
 
 import pymongo.errors
 from beanie import Document, init_beanie
-from motor import motor_asyncio
+from pymongo import AsyncMongoClient
 
 from evlampiy.config import settings
 from evlampiy.dto import (
@@ -47,7 +47,7 @@ async def init_beanie_models() -> None:
     """
     to call only once
     """
-    mongo_client: typing.Any = motor_asyncio.AsyncIOMotorClient(settings.mongo_uri)
+    mongo_client = AsyncMongoClient(settings.mongo_uri)
     await init_beanie(database=mongo_client["user_settings"], document_models=ALL_DOCUMENT_MODELS)
 
 
