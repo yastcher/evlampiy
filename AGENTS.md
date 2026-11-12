@@ -130,6 +130,8 @@ it, ruff owns it.
 
 ## Security review
 
+SAST runs on its own: Semgrep in the gate and CI (`p/python`, `p/dockerfile`, `p/github-actions`), CodeQL in CI (`codeql.yml`, findings in the Security tab). A finding is fixed, or suppressed on its line with `# nosemgrep: <rule>` and a comment saying why.
+
 Before finishing any task, check for:
 
 **P0 (блокирует merge):**

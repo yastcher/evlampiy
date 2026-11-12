@@ -13,6 +13,8 @@ GATE_COMMANDS = [
     "uv run ruff check",
     "uv run ruff format --check",
     "uv run ty check evlampiy",
+    "uvx --from semgrep==1.182.1 semgrep scan --config p/python --config p/dockerfile --config p/github-actions"
+    " --metrics off --error",
     "systemd-run --user --scope --quiet -p MemoryMax=2G -p MemorySwapMax=0 uv run pytest",
     "shellcheck scripts/gate.sh",
 ]

@@ -22,12 +22,12 @@ jobs:
           fi
           echo "has_key=true" >> "$GITHUB_ENV"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         if: env.has_key == 'true'
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@v1.0.3
+      - uses: anthropics/claude-code-action@a6888c03f22170d00d2a92fa2317584ca7d5e108  # v1.0.3
         if: env.has_key == 'true'
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}

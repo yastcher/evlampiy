@@ -58,6 +58,10 @@ jobs:
       - name: Type check
         run: uv run ty check evlampiy
 
+      # Rules ruff's Bandit set lacks, the workflows and the Dockerfile included; CodeQL runs apart (codeql.yml).
+      - name: SAST
+        run: uvx --from semgrep==1.182.1 semgrep scan --config p/python --config p/dockerfile --config p/github-actions --metrics off --error
+
       # The coverage floor is `fail_under` in pyproject.toml.
       - name: Tests
         env:
@@ -91,10 +95,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
