@@ -27,4 +27,4 @@ Telegram Stars balance on WhatsApp.
 
 **Consequences.** WhatsApp needs a Telegram account, and the docs say so. A number cannot be
 blocked on its own: blocking the linked Telegram user blocks it. Spec:
-`docs/spec/2026-11-12-whatsapp-account-revenue-and-docs.md`.
+`docs/spec/done/2026-11-12-whatsapp-account-revenue-and-docs.md`.

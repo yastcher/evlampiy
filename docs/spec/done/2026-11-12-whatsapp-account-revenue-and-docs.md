@@ -1,8 +1,9 @@
 # WhatsApp as the linked account, revenue in Stars, docs that follow the code
 
-Status: in progress, 2026-11-12. Decided with the owner: WhatsApp is the linked Telegram
-account (ADR-001); the vocabulary promise is dropped; `GITHUB_TOKEN_SETUP.md` becomes the
-operator's guide to the OAuth App.
+Status: done, 2026-11-12. Decided with the owner: WhatsApp is the linked Telegram account
+(ADR-001); the vocabulary promise is dropped; `GITHUB_TOKEN_SETUP.md` becomes the operator's
+guide to the OAuth App. Found on the way and fixed with the docs: a blocked user could still
+use the GPT chat and `/categorize`, which the admin guide said were denied.
 
 ## The request
 
