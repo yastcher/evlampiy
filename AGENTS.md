@@ -171,12 +171,11 @@ Always update documentation as part of the same task (not as a separate step):
 ## Before finishing
 
 0. `git diff --stat` — оцени scope изменений
-1. `uv run ruff check --fix`
-2. `uv run ruff format`
-3. `scripts/gate.sh` — must end with `all gates passed`: it runs what CI runs, the coverage floor included
-4. Security review (see above)
-5. Update documentation (see "Documentation" section above)
-6. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг, скопированные
+1. `uv run ruff check --fix` and `uv run ruff format` — the fixers; the gate only checks, as CI does
+2. `scripts/gate.sh` — must end with `all gates passed`: it runs what CI runs, the coverage floor included. Run it bare, into a file, and read the log in a separate call: `mkdir -p tmp && scripts/gate.sh > tmp/gate.log 2>&1` — a pipe returns the exit code of its last command, not the gate's
+3. Security review (see above)
+4. Update documentation (see "Documentation" section above)
+5. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг, скопированные
    антипаттерны из существующего кода, лишнюю сложность, нарушение принципа простоты. Если нашёл — исправь до
    завершения.
 
