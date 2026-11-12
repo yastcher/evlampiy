@@ -56,6 +56,7 @@
 - WhatsApp transcriptions count toward the Wit.ai monthly limit and stop at it, as Telegram's do
 - Pre-release QA runs a mutant that died or timed out beside others again, alone, and starts mutation testing only with as many workers as the free memory fits
 - The deploy trusts only the server's host key from the `SSH_KNOWN_HOSTS` secret, not whatever key answers
+- The image installs the Debian security fixes its base image has not been rebuilt with yet; Trivy found two HIGH zlib CVEs
 
 ### Removed
 

@@ -4,7 +4,10 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/
 
+# `upgrade` takes the Debian security fixes the base image has not been rebuilt with yet: in
+# 2026-11 Trivy found zlib's two HIGH CVEs fixed in Debian and still in python:3.14-slim.
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends git curl ffmpeg build-essential libffi-dev libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
