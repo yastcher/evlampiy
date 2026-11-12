@@ -6,7 +6,7 @@ import pytest
 
 from scripts import prepare_release, release_from_tag
 
-from tests.fixtures import REPO_ROOT, git
+from tests.script_fixtures import REPO_ROOT, git
 
 TODAY = datetime.date(2026, 11, 11)
 

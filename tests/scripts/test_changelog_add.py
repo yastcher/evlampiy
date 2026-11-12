@@ -6,7 +6,7 @@ import pytest
 
 from scripts import changelog_add
 
-from tests.fixtures import REPO_ROOT
+from tests.script_fixtures import REPO_ROOT
 
 OPEN = """\
 ## [Unreleased]

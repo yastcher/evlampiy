@@ -87,9 +87,7 @@ it, ruff owns it.
 - Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление. Round-trip:
   `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`, нет `@`, нет двух подряд capitalized слов.
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
-- **All fixtures in tests/fixtures.py** — every @pytest.fixture must be declared there, not in test files. Test files
-  should have zero fixture definitions and minimal inline mocks. If a test needs a mock, check if a fixture already
-  exists; if not, add one to fixtures.py.
+- **All fixtures in fixture modules, never in test files** — `tests/fixtures.py` for the app, `tests/script_fixtures.py` for the repository's own scripts (release, changelog, gate); both are registered in `tests/conftest.py`. Test files have zero fixture definitions and minimal inline mocks: check for an existing fixture before adding one.
 - **Prefer integration tests over unit tests with heavy mocking** — don't create tests that mock half the system. Trophy
   style: real DB, real logic, mock only external I/O.
 - pytest_plugins already configured in conftest.py

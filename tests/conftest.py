@@ -38,6 +38,7 @@ ALL_TEST_MODELS = [
 
 pytest_plugins = [
     "tests.fixtures",
+    "tests.script_fixtures",
 ]
 
 
