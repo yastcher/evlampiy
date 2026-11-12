@@ -221,6 +221,15 @@ class TestParseOpenAIResponse:
         assert result.content == "Let me check"
         assert len(result.tool_calls) == 1
 
+    def test_history_keeps_the_tool_calls_that_came_with_text(self):
+        """Without its calls in the history, the tool's answer that follows is refused by every provider."""
+        call = {"id": "call_1", "type": "function", "function": {"name": "get_notes", "arguments": "{}"}}
+        data = {"choices": [{"message": {"content": "Let me check", "role": "assistant", "tool_calls": [call]}}]}
+
+        result = _parse_openai_response(data)
+
+        assert result.raw_message == {"role": "assistant", "content": "Let me check", "tool_calls": [call]}
+
 
 class TestParseGeminiResponse:
     """Test Gemini response parsing."""

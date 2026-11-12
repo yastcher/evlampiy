@@ -245,7 +245,7 @@ def _parse_openai_response(data: dict[str, typing.Any]) -> ChatResponse:
     raw_message: dict[str, typing.Any] = {"role": "assistant"}
     if content:
         raw_message["content"] = content
-    elif raw_tool_calls:
+    if raw_tool_calls:
         raw_message["tool_calls"] = raw_tool_calls
 
     return ChatResponse(content=content, tool_calls=tool_calls, raw_message=raw_message)
