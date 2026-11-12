@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import httpx
+import pytest
 
 from evlampiy.ai_chat import (
     _messages_to_anthropic,
@@ -140,6 +141,24 @@ class TestMessageConversion:
         assert block["type"] == "tool_result"
         assert block["tool_use_id"] == "tc_1"
         assert block["content"] == "result data"
+
+    @pytest.mark.parametrize("arguments", ['{"limit": 3', "[3]", "null"], ids=["cut-short", "array", "null"])
+    def test_gemini_gets_no_arguments_for_a_call_whose_arguments_are_not_an_object(self, arguments):
+        """A model's own arguments, cut short or not an object, reach Gemini as none instead of failing the request."""
+        call = {"id": "tc_1", "function": {"name": "get_notes", "arguments": arguments}}
+
+        _, contents = _messages_to_gemini([{"role": "assistant", "tool_calls": [call]}])
+
+        assert contents[0]["parts"][0]["functionCall"] == {"name": "get_notes", "args": {}}
+
+    @pytest.mark.parametrize("arguments", ['{"limit": 3', "[3]", "null"], ids=["cut-short", "array", "null"])
+    def test_anthropic_gets_no_arguments_for_a_call_whose_arguments_are_not_an_object(self, arguments):
+        """A model's own arguments, cut short or not an object, reach Anthropic as none, not as a failed request."""
+        call = {"id": "tc_1", "function": {"name": "get_notes", "arguments": arguments}}
+
+        _, msgs = _messages_to_anthropic([{"role": "assistant", "tool_calls": [call]}])
+
+        assert msgs[0]["content"][0]["input"] == {}
 
 
 class TestParseOpenAIResponse:
@@ -385,6 +404,27 @@ class TestChatComplete:
 
         assert result is not None
         assert result.content == "Gemini says hi"
+
+    async def test_a_cut_short_tool_call_in_the_history_does_not_fail_the_next_turn(
+        self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter
+    ):
+        """An OpenAI-format provider cut a call's arguments short; the next turn goes to Gemini and gets its answer."""
+        api_response = {"candidates": [{"content": {"parts": [{"text": "Here are your notes"}]}}]}
+        mock_ai_http.post.return_value = mock_httpx_response_factory(api_response, 200)
+        messages = [
+            {"role": "user", "content": "Show notes"},
+            {
+                "role": "assistant",
+                "tool_calls": [{"id": "tc_1", "function": {"name": "get_notes", "arguments": '{"limit": 3'}}],
+            },
+            {"role": "tool", "tool_call_id": "tc_1", "name": "get_notes", "content": "Error executing get_notes"},
+        ]
+
+        with patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"):
+            result = await chat_complete(["gemini"], messages, tools=SAMPLE_TOOLS)
+
+        assert result is not None
+        assert result.content == "Here are your notes"
 
     async def test_gemini_with_tool_call(self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter):
         """Gemini returns function call in response."""

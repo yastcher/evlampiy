@@ -100,6 +100,26 @@ def tools_to_anthropic(
 # ---------------------------------------------------------------------------
 
 
+def _tool_arguments(function: dict[str, typing.Any]) -> dict[str, typing.Any]:
+    """A tool call's arguments as the object Gemini and Anthropic take.
+
+    They come from a model's earlier reply, in OpenAI's format a JSON string that may be cut
+    short or not be an object at all. Such a call already failed when it ran (`tool_calling`)
+    and its error is the next message, so the history keeps the call with no arguments instead
+    of failing the whole request on it.
+    """
+    arguments = function.get("arguments", "{}")
+    if isinstance(arguments, str):
+        try:
+            arguments = json.loads(arguments)
+        except json.JSONDecodeError:
+            arguments = None
+    if isinstance(arguments, dict):
+        return arguments
+    logger.warning("Tool call %s has arguments that are not a JSON object; sending none", function.get("name", ""))
+    return {}
+
+
 def _messages_to_gemini(
     messages: list[dict[str, typing.Any]],
 ) -> tuple[str | None, list[dict[str, typing.Any]]]:
@@ -122,15 +142,7 @@ def _messages_to_gemini(
                 parts.append({"text": msg["content"]})
             for tc in msg.get("tool_calls", []):
                 fn = tc.get("function", {})
-                args = fn.get("arguments", "{}")
-                parts.append(
-                    {
-                        "functionCall": {
-                            "name": fn.get("name", ""),
-                            "args": json.loads(args) if isinstance(args, str) else args,
-                        }
-                    }
-                )
+                parts.append({"functionCall": {"name": fn.get("name", ""), "args": _tool_arguments(fn)}})
             if parts:
                 contents.append({"role": "model", "parts": parts})
 
@@ -178,13 +190,12 @@ def _messages_to_anthropic(
                 content_blocks.append({"type": "text", "text": msg["content"]})
             for tc in msg.get("tool_calls", []):
                 fn = tc.get("function", {})
-                args_str = fn.get("arguments", "{}")
                 content_blocks.append(
                     {
                         "type": "tool_use",
                         "id": tc.get("id", ""),
                         "name": fn.get("name", ""),
-                        "input": json.loads(args_str) if isinstance(args_str, str) else args_str,
+                        "input": _tool_arguments(fn),
                     }
                 )
             result.append({"role": "assistant", "content": content_blocks})

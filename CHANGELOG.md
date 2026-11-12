@@ -32,6 +32,7 @@
 
 ### Fixed
 
+- A tool call whose arguments a provider cut short no longer fails the next GPT chat turn on Gemini or Anthropic
 - MongoDB comes back on its own after a crash or a reboot, as the bot already did
 - MongoDB gets the 64000 open files it asks for: at Docker's default 1024 it aborted once its collections and indexes outgrew the limit
 - The WhatsApp webhook stays off without `WHATSAPP_APP_SECRET`, where pywa accepted unsigned, forgeable updates; `/health` reports its state
