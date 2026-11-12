@@ -16,6 +16,7 @@ import uuid
 import httpx
 
 from evlampiy import ai_client, const
+from evlampiy.ai import _mask
 from evlampiy.ai_client import OpenAIEndpoint, RateLimitError
 from evlampiy.config import settings
 
@@ -566,19 +567,38 @@ async def chat_complete(
 ) -> ChatResponse | None:
     """Try each provider in chain, falling back on rate limit exhaustion.
 
+    PII is masked out of the whole history before it leaves for any provider (152-ФЗ) and
+    restored in the reply, as `ai_client._ai_complete` does for one prompt.
+
     Returns the first successful ChatResponse, or None if all fail.
     """
+    masker = _mask.Masker()
+    outgoing = _mask.mask_messages(messages, masker)
+    if settings.log_llm_payloads:
+        logger.debug("Chat outgoing payload (masked): %s", outgoing)
+
     for provider in chain:
         try:
             await ai_client.rate_limiter.acquire(provider)
             logger.debug("Using chat provider %s", provider)
-            result = await _call_with_retry(provider, messages, tools, max_tokens, temperature)
+            result = await _call_with_retry(provider, outgoing, tools, max_tokens, temperature)
         except RateLimitError:
             logger.warning("Chat provider %s exhausted, falling back to next", provider)
             continue
 
         if result is not None:
-            return result
+            return _unmasked(result, masker.mapping)
 
     logger.error("All chat providers in chain exhausted or failed")
     return None
+
+
+def _unmasked(response: ChatResponse, mapping: dict[str, str]) -> ChatResponse:
+    """The reply in the user's words: its text, its tool calls, and the message kept for history."""
+    return ChatResponse(
+        content=None if response.content is None else _mask.unmask(response.content, mapping),
+        tool_calls=[
+            dataclasses.replace(call, arguments=_mask.unmask(call.arguments, mapping)) for call in response.tool_calls
+        ],
+        raw_message=_mask.unmask_message(response.raw_message, mapping),
+    )
