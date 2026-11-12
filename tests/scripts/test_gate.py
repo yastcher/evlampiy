@@ -17,7 +17,7 @@ GATE_COMMANDS = [
     "uvx --from semgrep==1.182.1 semgrep scan --config p/python --config p/dockerfile --config p/github-actions"
     " --metrics off --error",
     "systemd-run --user --scope --quiet -p MemoryMax=2G -p MemorySwapMax=0 uv run pytest",
-    "shellcheck scripts/gate.sh",
+    "shellcheck scripts/gate.sh deploy/*.sh",
 ]
 
 
@@ -42,7 +42,7 @@ def test_gate_checks_the_scripts_of_its_own_tree(run_gate):
     """Called from another directory, the gate still expands its glob in its own root."""
     _, commands = run_gate()
 
-    assert commands[-1] == "shellcheck scripts/gate.sh"
+    assert commands[-1] == "shellcheck scripts/gate.sh deploy/*.sh"
 
 
 def test_without_a_systemd_user_session_the_tests_run_uncapped_and_say_so(run_gate):

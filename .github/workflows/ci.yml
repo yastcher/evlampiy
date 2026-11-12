@@ -75,7 +75,7 @@ jobs:
         run: uv run pytest
 
       - name: Shell scripts
-        run: shellcheck scripts/*.sh
+        run: shellcheck scripts/*.sh deploy/*.sh
 
   build-and-deploy:
     needs: lint-and-test

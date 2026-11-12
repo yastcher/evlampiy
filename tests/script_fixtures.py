@@ -271,3 +271,81 @@ def run_stack(tmp_path):
         return result, commands, env_seen.read_text().strip() if env_seen.exists() else ""
 
     return run
+
+
+# The server's docker: a dump on stdout, two containers, their states before and after the
+# steady minute (the first `inspect` of names is "before"), the image the bot runs, the
+# release images on the host. `curl` answers /health unless DEPLOY_UNHEALTHY; `sleep` waits for nothing.
+_DEPLOY_STUB = """#!/usr/bin/env bash
+case "${0##*/}" in
+  sleep) exit 0 ;;
+  curl) [ -z "$DEPLOY_UNHEALTHY" ] || exit 7 ;;
+esac
+printf "%s %s\\n" "${0##*/}" "$*" >> "$DEPLOY_LOG"
+if [ "${0##*/} $*" = "$DEPLOY_FAIL" ]; then exit 1; fi
+case "${0##*/} $*" in
+  "docker compose exec -T mongodb mongodump"*) echo "dump of the database" ;;
+  "docker compose ps --all --quiet") printf "c-mongo\\nc-app\\n" ;;
+  "docker compose ps --quiet evlampiy_notes") echo c-app ;;
+  "docker inspect --format {{.Name}}"*)
+    n=$(( $(cat "$DEPLOY_COUNT" 2>/dev/null || echo 0) + 1 ))
+    echo "$n" > "$DEPLOY_COUNT"
+    if [ "$n" -eq 1 ]; then printf "%b\\n" "$DEPLOY_BEFORE"; else printf "%b\\n" "$DEPLOY_AFTER"; fi ;;
+  "docker inspect --format {{.Config.Image}}"*) echo "$DEPLOY_RUNNING" ;;
+  "docker images "*) printf "%b\\n" "$DEPLOY_IMAGES" ;;
+esac
+"""
+DEPLOY_IMAGE = "ghcr.io/yastcher/evlampiy_notes"
+_STEADY = "/mongodb running 0\\n/evlampiy_notes running 0"
+
+
+@pytest.fixture
+def deploy_server(tmp_path):
+    """A deploy directory as the pipeline leaves it — the real deploy/ scripts, v0.9.7 running,
+    v0.10.0's compose file in incoming/ — with docker, curl and sleep stubbed.
+
+    Returns (server, run): run(*args, **env) runs a script of deploy/ there and gives back the
+    finished process and every command it ran; the env overrides the stub's answers.
+    """
+    server = tmp_path / "server"
+    (server / "deploy").mkdir(parents=True)
+    for script in ("deploy.sh", "rollback.sh", "backup-db.sh", "common.sh"):
+        shutil.copy2(REPO_ROOT / "deploy" / script, server / "deploy" / script)
+    (server / "docker-compose.yml").write_text("# v0.9.7's stack\n")
+    (server / "incoming").mkdir()
+    (server / "incoming" / "docker-compose.yml").write_text("# v0.10.0's stack\n")
+    (server / ".env").write_text(f"TELEGRAM_BOT_TOKEN=kept\nEVLAMPIY_IMAGE={DEPLOY_IMAGE}\nIMAGE_TAG=v0.9.7\n")
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for name in ("docker", "curl", "sleep"):
+        (stubs / name).write_text(_DEPLOY_STUB)
+        (stubs / name).chmod(0o755)
+    log = tmp_path / "commands.log"
+
+    def run(script: str, *args: str, **env: str) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+        log.unlink(missing_ok=True)
+        (tmp_path / "inspect.count").unlink(missing_ok=True)
+        answers = {
+            "PATH": f"{stubs}:{os.environ['PATH']}",
+            "DEPLOY_LOG": str(log),
+            "DEPLOY_COUNT": str(tmp_path / "inspect.count"),
+            "DEPLOY_FAIL": "",
+            "DEPLOY_UNHEALTHY": "",
+            "DEPLOY_BEFORE": _STEADY,
+            "DEPLOY_AFTER": _STEADY,
+            "DEPLOY_RUNNING": f"{DEPLOY_IMAGE}:v0.10.0",
+            "DEPLOY_IMAGES": f"{DEPLOY_IMAGE}:v0.10.0\\n{DEPLOY_IMAGE}:v0.9.7\\n{DEPLOY_IMAGE}:v0.9.5",
+            "DEPLOY_OBSERVE_SECONDS": "0",
+        }
+        result = subprocess.run(
+            ["bash", server / "deploy" / script, *args],
+            env=os.environ | answers | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        commands = [line.rstrip() for line in log.read_text().splitlines()] if log.exists() else []
+        return result, commands
+
+    return server, run

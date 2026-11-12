@@ -13,6 +13,7 @@
 - `scripts/pre_release_qa.sh` runs the slow checks before a release, the gate and a CRAP limit for now; `release.sh` tags only a tree it passed
 - Pre-release QA runs mutmut over the PII mask, billing, account linking and categorization; survivors and untested mutants only go down
 - Pre-release QA starts the release image with MongoDB in a stack of its own and passes it only healthy and with no restarts a minute later
+- `deploy/` dumps the database before a release, keeps the running release's compose file, and puts that release back when the new one does not hold
 
 ### Changed
 

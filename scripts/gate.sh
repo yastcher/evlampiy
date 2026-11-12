@@ -68,7 +68,7 @@ step "ruff format"  uv run ruff format --check
 step "ty"           uv run ty check evlampiy
 step "sast"         uvx --from semgrep==1.182.1 semgrep scan --config p/python --config p/dockerfile --config p/github-actions --metrics off --error
 step "pytest"       "${capped[@]}" uv run pytest
-step "shellcheck"   shellcheck scripts/*.sh
+step "shellcheck"   shellcheck scripts/*.sh deploy/*.sh
 
 printf '\n'
 if [ ${#failed[@]} -eq 0 ]; then
