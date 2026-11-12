@@ -165,7 +165,7 @@ esac
 def run_qa(tmp_path):
     """Run a copy of the real scripts/pre_release_qa.sh in a committed git tree, its stages stubbed.
 
-    scripts/gate.sh is a stub in that tree, and `uv`, `docker` and `systemd-run` are stubs on
+    scripts/gate.sh and scripts/stack_smoke.sh are stubs in that tree, `uv`, `docker` and `systemd-run` on
     PATH: each logs what it was asked, the variable the mutants' MongoDB travels in included,
     and fails when that equals `fail`. Returns (tree, run): run(fail="", **env) gives back the
     finished process, the commands the stages ran (the container's pid-named suffix as
@@ -178,7 +178,13 @@ def run_qa(tmp_path):
     (tree / "docker-compose.yml").write_text("services:\n\n  mongodb:\n    # pinned\n    image: mongo:8.0.3\n")
     stubs = tmp_path / "bin"
     stubs.mkdir()
-    for path in (scripts / "gate.sh", stubs / "uv", stubs / "docker", stubs / "systemd-run"):
+    for path in (
+        scripts / "gate.sh",
+        scripts / "stack_smoke.sh",
+        stubs / "uv",
+        stubs / "docker",
+        stubs / "systemd-run",
+    ):
         path.write_text(_QA_STUB)
         path.chmod(0o755)
     git(tree, "init", "-q", "-b", "main")
@@ -206,3 +212,62 @@ def run_qa(tmp_path):
         return result, commands, stamp.read_text().strip() if stamp.exists() else None
 
     return tree, run
+
+
+# What the stack's stubs answer: an address, a container id, its state, the health body.
+_STACK_STUB = """#!/usr/bin/env bash
+printf "%s %s\\n" "${0##*/}" "$*" >> "$STACK_LOG"
+if [ "${0##*/} $*" = "$STACK_FAIL" ]; then exit 1; fi
+case "${0##*/} $*" in
+  "docker compose up "*) echo "$COMPOSE_PROJECT_NAME $COMPOSE_FILE $EVLAMPIY_IMAGE:$IMAGE_TAG" > "$STACK_ENV" ;;
+  "docker compose port "*) echo 127.0.0.1:27999 ;;
+  "docker compose ps --quiet "*) echo "${*: -1}-id" ;;
+  "docker inspect "*) echo "$STACK_STATE" ;;
+  "curl "*) echo "$STACK_HEALTH" ;;
+esac
+"""
+
+
+@pytest.fixture
+def run_stack(tmp_path):
+    """Run a copy of the real scripts/stack_smoke.sh in a git tree, `docker` and `curl` stubbed.
+
+    Returns run(fail="", state="running 0", health=<the body /health should give>) giving back
+    the finished process, every command it ran, and the compose environment `up` saw.
+    """
+    tree = tmp_path / "tree"
+    (tree / "scripts").mkdir(parents=True)
+    shutil.copy2(REPO_ROOT / "scripts" / "stack_smoke.sh", tree / "scripts" / "stack_smoke.sh")
+    git(tree, "init", "-q", "-b", "main")
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for name in ("docker", "curl"):
+        (stubs / name).write_text(_STACK_STUB)
+        (stubs / name).chmod(0o755)
+    log, env_seen = tmp_path / "commands.log", tmp_path / "compose.env"
+
+    def run(
+        fail: str = "", state: str = "running 0", health: str = '{"status":"ok","whatsapp":"off"}'
+    ) -> tuple[subprocess.CompletedProcess[str], list[str], str]:
+        env = {
+            "PATH": f"{stubs}:{os.environ['PATH']}",
+            "STACK_LOG": str(log),
+            "STACK_ENV": str(env_seen),
+            "STACK_FAIL": fail,
+            "STACK_STATE": state,
+            "STACK_HEALTH": health,
+            "STACK_OBSERVE_SECONDS": "0",
+        }
+        result = subprocess.run(
+            [tree / "scripts" / "stack_smoke.sh"],
+            cwd=tree,
+            env=os.environ | _GIT_ENV | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        commands = [line.rstrip() for line in log.read_text().splitlines()] if log.exists() else []
+        return result, commands, env_seen.read_text().strip() if env_seen.exists() else ""
+
+    return run

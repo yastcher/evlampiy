@@ -10,6 +10,7 @@ _MUTMUT = (
 QA_STAGES = [
     "gate.sh",
     "uv run python scripts/crap.py coverage.json --max 20",
+    "stack_smoke.sh",
     f"docker run -d --rm --name {_MONGO} -p 127.0.0.1::27017 --memory 512m"
     " --ulimit nofile=64000:64000 mongo:8.0.3 --wiredTigerCacheSizeGB 0.25",
     f"docker exec {_MONGO} mongosh --quiet --eval db.runCommand({{ping: 1}}).ok",

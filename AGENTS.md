@@ -58,7 +58,7 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Heavy local runs go under a memory cap with no swap — `systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 <command>`; the gate caps its pytest step itself. On an 8 GB laptop the kernel's OOM killer otherwise picks the IDE
 - Coverage floor: `fail_under` in pyproject.toml is a ratchet — raise it when coverage grows, never lower it; the README badges show it (`tests/test_docs.py` checks)
 - Changelog entry: `scripts/changelog_add.py <Added|Changed|Fixed|Removed|Docs> "- text"` (`--top` puts a user-facing entry above infrastructure ones)
-- Release (maintainer, on main): `mkdir -p tmp && scripts/pre_release_qa.sh > tmp/qa.log 2>&1`, then `scripts/release.sh patch|minor|major` — the QA run (the gate, then a CRAP limit) stamps the tree it passed, and `release.sh` tags no other; `SKIP_PRERELEASE_QA=1` is for a hotfix that cannot wait
+- Release (maintainer, on main): `mkdir -p tmp && scripts/pre_release_qa.sh > tmp/qa.log 2>&1`, then `scripts/release.sh patch|minor|major` — the QA run (the gate, a CRAP limit, a smoke of the release image's stack, mutation testing) stamps the tree it passed, and `release.sh` tags no other; `SKIP_PRERELEASE_QA=1` is for a hotfix that cannot wait
 - CRAP limit: `--max` in `scripts/pre_release_qa.sh` sat at the worst function when set and only comes down
 
 ## Code style

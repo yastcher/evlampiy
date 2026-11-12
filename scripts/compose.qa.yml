@@ -1,0 +1,29 @@
+# The stack pre-release QA starts (scripts/stack_smoke.sh): docker-compose.yml with this on
+# top, under a project name of its own. Never the developer's .env — its token would poll
+# Telegram next to production's bot — nor the bind-mounted database, nor a published port
+# another stack may hold. Health is probed every few seconds so the run does not wait out
+# production's 30-second interval.
+services:
+  mongodb:
+    container_name: !reset null
+    volumes: !override
+      - mongo_data:/data/db
+    healthcheck:
+      interval: 3s
+
+  evlampiy_notes:
+    env_file: !reset []
+    environment:
+      # main() refuses to start without a token: this one has the form aiogram checks, and
+      # nothing else. The Bot API is a closed local port, so polling fails as the network
+      # error the bot outlives, and no request leaves for Telegram.
+      TELEGRAM_BOT_TOKEN: "123456789:qa-stack-not-a-real-token"
+      TELEGRAM_API_BASE: "http://127.0.0.1:9"
+    volumes: !reset []
+    ports: !override
+      - "127.0.0.1::8000"
+    healthcheck:
+      interval: 3s
+
+volumes:
+  mongo_data:

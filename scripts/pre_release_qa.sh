@@ -6,7 +6,9 @@
 #
 #   1. the gate    — scripts/gate.sh: what CI runs on a push
 #   2. CRAP        — scripts/crap.py over the coverage the gate's tests wrote
-#   3. mutation    — mutmut over the slice in [tool.mutmut], from scratch, in a
+#   3. stack       — scripts/stack_smoke.sh: the release image and MongoDB in a stack of
+#                    their own, healthy and not restarting a minute later
+#   4. mutation    — mutmut over the slice in [tool.mutmut], from scratch, in a
 #                    memory-capped scope, against one MongoDB started for it;
 #                    about 11 minutes with two workers
 #
@@ -38,6 +40,9 @@ stage "CRAP"
 # it was set, and only comes down: lower it as that function improves, never raise it to
 # let a change in.
 uv run python scripts/crap.py coverage.json --max 20
+
+stage "stack"
+scripts/stack_smoke.sh
 
 stage "mutation"
 # Every function of the slice in [tool.mutmut], changed in small ways, against the tests that

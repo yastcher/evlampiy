@@ -79,7 +79,7 @@ tests/
 ├── telegram/               - Adapter-level handler tests (aiogram-shape mocks)
 │   └── test_user_flow.py, test_admin.py, test_payments.py, ...
 ├── scripts/                - The repository's own scripts
-│   └── test_*.py           - Release, changelog, gate, dependency audit, CRAP, pre-release QA
+│   └── test_*.py           - Release, changelog, gate, dependency audit, CRAP, stack smoke, pre-release QA
 └── test_*.py               - Integration and unit tests for shared/infra code
 ```
 
