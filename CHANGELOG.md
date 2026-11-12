@@ -5,9 +5,12 @@
 
 ### Changed
 
+- WhatsApp users who hide their number behind a username get a reply that such accounts are not supported yet
 - Releases are cut from `main` by `scripts/release.sh patch|minor|major` and ship as `vX.Y.Z` tags
 - CHANGELOG entries go under `[Unreleased]` via `scripts/changelog_add.py`; the release picks the version
 - The package is `evlampiy` instead of `src`: run `python -m evlampiy.main`
+- Python 3.14 is pinned in `.python-version`
+- All dependencies updated (pywa 4, FastAPI 0.162, Starlette 1, aiogram 3.31); beanie stays on 2.0 while tests run on mongomock
 
 ### Fixed
 

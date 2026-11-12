@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def register_handlers(wa: WhatsApp) -> None:
     """Register WhatsApp message handlers."""
 
-    @wa.on_message()  # ty: ignore[invalid-argument-type, missing-argument]
+    @wa.on_message()
     async def handle_message(client: WhatsApp, message: Message) -> None:
         """Handle incoming WhatsApp messages."""
         if message.text and message.text.strip().lower().startswith("link "):
@@ -40,10 +40,21 @@ _LINK_REPLIES: dict[LinkOutcome, str] = {
     LinkOutcome.INVALID: "Invalid or expired code. Try /link_whatsapp in Telegram.",
 }
 
+_USERNAME_ACCOUNT_REPLY = "Sorry, this bot doesn't support WhatsApp accounts with a username yet."
+
+
+async def _refuse_username_account(wa: WhatsApp, message: Message) -> None:
+    """Answer by BSUID a user whose WhatsApp username hides the phone number every WhatsApp user is keyed by."""
+    logger.info("WhatsApp user %s has a username and no phone number", message.from_user.bsuid)
+    await wa.send_message(to=message.from_user.bsuid, text=_USERNAME_ACCOUNT_REPLY)
+
 
 async def handle_link_command(wa: WhatsApp, message: Message) -> None:
     """Handle account linking command from WhatsApp — thin adapter."""
     phone = message.from_user.wa_id
+    if phone is None:
+        await _refuse_username_account(wa, message)
+        return
     outcome = await process_link_command(message.text or "", phone)
     await wa.send_message(to=phone, text=_LINK_REPLIES[outcome])
 
@@ -51,6 +62,9 @@ async def handle_link_command(wa: WhatsApp, message: Message) -> None:
 async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
     """Handle voice message from WhatsApp — thin adapter over `voice_pipeline`."""
     phone_number = message.from_user.wa_id
+    if phone_number is None:
+        await _refuse_username_account(wa, message)
+        return
     chat_id = f"{WHATSAPP_CHAT_PREFIX}{phone_number}"
 
     audio = message.voice or message.audio

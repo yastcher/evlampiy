@@ -71,9 +71,7 @@ class TestHandleVoiceMessage:
 
         await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
-        mock_whatsapp_client.send_message.assert_called_once_with(
-            to=phone_number, text="Hello world"
-        )
+        mock_whatsapp_client.send_message.assert_called_once_with(to=phone_number, text="Hello world")
 
     async def test_skips_empty_transcription(
         self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
@@ -126,6 +124,21 @@ class TestHandleVoiceMessage:
 
         mock_whatsapp_client.send_message.assert_not_called()
 
+    async def test_voice_from_a_username_account_is_refused(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
+    ):
+        """No phone number, no chat to key the note by: refuse, answering by BSUID."""
+        mock_whatsapp_message.from_user.wa_id = None
+        mock_whatsapp_message.from_user.bsuid = "US.13491208655302741918"
+
+        await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        whatsapp_voice_external_mocks["transcribe"].assert_not_called()
+        mock_whatsapp_client.send_message.assert_called_once_with(
+            to="US.13491208655302741918",
+            text="Sorry, this bot doesn't support WhatsApp accounts with a username yet.",
+        )
+
     def test_whatsapp_chat_prefix_value(self):
         """WHATSAPP_CHAT_PREFIX has correct value."""
         assert WHATSAPP_CHAT_PREFIX == "wa_"
@@ -177,9 +190,7 @@ class TestHandleVoiceMessage:
             await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
         mocks["cleanup"].assert_called_once_with("raw text", context=[])
-        mock_whatsapp_client.send_message.assert_called_once_with(
-            to=phone_number, text="clean raw text"
-        )
+        mock_whatsapp_client.send_message.assert_called_once_with(to=phone_number, text="clean raw text")
 
     async def test_cleanup_skipped_for_free_user(
         self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks
@@ -220,9 +231,7 @@ class TestHandleMessageRouter:
         register_handlers(mock_wa)
         return captured["handler"]
 
-    async def test_routes_voice_to_handle_voice_message(
-        self, mock_whatsapp_client, mock_whatsapp_message
-    ):
+    async def test_routes_voice_to_handle_voice_message(self, mock_whatsapp_client, mock_whatsapp_message):
         """Voice messages are routed to handle_voice_message."""
         mock_wa = MagicMock()
         handler = self._capture_handler(mock_wa)
@@ -235,9 +244,7 @@ class TestHandleMessageRouter:
             await handler(mock_whatsapp_client, mock_whatsapp_message)
             mock_voice.assert_called_once_with(mock_whatsapp_client, mock_whatsapp_message)
 
-    async def test_routes_link_command_to_handle_link_command(
-        self, mock_whatsapp_client, mock_whatsapp_message
-    ):
+    async def test_routes_link_command_to_handle_link_command(self, mock_whatsapp_client, mock_whatsapp_message):
         """Link commands are routed to handle_link_command."""
         mock_wa = MagicMock()
         handler = self._capture_handler(mock_wa)
@@ -250,9 +257,7 @@ class TestHandleMessageRouter:
             await handler(mock_whatsapp_client, mock_whatsapp_message)
             mock_link.assert_called_once_with(mock_whatsapp_client, mock_whatsapp_message)
 
-    async def test_ignores_non_voice_non_link_messages(
-        self, mock_whatsapp_client, mock_whatsapp_message
-    ):
+    async def test_ignores_non_voice_non_link_messages(self, mock_whatsapp_client, mock_whatsapp_message):
         """Messages that are neither voice nor link are silently ignored."""
         mock_wa = MagicMock()
         handler = self._capture_handler(mock_wa)
@@ -287,9 +292,7 @@ class TestHandleLinkCommand:
         """Link command with rate limiting shows wait message."""
         mock_whatsapp_message.text = "link ABC123"
 
-        with patch(
-            "evlampiy.services.account_linking_service.confirm_link", AsyncMock(return_value="rate_limited")
-        ):
+        with patch("evlampiy.services.account_linking_service.confirm_link", AsyncMock(return_value="rate_limited")):
             await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_called_once()
@@ -300,9 +303,7 @@ class TestHandleLinkCommand:
         """Link command with invalid code shows error."""
         mock_whatsapp_message.text = "link INVALID"
 
-        with patch(
-            "evlampiy.services.account_linking_service.confirm_link", AsyncMock(return_value="invalid")
-        ):
+        with patch("evlampiy.services.account_linking_service.confirm_link", AsyncMock(return_value="invalid")):
             await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_called_once()
@@ -319,3 +320,18 @@ class TestHandleLinkCommand:
         mock_whatsapp_client.send_message.assert_called_once()
         call_kwargs = mock_whatsapp_client.send_message.call_args.kwargs
         assert "successfully" in call_kwargs["text"]
+
+    async def test_link_from_a_username_account_is_refused(self, mock_whatsapp_client, mock_whatsapp_message):
+        """A username hides the phone number that links are keyed by: refuse, answering by BSUID."""
+        mock_whatsapp_message.text = "link VALID123"
+        mock_whatsapp_message.from_user.wa_id = None
+        mock_whatsapp_message.from_user.bsuid = "US.13491208655302741918"
+
+        with patch("evlampiy.services.account_linking_service.confirm_link", AsyncMock()) as confirm:
+            await handle_link_command(mock_whatsapp_client, mock_whatsapp_message)
+
+        confirm.assert_not_called()
+        mock_whatsapp_client.send_message.assert_called_once_with(
+            to="US.13491208655302741918",
+            text="Sorry, this bot doesn't support WhatsApp accounts with a username yet.",
+        )
