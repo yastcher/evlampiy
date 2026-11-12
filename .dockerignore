@@ -13,3 +13,7 @@ data/
 coverage.*
 .pytest_cache/
 .ruff_cache/
+# Scratch the tools leave in the tree: logs, caches, mutmut's copy of the code
+tmp/
+mutants/
+.hypothesis/

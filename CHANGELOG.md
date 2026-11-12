@@ -38,6 +38,7 @@
 - Tests replace `asyncio.sleep` only where the code under test looks it up: a process-wide patch ran pymongo's heartbeat hot until a run took 9 GB
 - The HTTP app no longer serves `/docs`, `/redoc` and `/openapi.json` to anyone the proxy lets through
 - The Gemini review workflow no longer splices the pull request's base branch into a shell command
+- Local image builds no longer copy `tmp/`, `mutants/` and `.hypothesis/` into the image
 
 ### Removed
 
