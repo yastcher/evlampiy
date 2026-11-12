@@ -53,7 +53,7 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 - Gate (everything CI checks, in CI's order): `scripts/gate.sh` — the verdict is its exit code and last line
 - Lint: `uv run ruff check --fix`
 - Format: `uv run ruff format`
-- Typecheck: `uv run ty check evlampiy`
+- Typecheck: `uv run ty check evlampiy tests` — the tests are code the gate types too
 - Test: `uv run pytest`; a partial run needs `--no-cov` (`uv run pytest tests/test_x.py --no-cov`) — the coverage floor applies to the whole suite
 - Heavy local runs go under a memory cap with no swap — `systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 <command>`; the gate caps its pytest step itself. A container is not inside that scope — it runs under dockerd — so cap it with `docker run --memory=… --memory-swap=…` (compose: `mem_limit`); image scans (Trivy) run in CI, never locally. On an 8 GB laptop the kernel's OOM killer otherwise picks the IDE, free swap or not
 - Coverage floor: `fail_under` in pyproject.toml is a ratchet — raise it when coverage grows, never lower it; the README badges show it (`tests/test_docs.py` checks)

@@ -2,9 +2,12 @@ from evlampiy.config import Settings, _parse_comma_separated_ids
 
 
 class TestSettingsExtraEnv:
-    def test_unknown_env_vars_are_ignored(self):
-        """.env is shared with deploy tooling (CLOUDFLARE_*); unknown vars must not crash."""
-        settings = Settings(_env_file=None, CLOUDFLARE_ACCOUNT_ID="x", CLOUDFLARE_API_TOKEN="y")
+    def test_unknown_dotenv_keys_are_ignored(self, tmp_path):
+        """.env is shared with deploy tooling (CLOUDFLARE_*); keys the app does not declare must not crash it."""
+        dotenv = tmp_path / ".env"
+        dotenv.write_text("CLOUDFLARE_ACCOUNT_ID=x\nCLOUDFLARE_API_TOKEN=y\n")
+
+        settings = Settings(_env_file=dotenv)
 
         assert not hasattr(settings, "cloudflare_account_id")
 

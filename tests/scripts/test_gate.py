@@ -13,7 +13,7 @@ GATE_COMMANDS = [
     "uv run scripts/audit_deps.py",
     "uv run ruff check",
     "uv run ruff format --check",
-    "uv run ty check evlampiy",
+    "uv run ty check evlampiy tests",
     "uvx --from semgrep==1.182.1 semgrep scan --config p/python --config p/dockerfile --config p/github-actions"
     " --metrics off --error",
     "systemd-run --user --scope --quiet -p MemoryMax=2G -p MemorySwapMax=0 uv run pytest",
@@ -30,7 +30,7 @@ def test_gate_runs_every_check_in_order_and_passes(run_gate):
 
 
 def test_one_failed_check_fails_the_gate_and_the_rest_still_run(run_gate):
-    result, commands = run_gate(fail="uv run ty check evlampiy")
+    result, commands = run_gate(fail="uv run ty check evlampiy tests")
 
     assert commands == GATE_COMMANDS
     assert result.returncode == 1

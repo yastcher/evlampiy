@@ -28,6 +28,7 @@
 - MongoDB is reached through pymongo's async client instead of the deprecated motor
 - Every GitHub Action is pinned to a commit
 - The containers the tests and pre-release QA start have memory caps of their own, swap included
+- ty checks the tests as well as the package, in the gate and CI
 
 ### Fixed
 

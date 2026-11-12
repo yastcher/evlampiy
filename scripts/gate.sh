@@ -65,7 +65,7 @@ step "lockfile"     uv lock --locked
 step "audit"        uv run scripts/audit_deps.py
 step "ruff check"   uv run ruff check
 step "ruff format"  uv run ruff format --check
-step "ty"           uv run ty check evlampiy
+step "ty"           uv run ty check evlampiy tests
 step "sast"         uvx --from semgrep==1.182.1 semgrep scan --config p/python --config p/dockerfile --config p/github-actions --metrics off --error
 step "pytest"       "${capped[@]}" uv run pytest
 step "shellcheck"   shellcheck scripts/*.sh deploy/*.sh

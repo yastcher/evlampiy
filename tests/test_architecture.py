@@ -11,9 +11,8 @@ _SRC = str(pathlib.Path(__file__).resolve().parents[1] / "evlampiy")
 
 _arch = get_evaluable_architecture(_ROOT, _SRC)
 
-# Prefix depends on the project directory name (differs locally vs CI).
-# Detect it from the graph nodes: find node ending with ".evlampiy.const" and strip ".const".
-_PREFIX = next(n.removesuffix(".const") for n in _arch._graph._graph.nodes() if n.endswith(".evlampiy.const"))
+# pytestarch names a module after the root directory, which differs locally and in CI.
+_PREFIX = f"{pathlib.Path(_ROOT).name}.evlampiy"
 
 
 # --- Rule 1: telegram <-> whatsapp domain isolation ---
@@ -174,14 +173,14 @@ class TestAsyncioPatching:
         violations = []
         for py_file in sorted(_TESTS.rglob("*.py")):
             for node in ast.walk(ast.parse(py_file.read_text(), filename=str(py_file))):
-                if _patches_shared_asyncio(node):
+                if isinstance(node, ast.Call) and _patches_shared_asyncio(node):
                     violations.append(f"{py_file.relative_to(_TESTS)}:{node.lineno}")
         assert not violations, "Tests patch the shared asyncio module:\n" + "\n".join(f"  {v}" for v in violations)
 
 
-def _patches_shared_asyncio(node: ast.AST) -> bool:
+def _patches_shared_asyncio(node: ast.Call) -> bool:
     """A patch whose target is an attribute of the `asyncio` module itself."""
-    if not isinstance(node, ast.Call) or not node.args:
+    if not node.args:
         return False
     called = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", None)
     target = node.args[0]

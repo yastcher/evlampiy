@@ -1,7 +1,7 @@
 import asyncio
 import contextlib
 import typing
-from collections.abc import Iterator
+from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -25,7 +25,7 @@ class _AsyncioWithSleep:
 
 
 @contextlib.contextmanager
-def sleep_replaced(module: str, sleep: AsyncMock | None = None) -> Iterator[AsyncMock]:
+def sleep_replaced(module: str, sleep: AsyncMock | None = None) -> Generator[AsyncMock]:
     """Replace `asyncio.sleep` where `module` looks it up, and nowhere else.
 
     `patch(f"{module}.asyncio.sleep")` would replace it in `asyncio` itself, under the event
