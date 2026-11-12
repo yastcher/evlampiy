@@ -68,6 +68,7 @@ evlampiy/
 ```
 tests/
 ├── fixtures.py             - App fixtures (no fixtures in test files)
+├── db_fixtures.py          - The test MongoDB: a container per session, a clean database per test
 ├── script_fixtures.py      - Fixtures for the repository's scripts (release, changelog, gate)
 ├── conftest.py             - Pytest configuration and plugin imports
 ├── test_architecture.py    - Domain isolation and import style rules (pytestarch)
@@ -251,7 +252,7 @@ The codebase is organized by domain (`telegram/`, `whatsapp/`, `transcription/`)
 
 ### Trophy Testing
 
-Tests run against a real MongoDB — the image production runs, in a container testcontainers starts for the session (CI uses a service container of the same image) — and real application logic. Mocks are applied only at external I/O boundaries: HTTP APIs (Wit.ai, Groq, GitHub, LLM providers), Telegram Bot API, and WhatsApp Cloud API. This catches integration bugs that unit-test-heavy approaches miss. All fixtures live in fixture modules (`tests/fixtures.py` for the app, `tests/script_fixtures.py` for the repository's scripts) — test files have zero fixture definitions.
+Tests run against a real MongoDB — the image production runs, in a container testcontainers starts for the session (CI uses a service container of the same image) — and real application logic. Mocks are applied only at external I/O boundaries: HTTP APIs (Wit.ai, Groq, GitHub, LLM providers), Telegram Bot API, and WhatsApp Cloud API. This catches integration bugs that unit-test-heavy approaches miss. All fixtures live in fixture modules (`tests/fixtures.py` for the app, `tests/db_fixtures.py` for the database, `tests/script_fixtures.py` for the repository's scripts) — test files have zero fixture definitions.
 
 In addition to integration tests, four contract test suites guard structural invariants:
 

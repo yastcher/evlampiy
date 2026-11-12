@@ -91,7 +91,7 @@ it, ruff owns it.
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
 - **Patch `asyncio` only where the code under test looks it up**: `sleep_replaced(module)` from `tests/fixtures.py`, never `patch("<module>.asyncio.sleep")` — that replaces `asyncio` itself, under the event loop and pymongo's heartbeat (a run grew to 9 GB); `tests/test_architecture.py` enforces it
 - A test that hangs fails after `timeout` seconds (pytest-timeout, pyproject.toml) with the stack where it hung
-- **All fixtures in fixture modules, never in test files** — `tests/fixtures.py` for the app, `tests/script_fixtures.py` for the repository's own scripts (release, changelog, gate); both are registered in `tests/conftest.py`. Test files have zero fixture definitions and minimal inline mocks: check for an existing fixture before adding one.
+- **All fixtures in fixture modules, never in test files** — `tests/fixtures.py` for the app, `tests/db_fixtures.py` for the test MongoDB, `tests/script_fixtures.py` for the repository's own scripts (release, changelog, gate); all are registered in `tests/conftest.py`. Test files have zero fixture definitions and minimal inline mocks: check for an existing fixture before adding one.
 - **Prefer integration tests over unit tests with heavy mocking** — don't create tests that mock half the system. Trophy
   style: real DB, real logic, mock only external I/O.
 - pytest_plugins already configured in conftest.py

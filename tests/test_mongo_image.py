@@ -2,7 +2,7 @@
 
 import re
 
-from tests.fixtures import compose_mongo_image
+from tests.db_fixtures import compose_mongo_image
 from tests.script_fixtures import REPO_ROOT
 
 PRODUCTION = compose_mongo_image(REPO_ROOT / "docker-compose.yml")
