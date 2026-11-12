@@ -11,6 +11,7 @@
 - SAST: Semgrep in the gate and CI, CodeQL in CI with its findings in the Security tab
 - The gate and CI audit every pin of `uv.lock` for known vulnerabilities (pip-audit)
 - `scripts/pre_release_qa.sh` runs the slow checks before a release, the gate and a CRAP limit for now; `release.sh` tags only a tree it passed
+- Pre-release QA runs mutmut over the PII mask, billing, account linking and categorization; survivors and untested mutants only go down
 
 ### Changed
 
@@ -37,6 +38,7 @@
 ### Removed
 
 - The Codecov upload from CI: it had no token and nothing read it
+- cosmic-ray, replaced by mutmut
 
 ## [0.9.7] — 2026-07-15
 

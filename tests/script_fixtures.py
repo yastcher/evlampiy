@@ -2,6 +2,7 @@
 
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 
@@ -149,47 +150,59 @@ def run_gate(tmp_path):
     return run
 
 
+# What the stage stubs answer: `docker port` an address, a `mongosh` ping its 1.
+_QA_STUB = """#!/usr/bin/env bash
+printf "%s%s %s\\n" "${TEST_MONGO_URI:+TEST_MONGO_URI=$TEST_MONGO_URI }" "${0##*/}" "$*" >> "$QA_LOG"
+if [ "${0##*/} $*" = "$QA_FAIL" ]; then exit 1; fi
+case "${0##*/} $1" in
+  "docker port") echo 127.0.0.1:27999 ;;
+  "docker exec") echo 1 ;;
+esac
+"""
+
+
 @pytest.fixture
 def run_qa(tmp_path):
     """Run a copy of the real scripts/pre_release_qa.sh in a committed git tree, its stages stubbed.
 
-    scripts/gate.sh is a stub in that tree and `uv` one on PATH: each logs what it was asked
-    and fails when that equals `fail`. Returns (tree, run): run(fail="") gives back the
-    finished process, the commands the stages ran, and the stamp's text (None when absent).
+    scripts/gate.sh is a stub in that tree, and `uv`, `docker` and `systemd-run` are stubs on
+    PATH: each logs what it was asked, the variable the mutants' MongoDB travels in included,
+    and fails when that equals `fail`. Returns (tree, run): run(fail="", **env) gives back the
+    finished process, the commands the stages ran (the container's pid-named suffix as
+    `<pid>`), and the stamp's text (None when absent).
     """
     tree = tmp_path / "tree"
     scripts = tree / "scripts"
     scripts.mkdir(parents=True)
     shutil.copy2(REPO_ROOT / "scripts" / "pre_release_qa.sh", scripts / "pre_release_qa.sh")
-    stub = (
-        "#!/usr/bin/env bash\n"
-        'printf "%s %s\\n" "${0##*/}" "$*" >> "$QA_LOG"\n'
-        'if [ "${0##*/} $*" = "$QA_FAIL" ]; then exit 1; fi\n'
-    )
+    (tree / "docker-compose.yml").write_text("services:\n\n  mongodb:\n    # pinned\n    image: mongo:8.0.3\n")
     stubs = tmp_path / "bin"
     stubs.mkdir()
-    for path in (scripts / "gate.sh", stubs / "uv"):
-        path.write_text(stub)
+    for path in (scripts / "gate.sh", stubs / "uv", stubs / "docker", stubs / "systemd-run"):
+        path.write_text(_QA_STUB)
         path.chmod(0o755)
     git(tree, "init", "-q", "-b", "main")
     git(tree, "add", "-A")
     git(tree, "commit", "-q", "-m", "init")
     log = tmp_path / "commands.log"
     stamp = tree / ".git" / "pre_release_qa.ok"
+    # The developer's own TEST_MONGO_URI would reach every stub.
+    base = {name: value for name, value in os.environ.items() if name != "TEST_MONGO_URI"}
 
-    def run(fail: str = "") -> tuple[subprocess.CompletedProcess[str], list[str], str | None]:
+    def run(fail: str = "", **env: str) -> tuple[subprocess.CompletedProcess[str], list[str], str | None]:
         log.unlink(missing_ok=True)
-        env = {"PATH": f"{stubs}:{os.environ['PATH']}", "QA_LOG": str(log), "QA_FAIL": fail}
+        stage_env = {"PATH": f"{stubs}:{os.environ['PATH']}", "QA_LOG": str(log), "QA_FAIL": fail}
         result = subprocess.run(
             [scripts / "pre_release_qa.sh"],
             cwd=tree,
-            env=os.environ | _GIT_ENV | env,
+            env=base | _GIT_ENV | stage_env | env,
             capture_output=True,
             text=True,
             check=False,
             timeout=30,
         )
-        commands = [line.rstrip() for line in log.read_text().splitlines()] if log.exists() else []
+        lines = log.read_text().splitlines() if log.exists() else []
+        commands = [re.sub(r"evlampiy-qa-mongo-\d+", "evlampiy-qa-mongo-<pid>", line.rstrip()) for line in lines]
         return result, commands, stamp.read_text().strip() if stamp.exists() else None
 
     return tree, run

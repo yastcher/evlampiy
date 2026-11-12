@@ -97,8 +97,7 @@ it, ruff owns it.
 - pytest_plugins already configured in conftest.py
 - asyncio_mode = "auto" in pyproject.toml — pytestmark not needed
 - Architectural tests in tests/test_architecture.py — enforced by pytestarch + AST
-- Mutation testing:
-  `uv run cosmic-ray init cosmic-ray.toml session.sqlite && uv run cosmic-ray exec cosmic-ray.toml session.sqlite`
+- Mutation testing: mutmut over the slice in `[tool.mutmut]`, run from scratch by `scripts/pre_release_qa.sh`, which also starts the one MongoDB the mutants' test sessions share; survivors and untested mutants only come down (`--survived-max`, `--no-tests-max` there). `uv run mutmut browse` shows the survivors of the last run
 
 ### Writing effective tests
 

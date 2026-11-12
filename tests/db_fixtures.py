@@ -5,8 +5,8 @@ import pathlib
 import re
 from collections.abc import Iterator
 
-import pymongo
 import docker.types
+import pymongo
 import pytest
 from beanie import init_beanie
 from docker.errors import DockerException
@@ -14,10 +14,6 @@ from pymongo import AsyncMongoClient
 from testcontainers.community.mongodb import MongoDbContainer
 
 from evlampiy.mongo import ALL_DOCUMENT_MODELS
-
-# The tests' own database: TEST_MONGO_URI may point at a server that holds other data,
-# and every test empties the collections it used.
-_TEST_DATABASE = "evlampiy_test"
 
 # A small fixed cache and a hard memory limit: on a laptop the test mongod shares the memory
 # with the IDE, and by default it sizes its cache by the whole machine.
@@ -49,8 +45,6 @@ def mongo_uri() -> Iterator[str]:
     production runs, started for the session, so a local run needs Docker.
     """
     if uri := os.environ.get("TEST_MONGO_URI"):
-        with pymongo.MongoClient(uri) as client:
-            client.drop_database(_TEST_DATABASE)
         yield uri
         return
     try:
@@ -75,11 +69,24 @@ def mongo_uri() -> Iterator[str]:
         container.stop()
 
 
+@pytest.fixture(scope="session")
+def test_database(mongo_uri) -> Iterator[str]:
+    """This session's own database, dropped when it ends.
+
+    One per process: TEST_MONGO_URI may name a server that holds other data, and mutmut runs
+    a test session per mutant, several at once, on the one server pre-release QA starts.
+    """
+    name = f"evlampiy_test_{os.getpid()}"
+    yield name
+    with pymongo.MongoClient(mongo_uri) as client:
+        client.drop_database(name)
+
+
 @pytest.fixture(autouse=True)
-async def init_db(mongo_uri):
-    """Bind the app's models to the test database; empty their collections after the test."""
+async def init_db(mongo_uri, test_database):
+    """Bind the app's models to the session's database; empty their collections after the test."""
     client = AsyncMongoClient(mongo_uri)
-    await init_beanie(database=client[_TEST_DATABASE], document_models=ALL_DOCUMENT_MODELS)
+    await init_beanie(database=client[test_database], document_models=ALL_DOCUMENT_MODELS)
     yield
     for model in ALL_DOCUMENT_MODELS:
         await model.delete_all()

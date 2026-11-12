@@ -33,7 +33,7 @@ dev = [
     "hypothesis>=6.170",
     "pip-audit>=2.10",
     "pytestarch>=5.1",
-    "cosmic-ray>=8.9",
+    "mutmut>=3.8.1,<4",
     "testcontainers[mongodb]>=4.15",
     "responses~=0.26.3",
     # Starlette's TestClient runs on httpx2 and deprecates httpx.
@@ -114,6 +114,33 @@ asyncio_default_fixture_loop_scope = "function"
 # holding the run and its memory until something kills it. Generous on purpose: the first
 # test's setup starts the MongoDB container, an image pull included.
 timeout = 120
+
+[tool.mutmut]
+# Mutation testing, run from scratch by scripts/pre_release_qa.sh: a slice of modules whose
+# behaviour the tests pin — the PII mask, billing, account linking, categorization — widened
+# module by module as each one holds.
+source_paths = ["evlampiy"]
+only_mutate = [
+    "evlampiy/ai/_mask.py",
+    "evlampiy/account_linking.py",
+    "evlampiy/categorization.py",
+    "evlampiy/credits.py",
+    "evlampiy/services/payments_service.py",
+]
+# What the tests read besides tests/: tests/script_fixtures.py imports the release scripts.
+also_copy = ["scripts"]
+# No coverage: addopts measure it, and every mutant's run would be traced for nothing.
+pytest_add_cli_args = ["--no-cov", "-p", "no:cacheprovider"]
+# The slice's own tests: every mutant runs its tests against MongoDB again, so the rest stay out.
+pytest_add_cli_args_test_selection = [
+    "tests/test_ai_mask.py",
+    "tests/telegram/test_account_linking.py",
+    "tests/test_categorization.py",
+    "tests/test_monetization.py",
+    "tests/test_user_lifecycle.py",
+    "tests/services/test_payments_service.py",
+    "tests/telegram/test_payments.py",
+]
 
 [tool.coverage.report]
 # A ratchet: raise it as coverage grows, never lower it. The README badges show this number.
