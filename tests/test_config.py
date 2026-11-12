@@ -1,4 +1,35 @@
+import sys
+
 from evlampiy.config import Settings, _parse_comma_separated_ids
+from tests.settings_isolation import isolated_settings
+
+
+class TestTestSessionSettings:
+    def test_the_app_runs_on_the_isolated_settings(self):
+        """conftest swaps the settings before importing the app: a module holding older ones keeps the developer's."""
+        holders = {
+            name: module.settings
+            for name, module in list(sys.modules.items())
+            if name.startswith("evlampiy.") and isinstance(getattr(module, "settings", None), Settings)
+        }
+
+        assert "evlampiy.ai_client" in holders
+        stale = {name: held.environment for name, held in holders.items() if held.environment != "test"}
+        assert stale == {}
+
+    def test_isolated_settings_read_neither_the_dotenv_nor_the_shell(self, tmp_path, monkeypatch):
+        """Where the developer's .env and shell hold keys, a test session's settings hold none."""
+        (tmp_path / ".env").write_text("GROQ_API_KEY=from-dotenv\nMONGO_URI=mongodb://prod:27017/\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("OPENROUTER_API_KEY", "from-shell")
+
+        settings = isolated_settings()
+
+        assert (settings.groq_api_key, settings.openrouter_api_key, settings.mongo_uri) == (
+            "",
+            "",
+            "mongodb://mongodb:27017/",
+        )
 
 
 class TestSettingsExtraEnv:

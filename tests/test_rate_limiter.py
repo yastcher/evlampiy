@@ -11,6 +11,10 @@ from evlampiy.ai_client import (
     classify_text,
 )
 
+# A call to a real vendor spends the owner's money: only on request, never because a key
+# happens to be exported in the shell.
+_LIVE_VENDOR_TESTS = os.getenv("LIVE_VENDOR_TESTS") == "1"
+
 
 class TestRateLimiterThrottles:
     """Test that the rate limiter enforces RPM limits."""
@@ -145,8 +149,8 @@ class TestFallbackOnExhausted:
 
 
 @pytest.mark.skipif(
-    not os.getenv("GROQ_API_KEY"),
-    reason="GROQ_API_KEY not set — skipping integration test",
+    not (_LIVE_VENDOR_TESTS and os.getenv("GROQ_API_KEY")),
+    reason="a real Groq call: needs LIVE_VENDOR_TESTS=1 and GROQ_API_KEY exported",
 )
 class TestGroqIntegration:
     """Integration test with real Groq API."""
@@ -164,8 +168,8 @@ class TestGroqIntegration:
 
 
 @pytest.mark.skipif(
-    not os.getenv("OPENROUTER_API_KEY"),
-    reason="OPENROUTER_API_KEY not set — skipping integration test",
+    not (_LIVE_VENDOR_TESTS and os.getenv("OPENROUTER_API_KEY")),
+    reason="a real OpenRouter call: needs LIVE_VENDOR_TESTS=1 and OPENROUTER_API_KEY exported",
 )
 class TestOpenRouterIntegration:
     """Integration test with real OpenRouter API."""

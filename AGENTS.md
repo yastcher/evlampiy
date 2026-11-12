@@ -89,6 +89,7 @@ it, ruff owns it.
 - Unit-тест на маску (`tests/test_ai_mask.py`): фикстура «грязный» сегмент + восстановление. Round-trip:
   `unmask(mask(text)) == text`. Smoke: после `mask(...)` в строке нет `+7`, нет `@`, нет двух подряд capitalized слов.
 - Mocks only at external boundaries: HTTP API, Telegram Bot API, WhatsApp API
+- **Tests never see the developer's keys**: `tests/conftest.py` swaps `evlampiy.config.settings` for `Settings`' bare defaults (`tests/settings_isolation.py`) before the app is imported — no `.env`, no exported variable, so no key and no `MONGO_URI`. A test that needs a value patches it; a real vendor call runs only under `LIVE_VENDOR_TESTS=1` with its key exported
 - **Patch `asyncio` only where the code under test looks it up**: `sleep_replaced(module)` from `tests/fixtures.py`, never `patch("<module>.asyncio.sleep")` — that replaces `asyncio` itself, under the event loop and pymongo's heartbeat (a run grew to 9 GB); `tests/test_architecture.py` enforces it
 - A test that hangs fails after `timeout` seconds (pytest-timeout, pyproject.toml) with the stack where it hung
 - **All fixtures in fixture modules, never in test files** — `tests/fixtures.py` for the app, `tests/db_fixtures.py` for the test MongoDB, `tests/script_fixtures.py` for the repository's own scripts (release, changelog, gate); all are registered in `tests/conftest.py`. Test files have zero fixture definitions and minimal inline mocks: check for an existing fixture before adding one.
