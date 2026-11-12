@@ -61,6 +61,8 @@
 ### Docs
 
 - `docs/GLOSSARY.md` names the project's own things, one word for each
+- The docs describe the bot the code runs: provider chains, tiers, retries, the self-test, the event loop; the category vocabulary serves categorization only
+- `GITHUB_TOKEN_SETUP.md` explains the OAuth App behind `GITHUB_CLIENT_ID` instead of a token the bot never read
 
 ## [0.9.7] — 2026-07-15
 

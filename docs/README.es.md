@@ -18,7 +18,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Multiplataforma** — Telegram y WhatsApp
 - **Multilingüe** — Inglés, alemán, ruso, español
 - **Configuración por chat** — Idioma y trigger individual para cada chat
-- **Limpieza de texto con IA** — Limpieza opcional de transcripciones mediante LLM (elimina muletillas, corrige puntuación). Si la limpieza está desactivada, la respuesta en Telegram es el texto original, pero las notas en Obsidian siempre se limpian.
+- **Limpieza de texto con IA** — Limpieza opcional de transcripciones mediante LLM (elimina muletillas, corrige puntuación), por encima del nivel gratuito. Si la limpieza está desactivada, la respuesta en Telegram es el texto original, pero la nota en Obsidian se limpia igualmente.
 
 ### Proveedores de transcripción
 - **Wit.ai** — Proveedor predeterminado con seguimiento del límite mensual
@@ -27,7 +27,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 ### Monetización
 - **Sistema de tokens** — 10 tokens gratis/mes + paquetes comprables (1 token = 20 seg de audio)
 - **Telegram Stars** — Integración de pagos nativa con 4 niveles de paquetes
-- **Niveles de usuario** — Free, Paid, VIP, Tester, Admin, Blocked
+- **Niveles de usuario** — Free, Paid, VIP (también los administradores) y Tester; a un usuario bloqueado el bot lo rechaza
 
 ### Integración con Obsidian
 - **Sincronización GitHub** — Guardado automático de transcripciones en tu vault vía GitHub API
@@ -35,7 +35,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Elección de repositorio** — Al conectar, elige un repositorio de GitHub existente o crea uno nuevo (con cualquier nombre)
 - **Auto-categorización** — Clasificación de notas con IA (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Guardado dual** — Las notas contienen texto limpio; la transcripción original se preserva en un comentario HTML
-- **vocabulary.json** — Lista de palabras clave por categoría, construida automáticamente para mejorar la corrección de errores
+- **vocabulary.json** — Lista de palabras clave por categoría, construida automáticamente, que orienta la categorización de las notas nuevas
 - **Contexto de limpieza** — Las transcripciones recientes del mismo chat se pasan al LLM para mayor precisión
 
 ### Vinculación de cuentas
@@ -46,7 +46,7 @@ Bot de voz a texto para Telegram y WhatsApp con soporte multilingüe.
 - **Panel de administración** — Hub `/admin` con botones inline en Telegram
 - **Gestión de usuarios** — Añadir/eliminar usuarios VIP y testers, bloquear/desbloquear, recargar tokens vía Telegram
 - **Estadísticas de uso** — Transcripciones, ingresos, costos mensuales
-- **Monitoreo de salud** — Alertas de uso de Wit.ai/Groq
+- **Monitoreo de salud** — Alertas a los administradores sobre el uso de Wit.ai, el primer pago y los hitos de ingresos
 
 ## Requisitos
 
@@ -116,7 +116,7 @@ WIT_FREE_MONTHLY_LIMIT=500
 
 # Opcional: Proveedor IA para categorización y GPT (deepseek / groq / gemini / openrouter / anthropic)
 # Se recomienda deepseek — rápido, sin problemas de rate-limit
-# Cadena de respaldo (auto): primary → groq → openrouter → gemini
+# Cadena de respaldo (auto): primary, luego deepseek → openrouter → gemini → groq
 CATEGORIZATION_PROVIDER=deepseek
 GPT_PROVIDER=deepseek
 GEMINI_API_KEY=tu_gemini_api_key  # respaldo opcional
@@ -170,7 +170,7 @@ scripts/gate.sh
 | [Administracion](ADMIN.md) | Comandos de administrador, roles, alertas, monitoreo |
 | [Configuracion WhatsApp](WHATSAPP_SETUP.md) | Configuracion de WhatsApp Business API |
 | [Vinculacion de cuentas](WHATSAPP_LINKING.md) | Vinculacion Telegram ↔ WhatsApp |
-| [GitHub Token](GITHUB_TOKEN_SETUP.md) | Configuracion manual del token GitHub para Obsidian |
+| [GitHub OAuth App](GITHUB_TOKEN_SETUP.md) | La OAuth App detras de `GITHUB_CLIENT_ID`, para conectar Obsidian |
 
 ## Licencia
 

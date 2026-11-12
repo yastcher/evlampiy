@@ -1,8 +1,9 @@
 """Folder layout for the bot's working area inside the connected vault repo.
 
-All paths are relative to ``settings.obsidian_base_dir`` (e.g. ``evlampiy``), so
-the bot never touches the repo root: notes land in ``<base>/inbox`` and are moved
-into ``<base>/<category>`` or ``<base>/trash``.
+All paths are relative to ``settings.obsidian_base_dir`` (e.g. ``evlampiy``): notes land
+in ``<base>/inbox`` and are moved into ``<base>/<category>`` or ``<base>/trash``. At the
+repo root the bot writes only ``vocabulary.json`` (categorization) and the obsidian-git
+plugin's ``data.json``.
 """
 
 from evlampiy import const

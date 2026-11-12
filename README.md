@@ -18,7 +18,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Multi-platform** — Telegram and WhatsApp support
 - **Multi-language** — English, German, Russian, Spanish
 - **Per-chat settings** — Individual language and trigger preferences
-- **AI text cleanup** — Optional LLM-powered cleanup of transcriptions (removes filler words, fixes punctuation). When `/settings` cleanup is OFF, reply text stays raw but Obsidian notes are still cleaned silently.
+- **AI text cleanup** — Optional LLM-powered cleanup of transcriptions (removes filler words, fixes punctuation), above the free tier. When `/settings` cleanup is OFF, the reply stays raw but the Obsidian note is still cleaned.
 
 ### Transcription Providers
 - **Wit.ai** — Default provider with monthly limit tracking
@@ -27,7 +27,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 ### Monetization
 - **Token system** — 10 free tokens/month + purchasable packages (1 token = 20 sec audio)
 - **Telegram Stars** — Native payment integration with 4 package tiers
-- **User tiers** — Free, Paid, VIP, Tester, Admin, Blocked
+- **User tiers** — Free, Paid, VIP (admins too) and Tester; a blocked user is refused
 
 ### Obsidian Integration
 - **GitHub sync** — Auto-save transcriptions to your vault via GitHub API
@@ -35,7 +35,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Repository choice** — Pick an existing GitHub repo or create a new one (any name) when connecting
 - **Auto-categorization** — AI-powered note classification (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Dual-save** — Notes contain cleaned text; raw transcription preserved in an HTML comment for reference
-- **vocabulary.json** — Auto-built per-category keyword list; improves transcription error correction over time
+- **vocabulary.json** — Auto-built per-category keyword list that steers the categorization of new notes
 - **Cleanup context** — Recent transcriptions from the same chat are passed to the cleanup LLM for better accuracy
 
 ### Account Linking
@@ -46,7 +46,7 @@ Voice-to-text bot for Telegram and WhatsApp with multi-language support.
 - **Admin panel** — `/admin` hub with inline buttons in Telegram
 - **User management** — Add/remove VIP and tester users, block/unblock users, top up tokens via Telegram commands
 - **Usage stats** — Monthly transcriptions, revenue, costs
-- **Health monitoring** — Wit.ai/Groq usage alerts
+- **Health monitoring** — Admin alerts on Wit.ai usage, the first payment and revenue milestones
 
 ## Requirements
 
@@ -116,7 +116,7 @@ WIT_FREE_MONTHLY_LIMIT=500
 
 # Optional: AI provider for categorization and GPT (groq / gemini / openrouter / anthropic / openai)
 # groq is recommended — free tier, fast, no rate-limit issues
-# Fallback chain (auto): primary → groq → openrouter → gemini
+# Fallback chain (auto): the primary, then deepseek → openrouter → gemini → groq
 CATEGORIZATION_PROVIDER=groq
 GPT_PROVIDER=groq
 GEMINI_API_KEY=your_gemini_api_key  # optional fallback
@@ -170,7 +170,7 @@ scripts/gate.sh
 | [Admin Guide](docs/ADMIN.md) | Admin commands, user roles, alerts, monitoring |
 | [WhatsApp Setup](docs/WHATSAPP_SETUP.md) | WhatsApp Business API configuration |
 | [Account Linking](docs/WHATSAPP_LINKING.md) | Telegram ↔ WhatsApp account linking |
-| [GitHub Token](docs/GITHUB_TOKEN_SETUP.md) | Manual GitHub token setup for Obsidian |
+| [GitHub OAuth App](docs/GITHUB_TOKEN_SETUP.md) | The OAuth App behind `GITHUB_CLIENT_ID`, for the Obsidian connection |
 
 ## License
 

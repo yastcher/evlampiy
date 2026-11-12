@@ -8,30 +8,34 @@ otherwise, this file is corrected, not the discussion. Module paths are under `e
 
 - **Chat id** (`ChatId`): `u_<user_id>` private, `g_<chat_id>` group, `wa_<phone>` WhatsApp;
   settings hang on it, tokens and roles on the Telegram **user id** (`UserId`).
-- **Chat settings**: `UserSettings`, one per chat id (collection `users`). In a group, cleanup
-  and the vault follow the speaker's own `u_` settings (`settings_chat_id`).
+- **Chat settings**: `UserSettings`, one per chat id (collection `users`). In a group, and from
+  a linked WhatsApp number, cleanup and the vault follow the user's own `u_` settings
+  (`settings_chat_id`).
 - **Hub**: the inline menus `/settings`, `/obsidian` (Notes), `/account`; `hub_*` callbacks.
 - **Language**: `en`, `ru`, `es` or `de` (`config.LANGUAGES`), per chat, `ru` by default; the
   UI language (`localization.py`) and the transcription language at once.
 - **Admin**: a user id in `ADMIN_USER_IDS`, env only. A **chat admin** may change a chat's
   settings: anyone in a private chat, a group's administrators (`chat_params.is_user_admin`).
 - **Role**: `vip`, `tester` or `blocked` (`UserRole`), set by `/add_vip`, `/add_tester`,
-  `/block`; VIP also from `VIP_USER_IDS`. **Blocked** stops Telegram voice transcription only.
+  `/block`; VIP also from `VIP_USER_IDS`. **Blocked** stops voice transcription on both
+  channels, the GPT chat and `/categorize`.
 - **Tier** (`UserTier`): `free`, `paid` (since a purchase), `vip` (admins too) or `tester`.
-  Above `free`: LLM cleanup, provider choice; `vip`, `tester` and WhatsApp spend no tokens.
+  Above `free`: LLM cleanup, provider choice; `vip` and `tester` spend no tokens.
 - **Linking** (`account_linking.py`): `link <code>` sent on WhatsApp, the code from
-  `/link_whatsapp`, ties the number to that Telegram user, whose tier WhatsApp then gets.
+  `/link_whatsapp`, ties the number to that Telegram user: the number then acts as their
+  private chat, tokens and settings included (ADR-001). An unlinked number is told how to link.
 
 ## Transcription
 
 - **Voice pipeline**: `services/voice_pipeline.process_voice`, shared by Telegram and
-  WhatsApp: transcribe, clean up, save, sort. Billing stays in `telegram/handlers/voice.py`.
-- **Transcription provider**: `wit` or `groq`, per message (`voice._select_provider`): `free`
-  gets Wit.ai only, other tiers their choice, else Wit.ai, else Groq; WhatsApp gets Wit.ai.
+  WhatsApp: transcribe, clean up, save, sort. Admission and billing around it:
+  `services/voice_access.py`, for both channels.
+- **Transcription provider**: `wit` or `groq`, per message (`voice_access.select_provider`):
+  `free` gets Wit.ai only, other tiers their choice, else Wit.ai, else Groq.
 - **Wit.ai**: the default provider, a token per language, `WIT_{EN,RU,ES,DE}_TOKEN`
   (`transcription/wit_client.py`); audio goes in 19.5 s chunks, one request each.
-- **Wit limit**: `WIT_FREE_MONTHLY_LIMIT` (500) Wit requests per language a month, counted by
-  the bot for Telegram only (`wit_tracking.py`); past it `free` is refused, the rest get Groq.
+- **Wit limit**: `WIT_FREE_MONTHLY_LIMIT` (500) Wit requests per language a month, counted for
+  both channels (`wit_tracking.py`); past it `free` is refused, the rest get Groq.
 - **Groq**: one key, `GROQ_API_KEY`, for two things: **Groq Whisper** (`GROQ_MODEL`,
   `transcription/groq_client.py`) and the Groq LLM (`GROQ_LLM_MODEL`).
 
@@ -84,7 +88,8 @@ otherwise, this file is corrected, not the discussion. Module paths are under `e
 - **Self-test** (`selftest.py`): at each Telegram start, admins get the sample voice
   (`SELFTEST_SAMPLE_PATH`) and a check of Wit.ai, Groq, cleanup, translations and keys.
 - **Alerts**: admin messages, each kind once a month (`alerts.py`): the month's first payment,
-  a revenue milestone (on that payment only), Wit usage over 80 % and 95 % per language.
+  a revenue milestone in Stars (on any payment that crosses it), Wit usage over 80 % and 95 %
+  per language.
 - **Telegram proxy**, **LLM proxy**: `TELEGRAM_API_BASE`, `LLM_API_BASE`, Cloudflare Workers
   (`cloudflare/`) for hosts where Telegram or the LLM providers are blocked; the LLM one
   carries Groq, OpenRouter, Gemini, Anthropic and OpenAI (`llm_proxy.py`).

@@ -64,7 +64,7 @@ evlampiy/
 ├── obsidian_layout.py      - Vault folder layout (base dir, inbox, trash, categories)
 ├── gpt_commands.py         - GPT chat command handler with tool calling
 ├── main.py                 - Application entry point (Telegram + FastAPI startup)
-└── selftest.py             - Health check and self-test endpoints
+└── selftest.py             - Startup self-test: the sample voice through the pipeline, reported to admins
 ```
 
 ```
@@ -94,55 +94,56 @@ User sends voice message (Telegram or WhatsApp)
          │
          ▼
 ┌─────────────────────────────────────────────┐
-│ 1. RECEIVE & VALIDATE                       │
-│    telegram/voice.py or whatsapp/handlers.py│
-│    Download audio, check user not blocked   │
+│ 1. RECEIVE                                  │
+│    telegram/handlers/voice.py or            │
+│    whatsapp/handlers.py; a WhatsApp number  │
+│    acts as its linked Telegram account      │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
-│ 2. SELECT PROVIDER                          │
-│    Check user tier + Wit.ai availability    │
-│    Free → Wit.ai only                       │
-│    Paid/VIP/Admin → Wit.ai, Groq fallback   │
+│ 2. ADMIT (services/voice_access.py)         │
+│    Blocked → refused                        │
+│    Provider: Free → Wit.ai only; others →   │
+│    their choice, Wit.ai, then Groq          │
+│    No tokens left → refused                 │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
 │ 3. TRANSCRIBE                               │
 │    transcription/service.py                 │
-│    Wit.ai: chunk at 20s, combine results    │
+│    Wit.ai: chunk at 19.5 s, combine results │
 │    Groq: send entire audio file             │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
-│ 4. DEDUCT CREDITS                           │
-│    credits.py: ceil(duration / 20) tokens   │
-│    Free pool first, then purchased          │
-└─────────────────┬───────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────┐
-│ 5. OPTIONAL: AI CLEANUP                     │
+│ 4. OPTIONAL: AI CLEANUP (above Free)        │
 │    transcript_cleanup.py via ai_client.py   │
 │    Context: last 3 transcriptions (TTL 2h)  │
-│    + per-category vocabulary                │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
-│ 6. OPTIONAL: SAVE TO OBSIDIAN               │
+│ 5. OPTIONAL: SAVE TO OBSIDIAN               │
 │    obsidian.py → github_api.py              │
 │    Dual-save: clean + raw in HTML comment   │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
-│ 7. OPTIONAL: AUTO-CATEGORIZE                │
+│ 6. OPTIONAL: AUTO-CATEGORIZE                │
 │    categorization.py via ai_client.py       │
 │    Returns (category, keywords)             │
 │    Moves note to folder, updates vocabulary │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
+│ 7. SETTLE (services/voice_access.py)        │
+│    ceil(duration / 20) tokens: free pool    │
+│    first, then purchased; Wit or Groq use   │
+│    and stats counted; Wit alerts to admins  │
+└─────────────────┬───────────────────────────┘
+                  ▼
+┌─────────────────────────────────────────────┐
 │ 8. RESPOND                                  │
 │    Send transcription back to user          │
-│    Check & send admin alerts if needed      │
 └─────────────────────────────────────────────┘
 ```
 
@@ -157,13 +158,13 @@ ai_client.py receives request with preferred provider
     ┌────┴────┐
     │ OK      │ Rate limited
     ▼         ▼
-  Send    Retry with backoff (2s, 4s, 8s — max 3 retries)
+  Send    Retry: 3 attempts, waits of 2 s and 4 s
   request      │
     │     ┌────┴────┐
     │     │ OK      │ Still limited
     │     ▼         ▼
     │   Send     Next provider in fallback chain
-    │   request  deepseek → openrouter → gemini → groq
+    │   request  primary, then deepseek → openrouter → gemini → groq
     │                │
     │           All exhausted → RateLimitError
     ▼
@@ -176,9 +177,9 @@ ai_client.py receives request with preferred provider
 |---------|---------|--------|-----------------|
 | Wit.ai | Primary speech-to-text | `transcription/wit_client.py` | 500 req/month per language |
 | Groq Whisper | Fallback speech-to-text | `transcription/groq_client.py` | 7,200 sec/day |
-| DeepSeek | Primary LLM (cleanup, categorize) | `ai_client.py` | 60 RPM |
+| DeepSeek | LLM, first in the fallback chain | `ai_client.py` | 60 RPM |
 | OpenRouter | LLM fallback | `ai_client.py` | 10 RPM |
-| Google Gemini | LLM fallback | `ai_client.py` | 15 RPM |
+| Google Gemini | Default primary LLM (cleanup, categorize, GPT chat) | `ai_client.py`, `ai_chat.py` | 15 RPM |
 | Groq LLM | LLM fallback | `ai_client.py` | 30 RPM |
 | GitHub API | Obsidian vault sync | `github_api.py` | 5,000 req/hour |
 | Telegram Bot API | Messaging, file downloads | `telegram/` | Polling, no hard limit |
@@ -210,11 +211,12 @@ Each provider has an independent token bucket with per-minute capacity.
 | Gemini | 15 | `ai_client.py:_PROVIDER_LIMITS` |
 | OpenRouter | 10 | `ai_client.py:_PROVIDER_LIMITS` |
 
-Retry strategy: 3 attempts with exponential backoff (2s, 4s, 8s). If all retries fail, the request falls through to the next provider in the chain.
+Retry strategy: 3 attempts, with waits of 2 s and 4 s between them. If all of them fail, the request falls through to the next provider in the chain.
 
-Fallback chains (configurable at runtime via admin panel):
-- **Categorization:** deepseek → openrouter → gemini → groq
-- **GPT commands:** deepseek → openrouter → gemini → groq
+Fallback chains, one for categorization and cleanup, one for the GPT chat: the primary
+(`CATEGORIZATION_PROVIDER` / `GPT_PROVIDER`, gemini by default, or the one the admin panel
+stores in `BotConfig`: openrouter, gemini or groq), then the rest of
+deepseek → openrouter → gemini → groq, fixed in `ai_client.py`. A provider without a key is skipped.
 
 ### Wit.ai Usage
 
@@ -224,7 +226,8 @@ Fallback chains (configurable at runtime via admin panel):
 | Languages tracked | en, ru, es, de (independent counters) | `wit_tracking.py` |
 | Warning alert | 80% usage | `alerts.py` |
 | Critical alert | 95% usage | `alerts.py` |
-| On exhaustion | Fallback to Groq Whisper | `transcription/service.py` |
+| Counted for | Telegram and WhatsApp | `services/voice_access.py:settle_voice` |
+| On exhaustion | Free: refused; other tiers: Groq Whisper | `services/voice_access.py:select_provider` |
 
 ### User Tokens
 
@@ -233,18 +236,20 @@ Fallback chains (configurable at runtime via admin panel):
 | Token cost | 1 token = 20 seconds of audio | `const.py:SECONDS_PER_TOKEN` |
 | Free tier | 10 tokens/month | `config.py:FREE_MONTHLY_TOKENS` |
 | Deduction order | Free pool first, then purchased | `credits.py` |
-| Purchase method | Telegram Stars (4 package tiers) | `telegram/payments.py` |
+| Purchase method | Telegram Stars (4 packages) | `services/payments_service.py` |
+| WhatsApp | Spends the linked Telegram account's tokens (ADR-001) | `services/voice_access.py` |
 
 ### User Tiers
 
-| Tier | Transcription | Provider | Tokens |
+| Tier (`UserTier`) | Transcription | Provider | Tokens |
 |------|--------------|----------|--------|
-| Admin | Unlimited | Groq priority | N/A |
-| VIP | Unlimited | Groq priority | N/A |
-| Tester | Unlimited | Wit.ai + Groq fallback | Admin top-up |
-| Paid | Token-based | Wit.ai + Groq fallback | Purchased via Stars |
+| VIP (admins too) | Unlimited | Wit.ai; Groq by choice or past the Wit limit | Not spent |
+| Tester | Unlimited | Wit.ai; Groq by choice or past the Wit limit | Not spent |
+| Paid | Token-based | Wit.ai; Groq by choice or past the Wit limit | Purchased via Stars |
 | Free | 10/month | Wit.ai only | Purchasable |
-| Blocked | Denied | N/A | N/A |
+
+Blocked is a role, not a tier: a blocked user gets no voice transcription (Telegram or
+WhatsApp), no GPT chat and no `/categorize`.
 
 ## Engineering Decisions
 
@@ -271,7 +276,7 @@ Each LLM provider has a per-minute token bucket (`ai_client.py`). When a bucket 
 
 ### Multi-Provider Fallback Chains
 
-Two independent chains exist: one for categorization, one for GPT commands. Both default to `deepseek → openrouter → gemini → groq`. Chains can be switched at runtime via the admin panel (stored in MongoDB `BotConfig`) without restart.
+Two independent chains exist: one for categorization and cleanup, one for the GPT chat. Each starts with its primary (gemini by default) and goes on through the rest of `deepseek → openrouter → gemini → groq`. The admin panel switches the primary at runtime (stored in MongoDB `BotConfig`) without restart; the tail is fixed in code.
 
 ### Brute-Force Protection for Account Linking
 
@@ -283,8 +288,8 @@ Free users get Wit.ai only (no Groq fallback, no provider choice). This keeps co
 
 ### Async Throughout
 
-The entire stack is async: FastAPI for WhatsApp webhooks, aiogram for Telegram polling, httpx for outbound HTTP, and Beanie (on pymongo's async client) for MongoDB. The entry point (`main.py`) runs Telegram polling in the main thread and FastAPI in a daemon thread.
+The entire stack is async: FastAPI for WhatsApp webhooks, aiogram for Telegram polling, httpx for outbound HTTP, and Beanie (on pymongo's async client) for MongoDB. The entry point (`main.py`) runs Telegram polling and the HTTP server as two supervised asyncio tasks in one event loop, so one that fails restarts without taking the other down.
 
 ### Context-Aware Cleanup
 
-The AI cleanup step receives the last 3 transcriptions from the same chat (TTL 2 hours) as context, plus per-category vocabulary from `vocabulary.json`. This allows the LLM to resolve ambiguous words using surrounding topic context and domain-specific terminology.
+The AI cleanup step receives the last 3 transcriptions from the same chat (TTL 2 hours) as context. This allows the LLM to resolve ambiguous words from the surrounding topic. The per-category vocabulary (`vocabulary.json`) serves categorization only.
