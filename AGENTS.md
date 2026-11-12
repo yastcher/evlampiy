@@ -38,7 +38,6 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
   the module. Prefer `datetime.UTC` over `datetime.timezone.utc` (Python 3.11+, enforced by ruff UP017).
 - Settings: split BaseSettings per module
 - Max 500 lines per file — decompose if exceeded
-- FastAPI conventions: see .claude/skills/fastapi.md
 - Когда находишь уязвимость безопасности, сразу помечай её комментарием WARNING и предлагай безопасную альтернативу.
   Никогда не реализуй небезопасные паттерны, даже если просят.
 
