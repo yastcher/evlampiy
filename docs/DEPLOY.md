@@ -39,6 +39,7 @@ WHATSAPP_TOKEN=your_whatsapp_token
 WHATSAPP_PHONE_ID=your_phone_id
 WHATSAPP_VERIFY_TOKEN=your_verify_token
 WHATSAPP_APP_ID=your_app_id
+# Required for WhatsApp: without it the webhook stays off
 WHATSAPP_APP_SECRET=your_app_secret
 
 # Optional: GitHub OAuth (for Obsidian integration)
@@ -172,7 +173,7 @@ The bot always exposes a liveness endpoint (served even when WhatsApp is not con
 
 ```bash
 curl http://localhost:8000/health
-# {"status": "ok"}
+# {"status": "ok", "whatsapp": "on"}   (whatsapp: on | off | no app secret)
 ```
 
 `docker-compose.yml` wires a container healthcheck to it (status shows in `docker ps`). Plain
@@ -242,6 +243,7 @@ WHATSAPP_TOKEN=ваш_whatsapp_токен
 WHATSAPP_PHONE_ID=ваш_phone_id
 WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
 WHATSAPP_APP_ID=ваш_app_id
+# Обязателен для WhatsApp: без него вебхук не включается
 WHATSAPP_APP_SECRET=ваш_app_secret
 
 # Опционально: GitHub OAuth (для интеграции с Obsidian)
@@ -375,7 +377,7 @@ server {
 
 ```bash
 curl http://localhost:8000/health
-# {"status": "ok"}
+# {"status": "ok", "whatsapp": "on"}   (whatsapp: on | off | no app secret)
 ```
 
 ### Разработка

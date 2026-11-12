@@ -1,12 +1,13 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import evlampiy.whatsapp.client
 from evlampiy.dto import UserTier
 from evlampiy.mongo import set_auto_categorize, set_chat_language, set_github_settings
-from evlampiy.whatsapp.client import WHATSAPP_CHAT_PREFIX, init_whatsapp_client
+from evlampiy.whatsapp.client import WHATSAPP_CHAT_PREFIX, init_whatsapp_client, whatsapp_state
 from evlampiy.whatsapp.handlers import handle_link_command, handle_voice_message, register_handlers
 
 
@@ -29,7 +30,7 @@ class TestWhatsAppClient:
             mock_settings.whatsapp_token = "test_token"
             mock_settings.whatsapp_phone_id = "123456789"
             mock_settings.whatsapp_app_id = ""
-            mock_settings.whatsapp_app_secret = ""
+            mock_settings.whatsapp_app_secret = "app_secret"
             mock_settings.whatsapp_verify_token = "verify_token"
             evlampiy.whatsapp.client._WhatsAppClientHolder.instance = None
 
@@ -39,7 +40,41 @@ class TestWhatsAppClient:
                 mock_wa_class.assert_called_once()
                 # server must be wired to the FastAPI app for pywa to register routes
                 assert mock_wa_class.call_args.kwargs["server"] is app
+                assert mock_wa_class.call_args.kwargs["app_secret"] == "app_secret"
                 assert result is not None
+
+    def test_refuses_the_webhook_without_an_app_secret(self, caplog):
+        """Without the secret pywa stops checking signatures: anyone could post forged updates."""
+        with patch("evlampiy.whatsapp.client.settings") as mock_settings:
+            mock_settings.whatsapp_token = "test_token"
+            mock_settings.whatsapp_phone_id = "123456789"
+            mock_settings.whatsapp_app_secret = ""
+            mock_settings.whatsapp_verify_token = "verify_token"
+            evlampiy.whatsapp.client._WhatsAppClientHolder.instance = None
+
+            with patch("evlampiy.whatsapp.client.WhatsApp") as mock_wa_class:
+                result = init_whatsapp_client(FastAPI())
+
+        assert result is None
+        mock_wa_class.assert_not_called()
+        assert [r.levelname for r in caplog.records if "WHATSAPP_APP_SECRET" in r.getMessage()] == ["ERROR"]
+
+    @pytest.mark.parametrize(
+        ("token", "phone_id", "app_secret", "state"),
+        [
+            ("", "", "", "off"),
+            ("test_token", "", "app_secret", "off"),
+            ("test_token", "123456789", "", "no app secret"),
+            ("test_token", "123456789", "app_secret", "on"),
+        ],
+    )
+    def test_whatsapp_state(self, token, phone_id, app_secret, state):
+        with patch("evlampiy.whatsapp.client.settings") as mock_settings:
+            mock_settings.whatsapp_token = token
+            mock_settings.whatsapp_phone_id = phone_id
+            mock_settings.whatsapp_app_secret = app_secret
+
+            assert whatsapp_state() == state
 
 
 class TestWhatsAppWebhook:
@@ -51,7 +86,7 @@ class TestWhatsAppWebhook:
         response = client.get("/health")
 
         assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        assert response.json() == {"status": "ok", "whatsapp": "off"}
 
 
 class TestHandleVoiceMessage:

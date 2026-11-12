@@ -261,6 +261,8 @@ In addition to integration tests, four contract test suites guard structural inv
 - **`test_docs.py`** — all internal markdown links resolve to existing files; every `.py` file in `evlampiy/` is listed in `ARCHITECTURE.md` (and vice versa); all READMEs have a Documentation table; CHANGELOG subsection names are from the allowed set; README badges show the coverage floor CI enforces and point at an existing workflow.
 - **`scripts/test_gate.py`** — `scripts/gate.sh` runs exactly the checks of the CI job, in its order, and a failed check fails the gate without skipping the rest.
 
+The WhatsApp webhook is fuzzed with Hypothesis (`test_whatsapp_webhook.py`): unsigned and forged updates are refused and never reach the handlers, and a signed update of any shape is handled without an exception.
+
 ### Token Bucket Rate Limiting
 
 Each LLM provider has a per-minute token bucket (`ai_client.py`). When a bucket is empty, the request retries with exponential backoff. If still rate-limited after 3 retries, it falls through to the next provider in the fallback chain. This provides resilience against free-tier rate limits without manual intervention.

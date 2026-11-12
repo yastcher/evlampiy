@@ -113,7 +113,7 @@ Alerts are sent once per month per event type (no duplicates).
 **Health check endpoint:**
 ```bash
 curl http://localhost:8000/health
-# {"status": "ok"}
+# {"status": "ok", "whatsapp": "on"}   (whatsapp: on | off | no app secret)
 ```
 
 **Docker logs:**
@@ -231,7 +231,7 @@ Health
 **Health check endpoint:**
 ```bash
 curl http://localhost:8000/health
-# {"status": "ok"}
+# {"status": "ok", "whatsapp": "on"}   (whatsapp: on | off | no app secret)
 ```
 
 **Логи Docker:**

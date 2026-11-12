@@ -7,6 +7,7 @@
 
 - `scripts/gate.sh` runs every CI check locally, in CI's order; a test keeps the two in step
 - A runaway test can no longer take the machine down: the gate caps the tests at 2 GB without swap, and a hung test fails after 2 minutes
+- Hypothesis fuzzes the WhatsApp webhook: unsigned and forged updates never reach the handlers
 
 ### Changed
 
@@ -16,14 +17,16 @@
 - The package is `evlampiy` instead of `src`: run `python -m evlampiy.main`
 - Python 3.14 is pinned in `.python-version`
 - All dependencies updated (pywa 4, FastAPI 0.162, Starlette 1, aiogram 3.31, beanie 2.2)
-- CI lives in `.github/workflows/ci.yml` with pinned actions, a format check, shellcheck and a 91.2% coverage floor that only goes up
+- CI lives in `.github/workflows/ci.yml` with pinned actions, a format check, shellcheck and a coverage floor that only goes up
 - Tests run against a real MongoDB 8.0.3 (a testcontainers container locally, a service container in CI) instead of mongomock
 - MongoDB is reached through pymongo's async client instead of the deprecated motor
 
 ### Fixed
 
+- The WhatsApp webhook stays off without `WHATSAPP_APP_SECRET`, where pywa accepted unsigned, forgeable updates; `/health` reports its state
 - Services-isolation architecture tests matched no module and always passed; now they catch violations
 - Tests replace `asyncio.sleep` only where the code under test looks it up: a process-wide patch ran pymongo's heartbeat hot until a run took 9 GB
+- The HTTP app no longer serves `/docs`, `/redoc` and `/openapi.json` to anyone the proxy lets through
 
 ### Removed
 

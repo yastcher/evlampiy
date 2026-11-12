@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aiogram.types import CallbackQuery, Chat, Message, User
+from fastapi.testclient import TestClient
 
 import evlampiy.ai_client
 import evlampiy.telegram.handlers.obsidian as obsidian_handlers
@@ -394,6 +395,31 @@ def fastapi_app_no_whatsapp():
         mock_settings.whatsapp_phone_id = ""
         evlampiy.whatsapp.client._WhatsAppClientHolder.instance = None
         yield create_fastapi_app()
+
+
+WEBHOOK_APP_SECRET = "webhook-app-secret"
+WEBHOOK_VERIFY_TOKEN = "webhook-verify-token"
+
+
+@pytest.fixture
+def whatsapp_webhook():
+    """The HTTP app with the WhatsApp webhook on and its message handlers stubbed.
+
+    Yields (client, handlers): what reaches the handlers is what the webhook let through.
+    """
+    with (
+        patch("evlampiy.whatsapp.client.settings") as mock_settings,
+        patch("evlampiy.whatsapp.handlers.handle_link_command", AsyncMock()) as link,
+        patch("evlampiy.whatsapp.handlers.handle_voice_message", AsyncMock()) as voice,
+    ):
+        mock_settings.whatsapp_token = "test_token"
+        mock_settings.whatsapp_phone_id = "123456789"
+        mock_settings.whatsapp_app_id = ""
+        mock_settings.whatsapp_app_secret = WEBHOOK_APP_SECRET
+        mock_settings.whatsapp_verify_token = WEBHOOK_VERIFY_TOKEN
+        evlampiy.whatsapp.client._WhatsAppClientHolder.instance = None
+        yield TestClient(create_fastapi_app()), (link, voice)
+    evlampiy.whatsapp.client._WhatsAppClientHolder.instance = None
 
 
 @pytest.fixture

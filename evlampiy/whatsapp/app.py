@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from evlampiy.config import settings
-from evlampiy.whatsapp.client import init_whatsapp_client
+from evlampiy.whatsapp.client import init_whatsapp_client, whatsapp_state
 from evlampiy.whatsapp.handlers import register_handlers
 
 logger = logging.getLogger(__name__)
@@ -14,10 +14,9 @@ logger = logging.getLogger(__name__)
 
 def create_fastapi_app() -> FastAPI:
     """Create FastAPI application with WhatsApp webhook."""
-    # WARNING: FastAPI serves /docs, /redoc and /openapi.json by default, and the nginx example in
-    # docs/DEPLOY.md proxies `/` — the API's map goes to anyone. Safe: docs_url=None, redoc_url=None,
-    # openapi_url=None here; nothing in the bot reads them.
-    app = FastAPI(title="Evlampiy Bot API")
+    # No /docs, /redoc or /openapi.json: nothing in the bot reads them, and the proxy in
+    # docs/DEPLOY.md passes `/` through, so they would map the API for anyone.
+    app = FastAPI(title="Evlampiy Bot API", docs_url=None, redoc_url=None, openapi_url=None)
 
     wa = init_whatsapp_client(app)
     if wa:
@@ -26,7 +25,7 @@ def create_fastapi_app() -> FastAPI:
 
     @app.get("/health")
     async def health_check() -> dict[str, str]:
-        return {"status": "ok"}
+        return {"status": "ok", "whatsapp": whatsapp_state()}
 
     return app
 

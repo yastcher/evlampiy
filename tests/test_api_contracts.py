@@ -2,6 +2,7 @@
 
 import inspect
 
+import pytest
 from aiogram.fsm.state import State
 from fastapi.testclient import TestClient
 
@@ -114,9 +115,12 @@ class TestFastAPIContracts:
         client = TestClient(fastapi_app_no_whatsapp)
         response = client.get("/health")
         assert response.status_code == 200
-        body = response.json()
-        assert "status" in body, f"Missing 'status' key in response: {body}"
-        assert body["status"] == "ok"
+        assert response.json() == {"status": "ok", "whatsapp": "off"}
+
+    @pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
+    def test_api_docs_are_not_served(self, fastapi_app_no_whatsapp, path):
+        """The bot reads none of them; served, they map the API for anyone the proxy lets through."""
+        assert TestClient(fastapi_app_no_whatsapp).get(path).status_code == 404
 
 
 class TestConversationHandlerContract:

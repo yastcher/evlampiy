@@ -30,6 +30,7 @@ dev = [
     "pytest-mock==3.17.0",
     "pytest-cov~=7.1.0",
     "pytest-timeout>=2.4",
+    "hypothesis>=6.170",
     "pytestarch>=5.1",
     "cosmic-ray>=8.9",
     "testcontainers[mongodb]>=4.15",
@@ -115,7 +116,7 @@ timeout = 120
 
 [tool.coverage.report]
 # A ratchet: raise it as coverage grows, never lower it. The README badges show this number.
-fail_under = 91.2
+fail_under = 91.4
 precision = 2
 exclude_also = [
     # PTB handler guards - framework guarantees effective_user/message/etc. non-None in handler context
