@@ -36,6 +36,7 @@
 
 ### Fixed
 
+- Phone numbers stay out of the logs: linking, lockouts, WhatsApp replies and saved notes are logged by the Telegram user or the note
 - A blocked user can no longer use the GPT chat or `/categorize`, as the admin guide always said
 - The GPT chat no longer stops at a model's preamble when the same reply carries a tool call
 - The GPT chat reaches Gemini and Anthropic through `LLM_API_BASE`, as cleanup and sorting already did

@@ -49,7 +49,8 @@ async def _check_rate_limit(whatsapp_phone: str) -> LinkAttempt | None:
     if attempt.locked_until:
         locked_until = _to_aware(attempt.locked_until)
         if now < locked_until:
-            logger.warning("Rate limited: phone %s locked until %s", whatsapp_phone, locked_until)
+            # The number stays out of the logs (152-FZ); LinkAttempt keeps it.
+            logger.warning("Rate limited: a WhatsApp number is locked until %s", locked_until)
             return None
         attempt.locked_until = None
         attempt.attempt_count = 0
@@ -68,11 +69,7 @@ async def _record_failed_attempt(attempt: LinkAttempt) -> None:
     attempt.attempt_count += 1
     if attempt.attempt_count >= LINK_MAX_ATTEMPTS:
         attempt.locked_until = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=LINK_LOCKOUT_SECONDS)
-        logger.warning(
-            "Phone %s locked after %d failed attempts",
-            attempt.whatsapp_phone,
-            attempt.attempt_count,
-        )
+        logger.warning("A WhatsApp number is locked after %d failed attempts", attempt.attempt_count)
     await attempt.save()
 
 
@@ -109,7 +106,7 @@ async def confirm_link(code: str, whatsapp_phone: str) -> LinkResult:
     # Clear rate limit on success
     await attempt.delete()
 
-    logger.info("Linked Telegram %s <-> WhatsApp %s", telegram_user_id, whatsapp_phone)
+    logger.info("Linked Telegram user %s to a WhatsApp number", telegram_user_id)
     return "success"
 
 

@@ -123,7 +123,7 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         settings_chat_id=settings_chat_id,
     )
     if result is None:
-        logger.debug("Empty WhatsApp voice message from %s", phone_number)
+        logger.debug("Empty WhatsApp voice message from Telegram user %s", user_id)
         return
 
     overdraft = await settle_voice(user_id, admission.provider, language, result.duration, result.wit_requests)
@@ -133,4 +133,5 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         await wa.send_message(to=phone_number, text=_reply("whatsapp_credits_exhausted_warning", language))
 
     await wa.send_message(to=phone_number, text=result.text)
-    logger.info("Sent transcription to WhatsApp user %s", phone_number)
+    # The linked user, not the number: a phone number stays out of the logs (152-FZ).
+    logger.info("Sent transcription to WhatsApp for Telegram user %s", user_id)

@@ -82,9 +82,10 @@ async def save_transcription_to_obsidian(
         commit_message=f"Add transcription {now_str}",
     )
 
+    # The note, not the chat: a WhatsApp chat id carries the phone number (152-FZ).
     if result:
-        logger.info("Saved transcription to %s for %s", filepath, chat_id)
+        logger.info("Saved transcription to %s", filepath)
     else:
-        logger.error("Failed to save transcription for %s", chat_id)
+        logger.error("Failed to save transcription to %s", filepath)
 
     return result, filename if result else None

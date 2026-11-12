@@ -1,4 +1,7 @@
+import logging
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from evlampiy.mongo import set_github_settings, set_save_to_obsidian
 from evlampiy.obsidian import add_short_note_to_obsidian, save_transcription_to_obsidian
@@ -110,6 +113,22 @@ class TestSaveTranscriptionToObsidian:
         content = mock_put.call_args.kwargs["content"]
         assert "source: whatsapp" in content
         assert "language: ru" in content
+
+    @pytest.mark.parametrize("saved", [True, False], ids=["saved", "failed"])
+    async def test_a_whatsapp_number_stays_out_of_the_logs(self, saved, caplog):
+        """152-FZ: a WhatsApp chat id carries the phone number, so the logs name the note instead."""
+        await set_save_to_obsidian("u_70007", True)
+        await set_github_settings("u_70007", "user", "notes", "ghp_abc")
+        caplog.set_level(logging.DEBUG, logger="evlampiy")
+
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=saved)):
+            await save_transcription_to_obsidian(
+                "wa_79001234567", "Привет", "whatsapp", "ru", settings_chat_id="u_70007"
+            )
+
+        messages = [record.getMessage() for record in caplog.records]
+        assert [message for message in messages if "79001234567" in message] == []
+        assert any(".md" in message for message in messages)
 
     async def test_group_uses_sender_settings(self):
         """In group chat, uses sender's personal settings but keeps group chat_id in frontmatter."""

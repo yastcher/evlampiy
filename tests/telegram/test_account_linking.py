@@ -1,5 +1,6 @@
 """Tests for account linking between Telegram and WhatsApp."""
 
+import logging
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
@@ -57,6 +58,17 @@ class TestAccountLinking:
         # 6. Link gone
         assert await get_linked_telegram_id(whatsapp_phone) is None
         assert await get_linked_whatsapp(telegram_user_id) is None
+
+    async def test_a_link_is_logged_by_the_telegram_user_not_the_phone_number(self, caplog):
+        """152-FZ: the number is personal data and stays out of the logs."""
+        caplog.set_level(logging.DEBUG, logger="evlampiy")
+        code = await generate_link_code("111444")
+
+        assert await confirm_link(code, "79004444444") == "success"
+
+        messages = [record.getMessage() for record in caplog.records]
+        assert [message for message in messages if "79004444444" in message] == []
+        assert any("111444" in message for message in messages)
 
     async def test_invalid_code_rejected(self):
         """Invalid code returns 'invalid'."""
@@ -248,6 +260,18 @@ class TestRateLimiting:
 
         # Link should not exist
         assert await get_linked_telegram_id(phone) is None
+
+    async def test_a_locked_number_stays_out_of_the_logs(self, caplog):
+        """152-FZ: the lockout is logged without the number it locked."""
+        for _ in range(LINK_MAX_ATTEMPTS):
+            await confirm_link("000000", "79007777777")
+        caplog.set_level(logging.DEBUG, logger="evlampiy")
+
+        assert await confirm_link("000000", "79007777777") == "rate_limited"
+
+        messages = [record.getMessage() for record in caplog.records]
+        assert [message for message in messages if "79007777777" in message] == []
+        assert any("locked" in message for message in messages)
 
     async def test_rate_limit_clears_after_lockout(self):
         """Rate limit clears after lockout period."""

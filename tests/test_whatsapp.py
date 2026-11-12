@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -135,6 +136,28 @@ class TestHandleVoiceMessage:
         await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
         mock_whatsapp_client.send_message.assert_not_called()
+
+    @pytest.mark.parametrize("transcript", ["Hello world", ""], ids=["sent", "empty"])
+    async def test_the_logs_name_the_linked_user_not_the_phone_number(
+        self,
+        transcript,
+        mock_whatsapp_client,
+        mock_whatsapp_message,
+        whatsapp_voice_external_mocks,
+        link_whatsapp,
+        caplog,
+    ):
+        """152-FZ: the number is personal data, so the logs name the linked Telegram user instead."""
+        await link_whatsapp("6234567890", "70006")
+        mock_whatsapp_message.from_user.wa_id = "6234567890"
+        whatsapp_voice_external_mocks["transcribe"].return_value = (transcript, 5, 1)
+        caplog.set_level(logging.DEBUG, logger="evlampiy")
+
+        await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        messages = [record.getMessage() for record in caplog.records]
+        assert [message for message in messages if "6234567890" in message] == []
+        assert any("70006" in message for message in messages)
 
     async def test_the_language_is_the_linked_users(
         self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
