@@ -112,11 +112,13 @@ async def handle_voice_message(wa: WhatsApp, message: Message) -> None:
         logger.error("Failed to download WhatsApp audio: %s", e)
         return
 
+    # ADR-001: a linked number is its Telegram user's private chat, so the note names that chat,
+    # never the number; `source` says it came through WhatsApp.
     result = await process_voice(
         audio_bytes=audio_bytes,
         audio_format="ogg",
         source=const.SOURCE_WHATSAPP,
-        chat_id=chat_id,
+        chat_id=settings_chat_id,
         language=language,
         provider=admission.provider,
         tier=admission.tier,

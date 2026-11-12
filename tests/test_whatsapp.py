@@ -8,7 +8,8 @@ from fastapi.testclient import TestClient
 import evlampiy.whatsapp.client
 from evlampiy.credits import add_credits, current_month_key, deduct_credits, get_credits
 from evlampiy.dto import WitUsageStats
-from evlampiy.mongo import set_auto_categorize, set_chat_language, set_github_settings
+from evlampiy.mongo import set_auto_categorize, set_chat_language, set_github_settings, set_save_to_obsidian
+from evlampiy.obsidian import save_transcription_to_obsidian
 from evlampiy.services.admin_service import block_user
 from evlampiy.whatsapp.client import WHATSAPP_CHAT_PREFIX, init_whatsapp_client, whatsapp_state
 from evlampiy.whatsapp.handlers import handle_link_command, handle_voice_message, register_handlers
@@ -181,6 +182,23 @@ class TestHandleVoiceMessage:
         await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
 
         assert whatsapp_voice_external_mocks["save"].call_args.kwargs["settings_chat_id"] == "u_70013"
+
+    async def test_the_note_names_the_linked_account_not_the_phone_number(
+        self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
+    ):
+        """ADR-001: the number is its Telegram account, so the note sent to GitHub carries `u_<id>`, not the number."""
+        await link_whatsapp("4434567890", "70014")
+        mock_whatsapp_message.from_user.wa_id = "4434567890"
+        await set_save_to_obsidian("u_70014", True)
+        await set_github_settings("u_70014", "user", "notes", "ghp_abc")
+        whatsapp_voice_external_mocks["save"].side_effect = save_transcription_to_obsidian
+
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=True)) as github_put:
+            await handle_voice_message(mock_whatsapp_client, mock_whatsapp_message)
+
+        note = github_put.call_args.kwargs["content"]
+        assert "chat_id: u_70014\n" in note
+        assert "4434567890" not in note
 
     async def test_handles_download_error(
         self, mock_whatsapp_client, mock_whatsapp_message, whatsapp_voice_external_mocks, link_whatsapp
