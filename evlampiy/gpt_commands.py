@@ -7,10 +7,11 @@ from aiogram.types import Message
 
 from evlampiy.ai_client import GPT_FALLBACK_CHAIN
 from evlampiy.config import settings
-from evlampiy.mongo import get_bot_config
+from evlampiy.localization import translates
+from evlampiy.mongo import get_bot_config, get_chat_language
 from evlampiy.prompts import GPT_SYSTEM_PROMPT
 from evlampiy.telegram.bot import send_response
-from evlampiy.telegram.chat_params import get_chat_id
+from evlampiy.telegram.chat_params import get_chat_id, is_blocked_sender
 from evlampiy.tool_calling import run_tool_conversation
 from evlampiy.tools import get_tools
 
@@ -20,6 +21,12 @@ logger = logging.getLogger(__name__)
 async def evlampiy_command(message: Message, bot: Bot) -> None:
     user_message = message.text or ""
     chat_id = get_chat_id(message)
+    if await is_blocked_sender(message):
+        language = await get_chat_language(chat_id)
+        await send_response(
+            message, bot, response=translates["blocked_message"].get(language, translates["blocked_message"]["en"])
+        )
+        return
 
     try:
         messages: list[dict[str, str]] = [

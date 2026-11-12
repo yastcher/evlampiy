@@ -25,6 +25,7 @@ from evlampiy.mongo import (
     set_preferred_provider,
     set_save_to_obsidian,
 )
+from evlampiy.services.admin_service import block_user
 from evlampiy.telegram.handlers.account import account_hub
 from evlampiy.telegram.handlers.common import (
     WAITING_FOR_COMMAND,
@@ -699,6 +700,19 @@ class TestCategorizeAll:
 
         reply_text = mock_private_update.answer.call_args[0][0]
         assert "5" in reply_text
+
+    async def test_a_blocked_user_cannot_sort_the_inbox(self, mock_private_update, mock_context):
+        """Sorting asks the LLM about every note: a blocked user is refused before it starts."""
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
+        await block_user("12345", admin_id="999")
+
+        with patch("evlampiy.services.notes_service.categorize_all_inbox", AsyncMock(return_value=5)) as sort:
+            await categorize_all(mock_private_update, mock_context)
+
+        sort.assert_not_called()
+        assert mock_private_update.answer.call_args[0][0] == "You are blocked from using this bot."
 
     async def test_shows_no_files_message(self, mock_private_update, mock_context):
         """Shows message when no files to categorize."""

@@ -32,7 +32,7 @@ from evlampiy.services.notes_service import (
     toggle_auto_categorize,
     toggle_save_to_obsidian,
 )
-from evlampiy.telegram.chat_params import EventLike, get_chat_id, is_user_admin, reply_text
+from evlampiy.telegram.chat_params import EventLike, get_chat_id, is_blocked_sender, is_user_admin, reply_text
 from evlampiy.types import ChatId
 
 logger = logging.getLogger(__name__)
@@ -301,6 +301,9 @@ async def categorize_all(event: EventLike, bot: Bot) -> None:
 
     chat_id = get_chat_id(event)
     language = await get_chat_language(chat_id)
+    if await is_blocked_sender(event):
+        await reply_text(event, translates["blocked_message"].get(language, translates["blocked_message"]["en"]))
+        return
     has_repo, count = await categorize_all_for_chat(chat_id)
 
     if not has_repo:

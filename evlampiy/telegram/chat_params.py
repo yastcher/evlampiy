@@ -5,6 +5,7 @@ from aiogram.enums import ChatMemberStatus
 from aiogram.types import CallbackQuery, Chat, Message, User
 
 from evlampiy import const
+from evlampiy.credits import is_blocked_user
 
 EventLike = Message | CallbackQuery
 
@@ -42,6 +43,12 @@ def get_chat_id(event: EventLike) -> str:
     if is_private_chat(event):
         return f"{const.CHAT_PREFIX_USER}{user.id}"
     return f"{const.CHAT_PREFIX_GROUP}{chat.id}"
+
+
+async def is_blocked_sender(event: EventLike) -> bool:
+    """Whether the user behind `event` is blocked; a post with no user behind it is not."""
+    user = _event_user(event)
+    return user is not None and await is_blocked_user(str(user.id))
 
 
 async def is_user_admin(event: EventLike, bot: Bot) -> bool:

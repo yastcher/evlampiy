@@ -1,6 +1,8 @@
 from unittest.mock import AsyncMock, patch
 
 from evlampiy.gpt_commands import evlampiy_command
+from evlampiy.mongo import set_chat_language
+from evlampiy.services.admin_service import block_user
 
 
 class TestEvlampiyCommand:
@@ -19,6 +21,18 @@ class TestEvlampiyCommand:
         mock_context.send_message.assert_called_once()
         call_kwargs = mock_context.send_message.call_args.kwargs
         assert call_kwargs["text"] == "Why did the chicken..."
+
+    async def test_a_blocked_user_gets_no_answer(self, mock_private_update, mock_context):
+        """A blocked user is refused before any LLM call: every answer costs the owner money."""
+        mock_private_update.text = "Tell me a joke"
+        await block_user(str(mock_private_update.from_user.id), admin_id="999")
+        await set_chat_language(f"u_{mock_private_update.from_user.id}", "en")
+
+        with patch("evlampiy.gpt_commands.run_tool_conversation", AsyncMock()) as conversation:
+            await evlampiy_command(mock_private_update, mock_context)
+
+        conversation.assert_not_called()
+        assert mock_context.send_message.call_args.kwargs["text"] == "You are blocked from using this bot."
 
     async def test_handles_api_error(self, mock_private_update, mock_context):
         """API errors are caught and sent to user."""

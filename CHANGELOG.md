@@ -34,6 +34,7 @@
 
 ### Fixed
 
+- A blocked user can no longer use the GPT chat or `/categorize`, as the admin guide always said
 - The GPT chat no longer stops at a model's preamble when the same reply carries a tool call
 - The GPT chat reaches Gemini and Anthropic through `LLM_API_BASE`, as cleanup and sorting already did
 - The GPT chat masks names, phones and emails before they leave for a provider, as cleanup and sorting already did
