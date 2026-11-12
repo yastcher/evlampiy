@@ -1,7 +1,7 @@
 # Evlampiy Notes Bot
 
-[![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
+[![CI](https://github.com/yastcher/evlampiy_notes_tgbot/actions/workflows/ci.yml/badge.svg)](https://github.com/yastcher/evlampiy_notes_tgbot/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A591.2%25-brightgreen.svg)](https://github.com/yastcher/evlampiy_notes_tgbot/actions/workflows/ci.yml)
 [![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
@@ -155,8 +155,8 @@ uv run ruff check
 # Run type checker
 uv run ty check evlampiy
 
-# Run with coverage
-uv run pytest --cov=evlampiy --cov-fail-under=85
+# Everything CI checks, in CI's order (tests include the coverage floor)
+scripts/gate.sh
 ```
 
 ## Documentation

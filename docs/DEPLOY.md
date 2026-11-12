@@ -95,8 +95,8 @@ Empty = providers are called directly. DeepSeek and Qwen are reached directly an
 
 ### Server deploy (CI/CD)
 
-Releases roll out from the `release` branch via `.github/workflows/deploy.yml`: lint + type check +
-tests, then the image is built, tagged `:<commit-sha>` (immutable rollback handle) and `:latest`,
+Releases roll out from the `release` branch via `.github/workflows/ci.yml`: the `lint-and-test` job
+(the checks `scripts/gate.sh` runs locally), then the image is built, tagged `:<commit-sha>` (immutable rollback handle) and `:latest`,
 and pushed to **GHCR** (`ghcr.io/yastcher/evlampiy_notes`). The deploy step copies
 `docker-compose.yml` over SSH, pins `EVLAMPIY_IMAGE` + `IMAGE_TAG` in the server's `.env`, pulls the
 image and recreates only the bot container — MongoDB is never restarted. If `/health` does not
@@ -191,8 +191,8 @@ uv run ruff check
 # Run tests
 uv run pytest
 
-# Run with coverage
-uv run pytest --cov=evlampiy --cov-fail-under=85
+# Everything CI checks, in CI's order (tests include the coverage floor)
+scripts/gate.sh
 ```
 
 ### Logs
@@ -298,8 +298,8 @@ endpoint.
 
 ### Деплой на сервер (CI/CD)
 
-Релизы катятся из ветки `release` через `.github/workflows/deploy.yml`: линтер + тайпчекер + тесты,
-затем сборка образа, теги `:<commit-sha>` (неизменяемый handle для отката) и `:latest`, push в
+Релизы катятся из ветки `release` через `.github/workflows/ci.yml`: джоба `lint-and-test` (те же
+проверки, что локально запускает `scripts/gate.sh`), затем сборка образа, теги `:<commit-sha>` (неизменяемый handle для отката) и `:latest`, push в
 **GHCR** (`ghcr.io/yastcher/evlampiy_notes`). Шаг деплоя копирует по SSH `docker-compose.yml`, пинит
 `EVLAMPIY_IMAGE` + `IMAGE_TAG` в серверном `.env`, тянет образ и пересоздаёт только контейнер бота —
 MongoDB не перезапускается. Если `/health` не отвечает 30 секунд, job падает и печатает логи
@@ -390,8 +390,8 @@ uv run ruff check
 # Запуск тестов
 uv run pytest
 
-# Запуск с покрытием
-uv run pytest --cov=evlampiy --cov-fail-under=85
+# Всё, что проверяет CI, в том же порядке (тесты — с порогом покрытия)
+scripts/gate.sh
 ```
 
 ### Логи

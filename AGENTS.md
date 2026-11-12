@@ -51,11 +51,12 @@ Python Telegram/WhatsApp bot. FastAPI backend, MongoDB, async.
 
 ## Commands
 
+- Gate (everything CI checks, in CI's order): `scripts/gate.sh` — the verdict is its exit code and last line
 - Lint: `uv run ruff check --fix`
 - Format: `uv run ruff format`
 - Typecheck: `uv run ty check evlampiy`
-- Test: `uv run pytest`
-- Coverage must be >= 85%
+- Test: `uv run pytest`; a partial run needs `--no-cov` (`uv run pytest tests/test_x.py --no-cov`) — the coverage floor applies to the whole suite
+- Coverage floor: `fail_under` in pyproject.toml is a ratchet — raise it when coverage grows, never lower it; the README badges show it (`tests/test_docs.py` checks)
 - Changelog entry: `scripts/changelog_add.py <Added|Changed|Fixed|Removed|Docs> "- text"` (`--top` puts a user-facing entry above infrastructure ones)
 - Release (maintainer, on main): `scripts/release.sh patch|minor|major`
 
@@ -169,15 +170,14 @@ Always update documentation as part of the same task (not as a separate step):
 0. `git diff --stat` — оцени scope изменений
 1. `uv run ruff check --fix`
 2. `uv run ruff format`
-3. `uv run pytest`
-4. Verify coverage >= 85%
-5. Security review (see above)
-6. Update documentation (see "Documentation" section above)
-7. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг, скопированные
+3. `scripts/gate.sh` — must end with `all gates passed`: it runs what CI runs, the coverage floor included
+4. Security review (see above)
+5. Update documentation (see "Documentation" section above)
+6. **Tech lead review**: перечитай свои изменения как строгий ревьювер. Проверь на: оверинжиниринг, скопированные
    антипаттерны из существующего кода, лишнюю сложность, нарушение принципа простоты. Если нашёл — исправь до
    завершения.
 
-Do not finish until lint, tests, security review, and tech lead review pass.
+Do not finish until the gate, security review, and tech lead review pass.
 
 ## Gotchas
 

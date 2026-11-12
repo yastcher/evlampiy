@@ -4,7 +4,7 @@ version = "0.9.7"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = [{ name = "Yast", email = "yastcher@gmail.com" }]
-requires-python = "~=3.14"
+requires-python = ">=3.14"
 dependencies = [
     "httpx[http2]>=0.28.1",
     "python-dotenv~=1.2.4",
@@ -108,6 +108,9 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.coverage.report]
+# A ratchet: raise it as coverage grows, never lower it. The README badges show this number.
+fail_under = 91.2
+precision = 2
 exclude_also = [
     # PTB handler guards - framework guarantees effective_user/message/etc. non-None in handler context
     "if update\\.message is None",

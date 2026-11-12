@@ -2,6 +2,9 @@
 
 import pathlib
 import re
+import tomllib
+
+import pytest
 
 _ROOT = pathlib.Path(__file__).resolve().parents[1]
 _DOCS = _ROOT / "docs"
@@ -152,6 +155,26 @@ class TestReadmeDocTable:
             if "ARCHITECTURE.md" not in text:
                 missing.append(readme.name)
         assert not missing, f"READMEs without ARCHITECTURE.md link: {missing}"
+
+
+class TestReadmeBadges:
+    """README badges tell the truth about the repository."""
+
+    @pytest.mark.parametrize("readme", _READMES, ids=lambda path: path.name)
+    def test_coverage_badge_shows_the_floor_ci_enforces(self, readme):
+        """The badge promises `fail_under`, not a number someone typed once."""
+        floor = tomllib.loads((_ROOT / "pyproject.toml").read_text())["tool"]["coverage"]["report"]["fail_under"]
+        badge = re.search(r"img\.shields\.io/badge/coverage-%E2%89%A5([0-9.]+)%25", readme.read_text())
+
+        assert badge is not None
+        assert float(badge[1]) == floor
+
+    @pytest.mark.parametrize("readme", _READMES, ids=lambda path: path.name)
+    def test_ci_badge_points_at_an_existing_workflow(self, readme):
+        badge = re.search(r"/actions/workflows/([\w.-]+)/badge\.svg", readme.read_text())
+
+        assert badge is not None
+        assert (_ROOT / ".github" / "workflows" / badge[1]).is_file()
 
 
 _ALLOWED_CHANGELOG_SUBSECTIONS = {"Added", "Changed", "Fixed", "Removed", "Docs"}

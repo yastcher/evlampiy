@@ -68,7 +68,7 @@ evlampiy/
 ```
 tests/
 ├── fixtures.py             - App fixtures (no fixtures in test files)
-├── script_fixtures.py      - Fixtures for the repository's scripts (release, changelog)
+├── script_fixtures.py      - Fixtures for the repository's scripts (release, changelog, gate)
 ├── conftest.py             - Pytest configuration and plugin imports
 ├── test_architecture.py    - Domain isolation and import style rules (pytestarch)
 ├── test_api_contracts.py   - Handler registration, signatures, menu consistency
@@ -78,7 +78,7 @@ tests/
 ├── telegram/               - Adapter-level handler tests (aiogram-shape mocks)
 │   └── test_user_flow.py, test_admin.py, test_payments.py, ...
 ├── scripts/                - The repository's own scripts
-│   └── test_release_scripts.py, test_changelog_add.py
+│   └── test_release_scripts.py, test_changelog_add.py, test_gate.py
 └── test_*.py               - Integration and unit tests for shared/infra code
 ```
 
@@ -253,11 +253,12 @@ The codebase is organized by domain (`telegram/`, `whatsapp/`, `transcription/`)
 
 Tests use real MongoDB (via mongomock-motor) and real application logic. Mocks are applied only at external I/O boundaries: HTTP APIs (Wit.ai, Groq, GitHub, LLM providers), Telegram Bot API, and WhatsApp Cloud API. This catches integration bugs that unit-test-heavy approaches miss. All fixtures live in fixture modules (`tests/fixtures.py` for the app, `tests/script_fixtures.py` for the repository's scripts) — test files have zero fixture definitions.
 
-In addition to integration tests, three contract test suites guard structural invariants:
+In addition to integration tests, four contract test suites guard structural invariants:
 
 - **`test_architecture.py`** — pytestarch rules enforce domain isolation (telegram ↔ whatsapp never import each other, transcription is channel-independent) and stdlib import style (`import datetime`, not `from datetime import ...`).
 - **`test_api_contracts.py`** — every command in `COMMAND_HANDLERS` is async with `(update, context)` signature; all `BOT_COMMANDS` / `ADMIN_COMMANDS` menu entries map to registered handlers; all callback query handlers exist; `/health` endpoint returns expected schema.
-- **`test_docs.py`** — all internal markdown links resolve to existing files; every `.py` file in `evlampiy/` is listed in `ARCHITECTURE.md` (and vice versa); all READMEs have a Documentation table; CHANGELOG subsection names are from the allowed set.
+- **`test_docs.py`** — all internal markdown links resolve to existing files; every `.py` file in `evlampiy/` is listed in `ARCHITECTURE.md` (and vice versa); all READMEs have a Documentation table; CHANGELOG subsection names are from the allowed set; README badges show the coverage floor CI enforces and point at an existing workflow.
+- **`scripts/test_gate.py`** — `scripts/gate.sh` runs exactly the checks of the CI job, in its order, and a failed check fails the gate without skipping the rest.
 
 ### Token Bucket Rate Limiting
 

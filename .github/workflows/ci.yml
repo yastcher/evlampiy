@@ -1,5 +1,6 @@
-name: Deploy to Server
+name: CI
 
+# Every push and pull request runs the checks; a push to `release` also deploys.
 on:
   push:
     branches:
@@ -10,9 +11,15 @@ on:
       - main
       - release
 
+permissions:
+  contents: read
+
 jobs:
+  # `scripts/gate.sh` runs these checks locally, in the same order and with the same
+  # commands; `tests/scripts/test_gate.py` fails when the two drift apart.
   lint-and-test:
-    runs-on: ubuntu-latest
+    # Pinned: `ubuntu-latest` moves on its own schedule.
+    runs-on: ubuntu-24.04
 
     services:
       mongodb:
@@ -21,38 +28,35 @@ jobs:
           - 27017:27017
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
+      # uv installs the Python that `.python-version` pins.
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Install dependencies
-        run: |
-          pip install uv
-          uv sync --group dev
+        run: uv sync --locked
 
-      - name: Run linter
+      - name: Lint
         run: uv run ruff check
 
-      - name: Run type checker
+      - name: Format check
+        run: uv run ruff format --check
+
+      - name: Type check
         run: uv run ty check evlampiy
 
-      - name: Run tests with coverage
+      # The coverage floor is `fail_under` in pyproject.toml.
+      - name: Tests
         env:
           MONGO_URI: mongodb://localhost:27017/
-        run: uv run pytest --cov=evlampiy --cov-report=xml --cov-fail-under=85
+        run: uv run pytest
 
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-        continue-on-error: true
+      - name: Shell scripts
+        run: shellcheck scripts/*.sh
 
   build-and-deploy:
     needs: lint-and-test

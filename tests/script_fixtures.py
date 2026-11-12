@@ -110,3 +110,46 @@ def release_repo(tmp_path, release_tree):
         )
 
     return release_tree, origin, run
+
+
+@pytest.fixture
+def run_gate(tmp_path):
+    """Run a copy of the real scripts/gate.sh with every command it calls stubbed on PATH.
+
+    Returns a callable: `run_gate(*args, fail="uv run pytest")` makes the `fail` command
+    exit 1 and gives back the finished process and every command the gate invoked, in
+    order. The gate is called from the real repository root, whose scripts/ holds more
+    than the copy's: a glob expanded there instead of in the gate's own tree shows up in
+    the logged shellcheck command.
+    """
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    gate = scripts / "gate.sh"
+    shutil.copy2(REPO_ROOT / "scripts" / "gate.sh", gate)
+    stub = (
+        "#!/usr/bin/env bash\n"
+        'printf "%s %s\\n" "${0##*/}" "$*" >> "$GATE_LOG"\n'
+        'if [ "${0##*/} $*" = "$GATE_FAIL" ]; then exit 1; fi\n'
+    )
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for name in ("uv", "shellcheck"):
+        (stubs / name).write_text(stub)
+        (stubs / name).chmod(0o755)
+    log = tmp_path / "commands.log"
+
+    def run(*args: str, fail: str = "") -> tuple[subprocess.CompletedProcess[str], list[str]]:
+        env = {"PATH": f"{stubs}:{os.environ['PATH']}", "GATE_LOG": str(log), "GATE_FAIL": fail}
+        result = subprocess.run(
+            [gate, *args],
+            cwd=REPO_ROOT,
+            env=os.environ | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        commands = log.read_text().splitlines() if log.exists() else []
+        return result, commands
+
+    return run
