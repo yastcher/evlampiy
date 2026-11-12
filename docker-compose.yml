@@ -17,6 +17,8 @@ services:
     # --quiet drops the per-connection "accepted/closed" INFO lines that the
     # healthcheck (mongosh opens a small connection pool every probe) writes on loop.
     command: ["mongod", "--quiet"]
+    # A crash or a reboot must not leave the bot running and its database down.
+    restart: unless-stopped
     # Docker gives a container 1024 open files; WiredTiger keeps one per collection and
     # index, and at the limit mongod aborts (EMFILE). 64000 is what MongoDB asks for.
     ulimits:
