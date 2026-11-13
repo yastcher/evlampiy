@@ -3,6 +3,8 @@
 <!-- New entries go here, through scripts/changelog_add.py — never under a released version. -->
 <!-- Subsections, in order: Added / Changed / Fixed / Removed / Docs. -->
 
+## [0.10.0] — 2026-11-13
+
 ### Added
 
 - `scripts/gate.sh` runs every CI check locally, in CI's order; a test keeps the two in step
