@@ -23,7 +23,7 @@ QA_STAGES = [
     _STILL_RUNNING,
     "uv run mutmut results --all true",
     "uv run mutmut export-cicd-stats",
-    "uv run python scripts/mutation_ratchet.py mutants/mutmut-cicd-stats.json --survived-max 195 --no-tests-max 49",
+    "uv run python scripts/mutation_ratchet.py mutants/mutmut-cicd-stats.json --survived-max 194 --no-tests-max 49",
     f"docker stop {_MONGO}",
 ]
 

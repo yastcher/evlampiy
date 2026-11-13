@@ -129,7 +129,7 @@ if ((${#again[@]})); then
 fi
 uv run mutmut export-cicd-stats
 uv run python scripts/mutation_ratchet.py mutants/mutmut-cicd-stats.json \
-  --survived-max 195 --no-tests-max 49
+  --survived-max 194 --no-tests-max 49
 
 echo "$tree" > "$stamp"
 printf '\npre_release_qa: passed for tree %s\n' "$tree"
