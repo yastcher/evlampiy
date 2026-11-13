@@ -2,19 +2,19 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src import const
-from src.alerts import check_and_send_alerts
-from src.credits import add_credits, get_total_credits, get_user_tier, increment_payment_stats
-from src.dto import UserTier
-from src.mongo import set_chat_language
-from src.telegram.handlers.payments import (
+from evlampiy import const
+from evlampiy.alerts import check_payment_alerts
+from evlampiy.credits import add_credits, get_total_credits, get_user_tier, increment_payment_stats
+from evlampiy.dto import UserTier
+from evlampiy.mongo import set_chat_language
+from evlampiy.telegram.handlers.payments import (
     balance_command,
     buy_command,
     buy_package_callback,
     handle_pre_checkout,
     handle_successful_payment,
 )
-from src.telegram.handlers.settings import settings_hub
+from evlampiy.telegram.handlers.settings import settings_hub
 
 
 class TestPaymentFlow:
@@ -140,22 +140,21 @@ class TestMilestoneAlerts:
 
     async def test_milestone_triggers_on_bulk_purchase(self, mock_private_update, mock_context):
         """Milestone alert triggers when buying crossing threshold."""
-        credits_for_10_dollars = int(10 / const.STAR_TO_DOLLAR) + 1
+        stars_for_10_dollars = int(10 / const.STAR_TO_DOLLAR) + 1
 
-        await increment_payment_stats(credits_for_10_dollars)
+        await increment_payment_stats(stars_for_10_dollars, stars=stars_for_10_dollars)
 
         alerts_sent = []
 
-        async def capture_alert(bot, message):
+        async def capture_alert(message):
             alerts_sent.append(message)
 
         with (
-            patch("src.alerts.send_admin_alert", capture_alert),
-            patch("src.alerts.settings") as mock_settings,
+            patch("evlampiy.alerts.send_admin_alert", capture_alert),
+            patch("evlampiy.alerts.settings") as mock_settings,
         ):
             mock_settings.admin_user_ids = ["123"]
-            mock_settings.wit_free_monthly_limit = 500
-            await check_and_send_alerts(mock_context, credits_just_sold=credits_for_10_dollars)
+            await check_payment_alerts(stars_just_paid=stars_for_10_dollars)
 
         milestone_alerts = [a for a in alerts_sent if "$10" in a]
         assert len(milestone_alerts) == 1
@@ -177,7 +176,7 @@ class TestPaymentTierTransition:
         assert await get_user_tier(user_id) == UserTier.FREE
 
         # 2. Settings hub: only 2 base buttons
-        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
+        with patch("evlampiy.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         keyboard = mock_private_update.answer.call_args.kwargs["reply_markup"].inline_keyboard
@@ -197,7 +196,7 @@ class TestPaymentTierTransition:
 
         # 5. Settings hub now shows 4 buttons (language, gpt, provider, cleanup)
         mock_private_update.answer.reset_mock()
-        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
+        with patch("evlampiy.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         keyboard = mock_private_update.answer.call_args.kwargs["reply_markup"].inline_keyboard

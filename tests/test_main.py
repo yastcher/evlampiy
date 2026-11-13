@@ -1,12 +1,12 @@
-"""Entrypoint wiring and subsystem supervision (`src.main`)."""
+"""Entrypoint wiring and subsystem supervision (`evlampiy.main`)."""
 
 import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.config import settings
-from src.main import _async_main, _supervise
+from evlampiy.config import settings
+from evlampiy.main import _async_main, _supervise
 
 
 class TestAsyncMain:
@@ -15,9 +15,9 @@ class TestAsyncMain:
         with (
             patch.object(settings, "whatsapp_token", ""),
             patch.object(settings, "whatsapp_phone_id", ""),
-            patch("src.main.init_beanie_models", new=AsyncMock()),
-            patch("src.main.run_bot", new=AsyncMock()) as mock_run_bot,
-            patch("src.main.serve_fastapi", new=AsyncMock()) as mock_serve_fastapi,
+            patch("evlampiy.main.init_beanie_models", new=AsyncMock()),
+            patch("evlampiy.main.run_bot", new=AsyncMock()) as mock_run_bot,
+            patch("evlampiy.main.serve_fastapi", new=AsyncMock()) as mock_serve_fastapi,
         ):
             await _async_main()
 
@@ -36,7 +36,7 @@ class TestSupervise:
             if calls == 1:
                 raise RuntimeError("boom")
 
-        with patch("src.main._SUPERVISOR_INITIAL_BACKOFF_SECONDS", 0):
+        with patch("evlampiy.main._SUPERVISOR_INITIAL_BACKOFF_SECONDS", 0):
             await _supervise("test", flaky)
 
         assert calls == 2  # crashed once, restarted, then exited cleanly

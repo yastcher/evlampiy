@@ -1,7 +1,10 @@
+import logging
 from unittest.mock import AsyncMock, patch
 
-from src.mongo import set_github_settings, set_save_to_obsidian
-from src.obsidian import add_short_note_to_obsidian, save_transcription_to_obsidian
+import pytest
+
+from evlampiy.mongo import set_github_settings, set_save_to_obsidian
+from evlampiy.obsidian import add_short_note_to_obsidian, save_transcription_to_obsidian
 
 
 class TestAddShortNoteToObsidian:
@@ -12,7 +15,7 @@ class TestAddShortNoteToObsidian:
         chat_id = "u_obsidian_test_1"
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_testtoken")
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
             result = await add_short_note_to_obsidian(chat_id, "Test note content")
 
         assert result is True
@@ -29,7 +32,7 @@ class TestAddShortNoteToObsidian:
         chat_id = "u_obsidian_test_2"
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_testtoken")
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=False)):
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=False)):
             result = await add_short_note_to_obsidian(chat_id, "Test note")
 
         assert result is False
@@ -75,7 +78,7 @@ class TestSaveTranscriptionToObsidian:
         await set_save_to_obsidian(chat_id, True)
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
             success, filename = await save_transcription_to_obsidian(chat_id, "Hello world", "telegram", "en")
 
         assert success is True
@@ -102,7 +105,7 @@ class TestSaveTranscriptionToObsidian:
         await set_save_to_obsidian(chat_id, True)
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
             success, filename = await save_transcription_to_obsidian(chat_id, "Привет", "whatsapp", "ru")
 
         assert success is True
@@ -111,6 +114,22 @@ class TestSaveTranscriptionToObsidian:
         assert "source: whatsapp" in content
         assert "language: ru" in content
 
+    @pytest.mark.parametrize("saved", [True, False], ids=["saved", "failed"])
+    async def test_a_whatsapp_number_stays_out_of_the_logs(self, saved, caplog):
+        """152-FZ: a WhatsApp chat id carries the phone number, so the logs name the note instead."""
+        await set_save_to_obsidian("u_70007", True)
+        await set_github_settings("u_70007", "user", "notes", "ghp_abc")
+        caplog.set_level(logging.DEBUG, logger="evlampiy")
+
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=saved)):
+            await save_transcription_to_obsidian(
+                "wa_79001234567", "Привет", "whatsapp", "ru", settings_chat_id="u_70007"
+            )
+
+        messages = [record.getMessage() for record in caplog.records]
+        assert [message for message in messages if "79001234567" in message] == []
+        assert any(".md" in message for message in messages)
+
     async def test_group_uses_sender_settings(self):
         """In group chat, uses sender's personal settings but keeps group chat_id in frontmatter."""
         group_chat_id = "g_-1001234567890"
@@ -118,7 +137,7 @@ class TestSaveTranscriptionToObsidian:
         await set_save_to_obsidian(sender_chat_id, True)
         await set_github_settings(sender_chat_id, "sender", "vault", "ghp_sender")
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
             success, filename = await save_transcription_to_obsidian(
                 group_chat_id, "Group note", "telegram", "en", settings_chat_id=sender_chat_id
             )
@@ -148,7 +167,7 @@ class TestSaveTranscriptionToObsidian:
         await set_save_to_obsidian(chat_id, True)
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=False)):
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=False)):
             success, filename = await save_transcription_to_obsidian(chat_id, "text", "telegram", "ru")
 
         assert success is False
@@ -163,7 +182,7 @@ class TestSaveTranscriptionToObsidian:
         cleaned = "Сегодня встреча по проекту."
         original = "ну сегодня вот значит встреча по ну проекту"
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
             success, _filename = await save_transcription_to_obsidian(
                 chat_id, cleaned, "telegram", "ru", original_text=original
             )
@@ -183,7 +202,7 @@ class TestSaveTranscriptionToObsidian:
 
         text = "Текст без изменений."
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
             await save_transcription_to_obsidian(chat_id, text, "telegram", "ru", original_text=text)
 
         content = mock_put.call_args.kwargs["content"]
@@ -195,7 +214,7 @@ class TestSaveTranscriptionToObsidian:
         await set_save_to_obsidian(chat_id, True)
         await set_github_settings(chat_id, "user", "notes", "ghp_abc")
 
-        with patch("src.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
+        with patch("evlampiy.obsidian.put_github_file", AsyncMock(return_value=True)) as mock_put:
             await save_transcription_to_obsidian(chat_id, "Some text", "telegram", "ru", original_text=None)
 
         content = mock_put.call_args.kwargs["content"]

@@ -1,0 +1,211 @@
+name: CI
+
+# Every push and pull request runs the checks, and a pull request builds and scans the image.
+# A `vX.Y.Z` tag, which `scripts/release.sh` pushes, is the release: its image is pushed,
+# deployed and published. Nothing else deploys.
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/yastcher/evlampiy_notes
+
+jobs:
+  # `scripts/gate.sh` runs these checks locally, in the same order and with the same
+  # commands; `tests/scripts/test_gate.py` fails when the two drift apart.
+  lint-and-test:
+    # Pinned: `ubuntu-latest` moves on its own schedule.
+    runs-on: ubuntu-24.04
+    # A green run takes about three minutes; one that hangs must not hold a runner for six hours.
+    timeout-minutes: 20
+
+    # The tests' MongoDB, reached through TEST_MONGO_URI: the image docker-compose.yml
+    # runs in production (tests/test_mongo_image.py keeps the two equal).
+    services:
+      mongodb:
+        image: mongo:8.0.3
+        ports:
+          - 27017:27017
+        # Docker's 1024 open files would abort mongod (EMFILE); MongoDB asks for 64000.
+        options: >-
+          --ulimit nofile=64000:64000
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping: 1}).ok'"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # uv installs the Python that `.python-version` pins.
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # Known vulnerabilities in every pin of uv.lock, the dev group included.
+      - name: Dependency audit
+        run: uv run scripts/audit_deps.py
+
+      - name: Lint
+        run: uv run ruff check
+
+      - name: Format check
+        run: uv run ruff format --check
+
+      - name: Type check
+        run: uv run ty check evlampiy tests
+
+      # Rules ruff's Bandit set lacks, the workflows and the Dockerfile included; CodeQL runs apart (codeql.yml).
+      - name: SAST
+        run: uvx --from semgrep==1.182.1 semgrep scan --config p/python --config p/dockerfile --config p/github-actions --metrics off --error
+
+      # The coverage floor is `fail_under` in pyproject.toml.
+      - name: Tests
+        env:
+          TEST_MONGO_URI: mongodb://localhost:27017/
+        run: uv run pytest
+
+      - name: Shell scripts
+        run: shellcheck scripts/*.sh deploy/*.sh
+
+  # A pull request builds and scans the image too, so a release meets no surprise here; only a
+  # tag pushes it.
+  image:
+    needs: lint-and-test
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # The tag must name the version the tree declares: the check release.sh ran before pushing
+      # it. It also keeps any other tag name out of the deploy's ssh command.
+      - name: Check the tag against the tree
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python3 scripts/release_from_tag.py "$GITHUB_REF_NAME" >/dev/null
+
+      # `--pull` takes a fresh python base image, so its security patches reach production.
+      - name: Build the image
+        run: docker build --pull --tag evlampiy_notes:ci .
+
+      # The OS packages: the Python pins are scripts/audit_deps.py's, in the checks above. Trivy
+      # runs from its own image, pinned by digest, and reads a saved copy of ours: no Docker
+      # socket, no registry login and no secret reach it.
+      - name: Scan the image
+        run: |
+          docker save evlampiy_notes:ci --output image.tar
+          docker run --rm --volume "$PWD/image.tar:/image.tar:ro" \
+            ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
+            image --input /image.tar --scanners vuln --pkg-types os \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
+
+      - name: Push the release image
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag evlampiy_notes:ci "$IMAGE:$GITHUB_REF_NAME"
+          docker tag evlampiy_notes:ci "$IMAGE:latest"
+          docker push --all-tags "$IMAGE"
+
+  deploy:
+    needs: image
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    # deploy.sh waits up to two minutes for /health, then watches the release hold for one.
+    timeout-minutes: 20
+    environment: production
+    # One release at a time on the server: a second tag waits for the first to finish.
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      # The server pulls the image with this run's token, which dies with the run.
+      packages: read
+    env:
+      SERVER: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}
+      DEPLOY_DIR: ${{ secrets.DEPLOY_DIR || 'evlampiy' }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # Only the key in SSH_KNOWN_HOSTS is trusted. A fresh runner knows no host, so accepting
+      # whatever key answers would hand the session, and the registry token, to whoever answers.
+      - name: Set up SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$SSH_KNOWN_HOSTS" ]; then
+            echo "::error::the SSH_KNOWN_HOSTS secret is empty: docs/DEPLOY.md says how to fill it"
+            exit 1
+          fi
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s' "$SSH_PRIVATE_KEY" | base64 --decode > ~/.ssh/deploy_key
+          # ServerAlive: the deploy waits minutes in silence, and an idle connection was once
+          # reaped by a firewall on the way (Broken pipe, exit 255).
+          printf '%s\n' 'Host *' '  IdentityFile ~/.ssh/deploy_key' '  IdentitiesOnly yes' \
+            '  StrictHostKeyChecking yes' '  ServerAliveInterval 30' '  ServerAliveCountMax 10' > ~/.ssh/config
+
+      # deploy/deploy.sh dumps the database, rolls the release out, watches it hold and puts the
+      # release before it back if it does not. The server gets this release's scripts and
+      # compose file; its .env stays the server's own.
+      - name: Deploy
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ssh "$SERVER" "mkdir -p $DEPLOY_DIR/deploy $DEPLOY_DIR/incoming"
+          scp deploy/*.sh "$SERVER:$DEPLOY_DIR/deploy/"
+          scp docker-compose.yml "$SERVER:$DEPLOY_DIR/incoming/docker-compose.yml"
+          # Through stdin: the token never shows on a command line or in the process list.
+          echo "$GHCR_TOKEN" | ssh "$SERVER" "docker login ghcr.io --username $GITHUB_ACTOR --password-stdin"
+          status=0
+          ssh "$SERVER" "cd $DEPLOY_DIR && bash deploy/deploy.sh $IMAGE $GITHUB_REF_NAME" || status=$?
+          ssh "$SERVER" "docker logout ghcr.io" || true
+          exit "$status"
+
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  # After the deploy: a release page says this version runs, so a deploy that failed publishes none.
+  release:
+    needs: deploy
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # The notes are the tag's CHANGELOG section, the one release.sh printed before pushing it.
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/release_from_tag.py "$GITHUB_REF_NAME" --notes-file release-notes.md
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag

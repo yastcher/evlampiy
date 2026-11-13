@@ -2,10 +2,13 @@
 
 import pathlib
 import re
+import tomllib
+
+import pytest
 
 _ROOT = pathlib.Path(__file__).resolve().parents[1]
 _DOCS = _ROOT / "docs"
-_SRC = _ROOT / "src"
+_SRC = _ROOT / "evlampiy"
 
 # All markdown files that contain internal links
 _DOC_FILES = [
@@ -57,18 +60,18 @@ class TestDocLinks:
 
 
 class TestArchitectureFreshness:
-    """ARCHITECTURE.md directory tree matches actual src/ structure."""
+    """ARCHITECTURE.md directory tree matches actual evlampiy/ structure."""
 
     @staticmethod
     def _parse_tree_files(text: str) -> set[str]:
         """Extract relative file paths from the directory tree block."""
         # Match lines like: │   ├── handlers.py or ├── ai_client.py
-        # within the src/ tree block. Supports arbitrary nesting depth.
+        # within the evlampiy/ tree block. Supports arbitrary nesting depth.
         in_src_block = False
         files: list[str] = []
         prefix_by_depth: dict[int, str] = {}
         for line in text.splitlines():
-            if "src/" in line and "```" not in line and in_src_block is False:
+            if line.strip() == "evlampiy/" and in_src_block is False:
                 in_src_block = True
                 continue
             if in_src_block and line.strip().startswith("```"):
@@ -92,23 +95,23 @@ class TestArchitectureFreshness:
         return set(files)
 
     def test_tree_files_exist_in_src(self):
-        """Every file listed in ARCHITECTURE.md tree exists in src/."""
+        """Every file listed in ARCHITECTURE.md tree exists in evlampiy/."""
         arch = (_DOCS / "ARCHITECTURE.md").read_text()
         tree_files = self._parse_tree_files(arch)
         assert tree_files, "Failed to parse any files from ARCHITECTURE.md tree"
         missing = []
         for rel in tree_files:
             if not (_SRC / rel).exists():
-                missing.append(f"src/{rel}")
+                missing.append(f"evlampiy/{rel}")
         assert not missing, "Files in ARCHITECTURE.md tree not found on disk:\n" + "\n".join(
             f"  {m}" for m in sorted(missing)
         )
 
     def test_src_python_files_in_tree(self):
-        """Every .py file in src/ is listed in the ARCHITECTURE.md tree."""
+        """Every .py file in evlampiy/ is listed in the ARCHITECTURE.md tree."""
         arch = (_DOCS / "ARCHITECTURE.md").read_text()
         tree_files = self._parse_tree_files(arch)
-        # Collect all .py files in src/ (excluding __pycache__, __init__.py)
+        # Collect all .py files in evlampiy/ (excluding __pycache__, __init__.py)
         actual_files = set()
         for py in _SRC.rglob("*.py"):
             if "__pycache__" in str(py):
@@ -118,9 +121,8 @@ class TestArchitectureFreshness:
                 continue
             actual_files.add(rel)
         undocumented = actual_files - tree_files
-        assert not undocumented, (
-            "Python files in src/ not listed in ARCHITECTURE.md tree:\n"
-            + "\n".join(f"  src/{f}" for f in sorted(undocumented))
+        assert not undocumented, "Python files in evlampiy/ not listed in ARCHITECTURE.md tree:\n" + "\n".join(
+            f"  evlampiy/{f}" for f in sorted(undocumented)
         )
 
 
@@ -141,9 +143,7 @@ class TestReadmeDocTable:
         for readme in _READMES:
             text = readme.read_text()
             # Match ## Documentation / ## Документация / ## Documentacion / ## Dokumentation
-            if not re.search(
-                r"^## (Documentation|Документация|Documentacion|Dokumentation)", text, re.M
-            ):
+            if not re.search(r"^## (Documentation|Документация|Documentacion|Dokumentation)", text, re.M):
                 missing.append(readme.name)
         assert not missing, f"READMEs without Documentation section: {missing}"
 
@@ -155,6 +155,26 @@ class TestReadmeDocTable:
             if "ARCHITECTURE.md" not in text:
                 missing.append(readme.name)
         assert not missing, f"READMEs without ARCHITECTURE.md link: {missing}"
+
+
+class TestReadmeBadges:
+    """README badges tell the truth about the repository."""
+
+    @pytest.mark.parametrize("readme", _READMES, ids=lambda path: path.name)
+    def test_coverage_badge_shows_the_floor_ci_enforces(self, readme):
+        """The badge promises `fail_under`, not a number someone typed once."""
+        floor = tomllib.loads((_ROOT / "pyproject.toml").read_text())["tool"]["coverage"]["report"]["fail_under"]
+        badge = re.search(r"img\.shields\.io/badge/coverage-%E2%89%A5([0-9.]+)%25", readme.read_text())
+
+        assert badge is not None
+        assert float(badge[1]) == floor
+
+    @pytest.mark.parametrize("readme", _READMES, ids=lambda path: path.name)
+    def test_ci_badge_points_at_an_existing_workflow(self, readme):
+        badge = re.search(r"/actions/workflows/([\w.-]+)/badge\.svg", readme.read_text())
+
+        assert badge is not None
+        assert (_ROOT / ".github" / "workflows" / badge[1]).is_file()
 
 
 _ALLOWED_CHANGELOG_SUBSECTIONS = {"Added", "Changed", "Fixed", "Removed", "Docs"}
@@ -172,6 +192,5 @@ class TestChangelogStructure:
             if name not in _ALLOWED_CHANGELOG_SUBSECTIONS:
                 invalid.append(name)
         assert not invalid, (
-            f"Invalid CHANGELOG subsections: {invalid}. "
-            f"Allowed: {sorted(_ALLOWED_CHANGELOG_SUBSECTIONS)}"
+            f"Invalid CHANGELOG subsections: {invalid}. Allowed: {sorted(_ALLOWED_CHANGELOG_SUBSECTIONS)}"
         )

@@ -1,51 +1,11 @@
-import pytest
-from beanie import init_beanie
-from mongomock_motor import AsyncMongoMockClient
+from evlampiy import config
+from tests.settings_isolation import isolated_settings
 
-from src.dto import (
-    AccountLink,
-    AlertState,
-    BotConfig,
-    LinkAttempt,
-    LinkCode,
-    MonthlyStats,
-    ProcessedPayment,
-    RecentTranscription,
-    UsedTrial,
-    UserCredits,
-    UserMonthlyUsage,
-    UserRole,
-    UserSettings,
-    WitUsageStats,
-)
-
-ALL_TEST_MODELS = [
-    UserSettings,
-    UserCredits,
-    UsedTrial,
-    WitUsageStats,
-    MonthlyStats,
-    ProcessedPayment,
-    AlertState,
-    UserRole,
-    AccountLink,
-    LinkCode,
-    LinkAttempt,
-    UserMonthlyUsage,
-    RecentTranscription,
-    BotConfig,
-]
+# Before the fixture modules below import the app: each module keeps the `settings` it found.
+config.settings = isolated_settings()
 
 pytest_plugins = [
     "tests.fixtures",
+    "tests.db_fixtures",
+    "tests.script_fixtures",
 ]
-
-
-@pytest.fixture(autouse=True)
-async def init_db():
-    """Initialize in-memory MongoDB before each test."""
-    client = AsyncMongoMockClient()
-    await init_beanie(database=client["test_db"], document_models=ALL_TEST_MODELS)
-    yield
-    for model in ALL_TEST_MODELS:
-        await model.delete_all()

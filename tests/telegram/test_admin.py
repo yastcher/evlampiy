@@ -2,10 +2,10 @@
 
 from unittest.mock import patch
 
-from src import const
-from src.alerts import check_and_send_alerts
-from src.config import settings
-from src.credits import (
+from evlampiy import const
+from evlampiy.alerts import check_payment_alerts, check_wit_alerts
+from evlampiy.config import settings
+from evlampiy.credits import (
     add_credits,
     admin_add_credits,
     current_month_key,
@@ -22,10 +22,10 @@ from src.credits import (
     is_vip_user,
     record_groq_usage,
 )
-from src.dto import AlertState, MonthlyStats, UserCredits, UserTier, WitUsageStats
-from src.mongo import add_user_role, get_bot_config, get_users_by_role, remove_user_role
-from src.telegram.handlers.account import mystats_command
-from src.telegram.handlers.admin import (
+from evlampiy.dto import AlertState, MonthlyStats, UserCredits, UserTier, WitUsageStats
+from evlampiy.mongo import add_user_role, get_bot_config, get_users_by_role, remove_user_role
+from evlampiy.telegram.handlers.account import mystats_command
+from evlampiy.telegram.handlers.admin import (
     _build_providers_panel,
     add_credits_command,
     add_tester_command,
@@ -37,7 +37,7 @@ from src.telegram.handlers.admin import (
     remove_vip_command,
     unblock_command,
 )
-from src.telegram.handlers.common import stats_command
+from evlampiy.telegram.handlers.common import stats_command
 
 
 class TestAdminRole:
@@ -246,9 +246,7 @@ class TestAdminCommands:
         call_text = mock_private_update.answer.call_args[0][0]
         assert "not found" in call_text.lower()
 
-    async def test_admin_callback_vip_list(
-        self, mock_private_update, mock_context, mock_callback_query, admin_auth
-    ):
+    async def test_admin_callback_vip_list(self, mock_private_update, mock_context, mock_callback_query, admin_auth):
         """Admin callback shows VIP list."""
         await add_user_role("111", const.ROLE_VIP, "admin")
 
@@ -295,9 +293,7 @@ class TestAdminCommands:
         call_text = mock_callback_query.message.edit_text.call_args[0][0]
         assert "/add_credits" in call_text
 
-    async def test_admin_callback_stats(
-        self, mock_private_update, mock_context, mock_callback_query, admin_auth
-    ):
+    async def test_admin_callback_stats(self, mock_private_update, mock_context, mock_callback_query, admin_auth):
         """Admin stats callback builds stats text and updates message."""
         mock_private_update.from_user.id = 999
         mock_callback_query.data = "adm_stats"
@@ -385,15 +381,14 @@ class TestStatsCommand:
         await increment_transcription_stats()
         await increment_transcription_stats()
         await increment_transcription_stats()
-        await increment_payment_stats(50)
+        await increment_payment_stats(50, stars=40)
 
         await stats_command(mock_private_update)
 
         mock_private_update.answer.assert_called_once()
         call_text = mock_private_update.answer.call_args[0][0]
-        # Verify real stats are shown in response
-        assert "3" in call_text  # transcriptions count
-        assert "50" in call_text  # credits sold
+        assert "Total transcriptions: 3\n" in call_text
+        assert "Stars received: 40★\n• Tokens sold: 50\n• Revenue: $0.56\n" in call_text
 
     async def test_non_admin_ignored(self, mock_private_update, mock_context):
         """Non-admin cannot view system stats."""
@@ -433,83 +428,96 @@ class TestMyStatsCommand:
 
 
 class TestAlerts:
-    async def test_first_payment_alert_sent(self, mock_context, admin_auth):
+    async def test_first_payment_alert_sent(self, alerts_bot, admin_auth):
         """First payment triggers celebration alert."""
         month = current_month_key()
-        await MonthlyStats(month_key=month, total_payments=1, total_credits_sold=5).insert()
+        await MonthlyStats(month_key=month, total_payments=1, total_credits_sold=5, total_stars=5).insert()
 
-        await check_and_send_alerts(mock_context)
+        await check_payment_alerts(stars_just_paid=5)
 
-        mock_context.send_message.assert_called()
-        call_text = mock_context.send_message.call_args.kwargs["text"]
+        call_text = alerts_bot.send_message.call_args.kwargs["text"]
         assert "First payment" in call_text
 
-    async def test_wit_warning_at_80_percent(self, mock_context, admin_auth):
+    async def test_wit_warning_at_80_percent(self, alerts_bot, admin_auth):
         """Wit.ai warning sent at 80% usage."""
         month = current_month_key()
         await WitUsageStats(month_key=month, language="ru", request_count=450).insert()
 
         with patch.object(settings, "wit_free_monthly_limit", 500):
-            await check_and_send_alerts(mock_context)
+            await check_wit_alerts()
 
-        call_text = mock_context.send_message.call_args.kwargs["text"]
+        call_text = alerts_bot.send_message.call_args.kwargs["text"]
         assert "Warning" in call_text
 
-    async def test_wit_critical_at_95_percent(self, mock_context, admin_auth):
+    async def test_wit_critical_at_95_percent(self, alerts_bot, admin_auth):
         """Wit.ai critical alert sent at 95% usage."""
         month = current_month_key()
         await WitUsageStats(month_key=month, language="ru", request_count=480).insert()
 
         with patch.object(settings, "wit_free_monthly_limit", 500):
-            await check_and_send_alerts(mock_context)
+            await check_wit_alerts()
 
-        call_text = mock_context.send_message.call_args.kwargs["text"]
+        call_text = alerts_bot.send_message.call_args.kwargs["text"]
         assert "CRITICAL" in call_text
 
-    async def test_revenue_milestone_alert(self, mock_context, admin_auth):
-        """Revenue milestone $10 triggers alert when crossed."""
+    async def test_revenue_milestone_alert(self, alerts_bot, admin_auth):
+        """$10 is 714.3 Stars at 0.014: a payment from 705 to 715 Stars crosses it."""
         month = current_month_key()
-        # $10 / 0.014 ≈ 714.3 stars needed for $10 milestone
-        credits_sold = 715
-        credits_just_sold = 10
-        await MonthlyStats(
-            month_key=month, total_payments=1, total_credits_sold=credits_sold
-        ).insert()
+        await MonthlyStats(month_key=month, total_payments=1, total_stars=715).insert()
 
-        await check_and_send_alerts(mock_context, credits_just_sold=credits_just_sold)
+        await check_payment_alerts(stars_just_paid=10)
 
-        calls = mock_context.send_message.call_args_list
-        texts = [c.kwargs["text"] for c in calls]
-        milestone_texts = [t for t in texts if "$10" in t]
-        assert len(milestone_texts) == 1, f"Expected $10 milestone alert, got: {texts}"
+        texts = [c.kwargs["text"] for c in alerts_bot.send_message.call_args_list]
+        assert [t for t in texts if "$10" in t] == ["🎉 <b>Revenue milestone!</b>\n\nReached $10!"]
 
-    async def test_revenue_milestone_not_sent_if_already_above(self, mock_context, admin_auth):
-        """Milestone not sent if previous revenue was already above threshold."""
+    async def test_a_milestone_on_a_later_payment_is_announced(self, alerts_bot, admin_auth):
+        """The third payment of the month takes revenue from $8.68 to $10.08."""
         month = current_month_key()
-        # Both prev and current above $10 → no milestone crossing
-        credits_sold = 800
-        credits_just_sold = 5  # prev = 795 stars ≈ $11.13, current ≈ $11.20
-        await MonthlyStats(
-            month_key=month, total_payments=1, total_credits_sold=credits_sold
-        ).insert()
+        await MonthlyStats(month_key=month, total_payments=3, total_stars=720).insert()
 
-        await check_and_send_alerts(mock_context, credits_just_sold=credits_just_sold)
+        await check_payment_alerts(stars_just_paid=100)
 
-        calls = mock_context.send_message.call_args_list
-        texts = [c.kwargs["text"] for c in calls]
-        milestone_texts = [t for t in texts if "milestone" in t.lower()]
-        assert len(milestone_texts) == 0, f"Should not send milestone alert: {texts}"
+        texts = [c.kwargs["text"] for c in alerts_bot.send_message.call_args_list]
+        assert [t for t in texts if "milestone" in t] == ["🎉 <b>Revenue milestone!</b>\n\nReached $10!"]
 
-    async def test_alert_not_duplicated(self, mock_context, admin_auth):
+    async def test_revenue_counts_stars_not_tokens(self, alerts_bot, admin_auth):
+        """1000 tokens bought for 700 Stars are $9.80, short of the $10 milestone."""
+        month = current_month_key()
+        await MonthlyStats(month_key=month, total_payments=1, total_credits_sold=1000, total_stars=700).insert()
+
+        await check_payment_alerts(stars_just_paid=700)
+
+        texts = [c.kwargs["text"] for c in alerts_bot.send_message.call_args_list]
+        assert [t for t in texts if "milestone" in t] == []
+
+    async def test_revenue_milestone_not_sent_if_already_above(self, alerts_bot, admin_auth):
+        """From 795 to 800 Stars revenue stays above $10: nothing is crossed."""
+        month = current_month_key()
+        await MonthlyStats(month_key=month, total_payments=2, total_stars=800).insert()
+
+        await check_payment_alerts(stars_just_paid=5)
+
+        alerts_bot.send_message.assert_not_called()
+
+    async def test_a_transcription_announces_no_payment(self, alerts_bot, admin_auth):
+        """Wit alerts run after every transcription; the month's first payment is not theirs to announce."""
+        month = current_month_key()
+        await MonthlyStats(month_key=month, total_payments=1, total_stars=715).insert()
+
+        await check_wit_alerts()
+
+        alerts_bot.send_message.assert_not_called()
+
+    async def test_alert_not_duplicated(self, alerts_bot, admin_auth):
         """Same alert not sent twice in same month."""
         month = current_month_key()
         await WitUsageStats(month_key=month, language="ru", request_count=450).insert()
         await AlertState(alert_type="wit_80_ru", month_key=month).insert()
 
         with patch.object(settings, "wit_free_monthly_limit", 500):
-            await check_and_send_alerts(mock_context)
+            await check_wit_alerts()
 
-        mock_context.send_message.assert_not_called()
+        alerts_bot.send_message.assert_not_called()
 
 
 class TestUserStatsTracking:
@@ -649,9 +657,7 @@ class TestAdminProviderPanel:
         saved = await get_bot_config("gpt_provider", "")
         assert saved == const.PROVIDER_OPENROUTER
 
-    async def test_invalid_provider_ignored(
-        self, mock_private_update, mock_context, mock_callback_query, admin_auth
-    ):
+    async def test_invalid_provider_ignored(self, mock_private_update, mock_context, mock_callback_query, admin_auth):
         """Unknown provider name is ignored (not persisted)."""
 
         mock_private_update.from_user.id = 999
@@ -665,9 +671,7 @@ class TestAdminProviderPanel:
         saved = await get_bot_config("categorization_provider", "")
         assert saved != "unknown_provider"
 
-    async def test_back_button_returns_to_hub(
-        self, mock_private_update, mock_context, mock_callback_query, admin_auth
-    ):
+    async def test_back_button_returns_to_hub(self, mock_private_update, mock_context, mock_callback_query, admin_auth):
         """Back button returns to admin hub."""
         mock_private_update.from_user.id = 999
         mock_callback_query.data = "adm_back"

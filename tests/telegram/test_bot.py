@@ -6,8 +6,8 @@ from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import InlineKeyboardMarkup
 
-from src.telegram import setup as bot_setup
-from src.telegram.bot import MAX_TELEGRAM_MESSAGE_LENGTH, send_response
+from evlampiy.telegram import setup as bot_setup
+from evlampiy.telegram.bot import MAX_TELEGRAM_MESSAGE_LENGTH, send_response
 
 
 class TestSendResponse:

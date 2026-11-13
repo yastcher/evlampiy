@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, patch
 
-from src.transcript_cleanup import _build_cleanup_prompt, cleanup_transcript
+from evlampiy.transcript_cleanup import _build_cleanup_prompt, cleanup_transcript
 
 
 class TestCleanupTranscript:
@@ -10,7 +10,7 @@ class TestCleanupTranscript:
 
     async def test_short_text_returned_without_llm(self):
         """Text shorter than 20 chars is returned as-is without calling LLM."""
-        with patch("src.transcript_cleanup.cleanup_text") as mock_cleanup:
+        with patch("evlampiy.transcript_cleanup.cleanup_text") as mock_cleanup:
             result = await cleanup_transcript("short text")
             assert result == "short text"
             mock_cleanup.assert_not_called()
@@ -21,7 +21,7 @@ class TestCleanupTranscript:
         cleaned = "Я хотел сказать, что этот проект классный."
 
         with patch(
-            "src.transcript_cleanup.cleanup_text",
+            "evlampiy.transcript_cleanup.cleanup_text",
             AsyncMock(return_value=cleaned),
         ):
             result = await cleanup_transcript(original)
@@ -32,7 +32,7 @@ class TestCleanupTranscript:
         original = "ну вот значит я хотел сказать что этот проект классный"
 
         with patch(
-            "src.transcript_cleanup.cleanup_text",
+            "evlampiy.transcript_cleanup.cleanup_text",
             AsyncMock(side_effect=RuntimeError("API error")),
         ):
             result = await cleanup_transcript(original)
@@ -43,7 +43,7 @@ class TestCleanupTranscript:
         original = "ну вот значит я хотел сказать что этот проект классный"
 
         with patch(
-            "src.transcript_cleanup.cleanup_text",
+            "evlampiy.transcript_cleanup.cleanup_text",
             AsyncMock(return_value=""),
         ):
             result = await cleanup_transcript(original)
@@ -54,7 +54,7 @@ class TestCleanupTranscript:
         original = "ну вот значит я хотел сказать что этот проект классный"
 
         with patch(
-            "src.transcript_cleanup.cleanup_text",
+            "evlampiy.transcript_cleanup.cleanup_text",
             AsyncMock(return_value=None),
         ):
             result = await cleanup_transcript(original)
@@ -70,7 +70,7 @@ class TestCleanupTranscript:
             captured_prompts.append(prompt)
             return "cleaned"
 
-        with patch("src.transcript_cleanup.cleanup_text", side_effect=capture):
+        with patch("evlampiy.transcript_cleanup.cleanup_text", side_effect=capture):
             await cleanup_transcript(text, vocabulary=vocabulary)
 
         assert len(captured_prompts) == 1
@@ -88,7 +88,7 @@ class TestCleanupTranscript:
             captured_prompts.append(prompt)
             return "cleaned"
 
-        with patch("src.transcript_cleanup.cleanup_text", side_effect=capture):
+        with patch("evlampiy.transcript_cleanup.cleanup_text", side_effect=capture):
             await cleanup_transcript(text, context=context)
 
         assert len(captured_prompts) == 1

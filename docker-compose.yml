@@ -17,6 +17,14 @@ services:
     # --quiet drops the per-connection "accepted/closed" INFO lines that the
     # healthcheck (mongosh opens a small connection pool every probe) writes on loop.
     command: ["mongod", "--quiet"]
+    # A crash or a reboot must not leave the bot running and its database down.
+    restart: unless-stopped
+    # Docker gives a container 1024 open files; WiredTiger keeps one per collection and
+    # index, and at the limit mongod aborts (EMFILE). 64000 is what MongoDB asks for.
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
     logging: *default-logging
     volumes:
       - ./mongo_data:/data/db
@@ -40,7 +48,9 @@ services:
     environment:
       FASTAPI_HOST: "0.0.0.0"
     ports:
-      - "8000:8000"  # HTTP server: /health + WhatsApp webhook
+      # The host's loopback alone: Docker publishes a port past the firewall, and the
+      # WhatsApp webhook comes in from the internet through the TLS proxy on this host.
+      - "127.0.0.1:8000:8000"  # HTTP server: /health + WhatsApp webhook
     volumes:
       - ./data:/app/data:ro
     depends_on:

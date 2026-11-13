@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 
-from src.transcription.groq_client import transcribe_with_groq
+from evlampiy.transcription.groq_client import transcribe_with_groq
 
 
 class TestGroqClient:
@@ -15,8 +15,8 @@ class TestGroqClient:
         mock_response.raise_for_status = MagicMock()
 
         with (
-            patch("src.transcription.groq_client.settings") as mock_settings,
-            patch("src.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
+            patch("evlampiy.transcription.groq_client.settings") as mock_settings,
+            patch("evlampiy.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
@@ -34,8 +34,8 @@ class TestGroqClient:
         mock_response.text = "Unauthorized"
 
         with (
-            patch("src.transcription.groq_client.settings") as mock_settings,
-            patch("src.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
+            patch("evlampiy.transcription.groq_client.settings") as mock_settings,
+            patch("evlampiy.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
@@ -50,8 +50,8 @@ class TestGroqClient:
     async def test_returns_empty_on_request_error(self):
         """Network error returns empty string, doesn't raise."""
         with (
-            patch("src.transcription.groq_client.settings") as mock_settings,
-            patch("src.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
+            patch("evlampiy.transcription.groq_client.settings") as mock_settings,
+            patch("evlampiy.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
@@ -65,7 +65,7 @@ class TestGroqClient:
 
     async def test_returns_empty_when_not_configured(self):
         """Returns empty if GROQ_API_KEY not set."""
-        with patch("src.transcription.groq_client.settings") as mock_settings:
+        with patch("evlampiy.transcription.groq_client.settings") as mock_settings:
             mock_settings.groq_api_key = ""
 
             result = await transcribe_with_groq(b"audio", "en")
@@ -79,9 +79,9 @@ class TestGroqClient:
         mock_response.raise_for_status = MagicMock()
 
         with (
-            patch("src.transcription.groq_client.settings") as mock_settings,
-            patch("src.llm_proxy.settings.llm_api_base", "https://proxy.example"),
-            patch("src.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
+            patch("evlampiy.transcription.groq_client.settings") as mock_settings,
+            patch("evlampiy.llm_proxy.settings.llm_api_base", "https://proxy.example"),
+            patch("evlampiy.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
@@ -100,9 +100,9 @@ class TestGroqClient:
         mock_response.raise_for_status = MagicMock()
 
         with (
-            patch("src.transcription.groq_client.settings") as mock_settings,
-            patch("src.llm_proxy.settings.llm_api_base", ""),
-            patch("src.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
+            patch("evlampiy.transcription.groq_client.settings") as mock_settings,
+            patch("evlampiy.llm_proxy.settings.llm_api_base", ""),
+            patch("evlampiy.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"
@@ -121,8 +121,8 @@ class TestGroqClient:
         mock_response.raise_for_status = MagicMock()
 
         with (
-            patch("src.transcription.groq_client.settings") as mock_settings,
-            patch("src.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
+            patch("evlampiy.transcription.groq_client.settings") as mock_settings,
+            patch("evlampiy.transcription.groq_client.httpx.AsyncClient") as mock_client_class,
         ):
             mock_settings.groq_api_key = "test-key"
             mock_settings.groq_model = "whisper-large-v3-turbo"

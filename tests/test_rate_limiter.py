@@ -5,11 +5,15 @@ from unittest.mock import patch
 
 import pytest
 
-from src import const
-from src.ai_client import (
+from evlampiy import const
+from evlampiy.ai_client import (
     RateLimiter,
     classify_text,
 )
+
+# A call to a real vendor spends the owner's money: only on request, never because a key
+# happens to be exported in the shell.
+_LIVE_VENDOR_TESTS = os.getenv("LIVE_VENDOR_TESTS") == "1"
 
 
 class TestRateLimiterThrottles:
@@ -56,15 +60,13 @@ class TestRetryOn429:
         self, mock_httpx_response_factory, mock_ai_http, mock_rate_limiter, mock_ai_sleep
     ):
         """Provider is retried on 429 and returns result on second attempt."""
-        ok_response = mock_httpx_response_factory(
-            {"candidates": [{"content": {"parts": [{"text": "result"}]}}]}, 200
-        )
+        ok_response = mock_httpx_response_factory({"candidates": [{"content": {"parts": [{"text": "result"}]}}]}, 200)
         rate_limited = mock_httpx_response_factory(status_code=429)
         mock_ai_http.post.side_effect = [rate_limited, ok_response]
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -83,8 +85,8 @@ class TestRetryOn429:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=429)
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "test-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "test-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -104,9 +106,7 @@ class TestFallbackOnExhausted:
     ):
         """When Gemini exhausts retries on 429, request falls back to Groq."""
         gemini_429 = mock_httpx_response_factory(status_code=429)
-        groq_ok = mock_httpx_response_factory(
-            {"choices": [{"message": {"content": "groq_result"}}]}, 200
-        )
+        groq_ok = mock_httpx_response_factory({"choices": [{"message": {"content": "groq_result"}}]}, 200)
 
         async def fake_post(url: str, **kwargs):
             if "generateContent" in url:
@@ -118,12 +118,12 @@ class TestFallbackOnExhausted:
         mock_ai_http.post.side_effect = fake_post
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
-            patch("src.ai_client.settings.groq_api_key", "groq-key"),
-            patch("src.ai_client.settings.openrouter_api_key", ""),
-            patch("src.ai_client.settings.deepseek_api_key", ""),
-            patch("src.ai_client.settings.qwen_api_key", ""),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "gemini-key"),
+            patch("evlampiy.ai_client.settings.groq_api_key", "groq-key"),
+            patch("evlampiy.ai_client.settings.openrouter_api_key", ""),
+            patch("evlampiy.ai_client.settings.deepseek_api_key", ""),
+            patch("evlampiy.ai_client.settings.qwen_api_key", ""),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -138,10 +138,10 @@ class TestFallbackOnExhausted:
         mock_ai_http.post.return_value = mock_httpx_response_factory(status_code=429)
 
         with (
-            patch("src.ai_client.settings.gemini_api_key", "gemini-key"),
-            patch("src.ai_client.settings.groq_api_key", "groq-key"),
-            patch("src.ai_client.settings.openrouter_api_key", "openrouter-key"),
-            patch("src.ai_client.settings.categorization_provider", "gemini"),
+            patch("evlampiy.ai_client.settings.gemini_api_key", "gemini-key"),
+            patch("evlampiy.ai_client.settings.groq_api_key", "groq-key"),
+            patch("evlampiy.ai_client.settings.openrouter_api_key", "openrouter-key"),
+            patch("evlampiy.ai_client.settings.categorization_provider", "gemini"),
         ):
             result = await classify_text("Test")
 
@@ -149,8 +149,8 @@ class TestFallbackOnExhausted:
 
 
 @pytest.mark.skipif(
-    not os.getenv("GROQ_API_KEY"),
-    reason="GROQ_API_KEY not set — skipping integration test",
+    not (_LIVE_VENDOR_TESTS and os.getenv("GROQ_API_KEY")),
+    reason="a real Groq call: needs LIVE_VENDOR_TESTS=1 and GROQ_API_KEY exported",
 )
 class TestGroqIntegration:
     """Integration test with real Groq API."""
@@ -158,8 +158,8 @@ class TestGroqIntegration:
     async def test_groq_complete(self):
         """Groq LLM returns a valid response to classify prompt."""
         with (
-            patch("src.ai_client.settings.groq_api_key", os.getenv("GROQ_API_KEY", "")),
-            patch("src.ai_client.settings.categorization_provider", const.PROVIDER_GROQ),
+            patch("evlampiy.ai_client.settings.groq_api_key", os.getenv("GROQ_API_KEY", "")),
+            patch("evlampiy.ai_client.settings.categorization_provider", const.PROVIDER_GROQ),
         ):
             result = await classify_text("Say only the word: hello")
 
@@ -168,8 +168,8 @@ class TestGroqIntegration:
 
 
 @pytest.mark.skipif(
-    not os.getenv("OPENROUTER_API_KEY"),
-    reason="OPENROUTER_API_KEY not set — skipping integration test",
+    not (_LIVE_VENDOR_TESTS and os.getenv("OPENROUTER_API_KEY")),
+    reason="a real OpenRouter call: needs LIVE_VENDOR_TESTS=1 and OPENROUTER_API_KEY exported",
 )
 class TestOpenRouterIntegration:
     """Integration test with real OpenRouter API."""
@@ -178,10 +178,10 @@ class TestOpenRouterIntegration:
         """OpenRouter returns a valid response to classify prompt."""
         with (
             patch(
-                "src.ai_client.settings.openrouter_api_key",
+                "evlampiy.ai_client.settings.openrouter_api_key",
                 os.getenv("OPENROUTER_API_KEY", ""),
             ),
-            patch("src.ai_client.settings.categorization_provider", const.PROVIDER_OPENROUTER),
+            patch("evlampiy.ai_client.settings.categorization_provider", const.PROVIDER_OPENROUTER),
         ):
             result = await classify_text("Say only the word: hello")
 

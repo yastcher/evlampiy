@@ -1,12 +1,12 @@
-"""Tests for src.services.payments_service.
+"""Tests for evlampiy.services.payments_service.
 
 Adapter-level flow (keyboard, send_invoice, alerts wiring) lives in tests/test_payments.py
 under TestPaymentFlow / TestBuyCommand / TestBuyPackageCallback / TestPreCheckout /
 TestBalanceCommand.
 """
 
-from src.credits import get_total_credits
-from src.services.payments_service import (
+from evlampiy.credits import current_month_key, get_monthly_stats, get_total_credits
+from evlampiy.services.payments_service import (
     CREDIT_PACKAGES,
     AwardResult,
     award_tokens,
@@ -38,6 +38,15 @@ class TestTokensForPayload:
 
 
 class TestAwardTokens:
+    async def test_a_payment_counts_its_stars_apart_from_its_tokens(self):
+        """XL sells 140 tokens for 100 Stars: the month's revenue is the Stars."""
+        await award_tokens("stars_user", "buy_tokens_3", total_amount=100, charge_id="charge-stars")
+
+        stats = await get_monthly_stats(current_month_key())
+
+        assert stats is not None
+        assert (stats.total_stars, stats.total_credits_sold) == (100, 140)
+
     async def test_package_payment_credits_package_tokens(self):
         user_id = "pay_1"
         before = await get_total_credits(user_id)

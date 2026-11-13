@@ -1,9 +1,9 @@
 """Integration test for complete user settings lifecycle."""
 
-from src.config import settings
-from src.dto import UserSettings
-from src.github_api import GitHubRepo
-from src.mongo import (
+from evlampiy.config import settings
+from evlampiy.dto import UserSettings
+from evlampiy.github_api import GitHubRepo
+from evlampiy.mongo import (
     clear_github_settings,
     get_auto_categorize,
     get_auto_cleanup,

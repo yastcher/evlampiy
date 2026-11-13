@@ -78,10 +78,11 @@ For testing, Meta provides a test phone number. For production:
 WHATSAPP_TOKEN=your_permanent_access_token
 WHATSAPP_PHONE_ID=your_phone_number_id
 WHATSAPP_VERIFY_TOKEN=your_webhook_verify_token
+# Required: Meta signs every update with it; without it the webhook stays off
+WHATSAPP_APP_SECRET=your_app_secret
 
 # Optional (for token refresh)
 WHATSAPP_APP_ID=your_app_id
-WHATSAPP_APP_SECRET=your_app_secret
 ```
 
 ### Testing
@@ -99,7 +100,7 @@ WHATSAPP_APP_SECRET=your_app_secret
 
 ### Account Linking
 
-To link a WhatsApp account to Telegram for shared credit balance, see [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).
+The bot transcribes only a number linked to a Telegram account, which then shares that account's tokens and settings: see [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).
 
 ---
 
@@ -177,10 +178,11 @@ To link a WhatsApp account to Telegram for shared credit balance, see [WHATSAPP_
 WHATSAPP_TOKEN=ваш_постоянный_токен
 WHATSAPP_PHONE_ID=ваш_phone_number_id
 WHATSAPP_VERIFY_TOKEN=ваш_токен_верификации_webhook
+# Обязателен: им Meta подписывает каждый апдейт; без него вебхук не включается
+WHATSAPP_APP_SECRET=ваш_app_secret
 
 # Опциональные (для обновления токена)
 WHATSAPP_APP_ID=ваш_app_id
-WHATSAPP_APP_SECRET=ваш_app_secret
 ```
 
 ### Тестирование
@@ -198,4 +200,4 @@ WHATSAPP_APP_SECRET=ваш_app_secret
 
 ### Привязка аккаунтов
 
-Для привязки WhatsApp к Telegram и общего баланса кредитов см. [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).
+Бот транскрибирует только номер, привязанный к аккаунту Telegram: номер получает токены и настройки этого аккаунта, см. [WHATSAPP_LINKING.md](WHATSAPP_LINKING.md).

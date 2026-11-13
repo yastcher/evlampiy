@@ -4,35 +4,40 @@ version = "0.9.7"
 description = "Bot (Evlampiy) for managing voice notes"
 readme = "README.md"
 authors = [{ name = "Yast", email = "yastcher@gmail.com" }]
-requires-python = "~=3.14"
+requires-python = ">=3.14"
 dependencies = [
     "httpx[http2]>=0.28.1",
-    "python-dotenv~=1.2.2",
-    "pydantic-settings>=2.7,<3",
+    "python-dotenv~=1.2.4",
+    "pydantic-settings>=2.16,<3",
     "wit~=6.0.1",
     "pydub~=0.25.1",
     "audioop-lts>=0.2; python_version>='3.13'",
-    "beanie~=2.0.1",
-    "motor==3.7.1",
-    "pywa~=3.8",
-    "fastapi~=0.115",
-    "uvicorn~=0.34",
-    "aiogram~=3.27",
-    "aiohttp>=3.13.4",
+    "beanie~=2.2.0",
+    "pymongo~=4.19",
+    "pywa~=4.5",
+    "fastapi~=0.162",
+    "uvicorn~=0.54",
+    "aiogram~=3.31",
+    "aiohttp>=3.14.5",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.0",
-    "ty>=0.0.32",
-    "pytest>=9.0.2",
-    "pytest-asyncio~=1.3",
-    "pytest-mock==3.15.1",
-    "pytest-cov~=7.0.0",
-    "pytestarch>=2.0",
-    "cosmic-ray>=8.3",
-    "mongomock-motor~=0.0.34",
-    "responses~=0.26.0",
+    "ruff>=0.17.4",
+    "ty>=0.0.101",
+    "pytest>=9.2.0",
+    "pytest-asyncio~=1.4",
+    "pytest-mock==3.17.0",
+    "pytest-cov~=7.1.0",
+    "pytest-timeout>=2.4",
+    "hypothesis>=6.170",
+    "pip-audit>=2.10",
+    "pytestarch>=5.1",
+    "mutmut>=3.8.1,<4",
+    "testcontainers[mongodb]>=4.15",
+    "responses~=0.26.3",
+    # Starlette's TestClient runs on httpx2 and deprecates httpx.
+    "httpx2>=2.16",
 ]
 
 [tool.ruff]
@@ -61,8 +66,9 @@ ignore = []
 fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "PLR2004", "S105", "S106"]
-"src/localization.py" = ["RUF001"]
+# S603/S607: tests run git and the repository's own scripts with fixed arguments.
+"tests/*" = ["S101", "PLR2004", "S105", "S106", "S603", "S607"]
+"evlampiy/localization.py" = ["RUF001"]
 
 [tool.ruff.lint.pylint]
 max-args = 6
@@ -70,7 +76,7 @@ max-args = 6
 [tool.ruff.lint.isort]
 known-third-party = ["telegram"]
 known-local-folder = [
-    "src",
+    "evlampiy",
     "tests",
 ]
 
@@ -84,26 +90,62 @@ python-version = "3.14"
 root = ["."]
 
 [tool.ty.rules]
-unresolved-import = "warn"
+import-not-found = "warn"
 
 [[tool.ty.overrides]]
 include = ["tests/"]
 
 [tool.ty.overrides.rules]
-unresolved-import = "ignore"
+import-not-found = "ignore"
 
 [tool.pytest.ini_options]
 addopts = [
     "-p", "pytest_cov",
-    "--cov=src",
+    "--cov=evlampiy",
     "--cov-report=term-missing",
     "--cov-report=json:coverage.json",
     "--cov-branch",
 ]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# Every async fixture is per test, the database client included.
+asyncio_default_fixture_loop_scope = "function"
+# A test that hangs fails after this many seconds, with the stack where it hung, instead of
+# holding the run and its memory until something kills it. Generous on purpose: the first
+# test's setup starts the MongoDB container, an image pull included.
+timeout = 120
+
+[tool.mutmut]
+# Mutation testing, run from scratch by scripts/pre_release_qa.sh: a slice of modules whose
+# behaviour the tests pin — the PII mask, billing, account linking, categorization — widened
+# module by module as each one holds.
+source_paths = ["evlampiy"]
+only_mutate = [
+    "evlampiy/ai/_mask.py",
+    "evlampiy/account_linking.py",
+    "evlampiy/categorization.py",
+    "evlampiy/credits.py",
+    "evlampiy/services/payments_service.py",
+]
+# What the tests read besides tests/: tests/script_fixtures.py imports the release scripts.
+also_copy = ["scripts"]
+# No coverage: addopts measure it, and every mutant's run would be traced for nothing.
+pytest_add_cli_args = ["--no-cov", "-p", "no:cacheprovider"]
+# The slice's own tests: every mutant runs its tests against MongoDB again, so the rest stay out.
+pytest_add_cli_args_test_selection = [
+    "tests/test_ai_mask.py",
+    "tests/telegram/test_account_linking.py",
+    "tests/test_categorization.py",
+    "tests/test_monetization.py",
+    "tests/test_user_lifecycle.py",
+    "tests/services/test_payments_service.py",
+    "tests/telegram/test_payments.py",
+]
 
 [tool.coverage.report]
+# A ratchet: raise it as coverage grows, never lower it. The README badges show this number.
+fail_under = 91.6
+precision = 2
 exclude_also = [
     # PTB handler guards - framework guarantees effective_user/message/etc. non-None in handler context
     "if update\\.message is None",

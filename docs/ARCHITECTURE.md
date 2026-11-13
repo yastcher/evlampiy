@@ -7,7 +7,7 @@ Evlampiy Notes Bot is an async Python application that transcribes voice message
 ## Directory Structure
 
 ```
-src/
+evlampiy/
 ├── telegram/               # Telegram bot (aiogram)
 │   ├── handlers/           - Per-domain handler modules (PR6 of architecture-isolation)
 │   │   ├── common.py       - Core handlers (/start, stats, hub router, GPT command conversation)
@@ -35,9 +35,11 @@ src/
 │   ├── payments_service.py - Token packages + award_tokens on successful Stars payment
 │   ├── settings_service.py - Toggle auto-cleanup, persist transcription provider choice
 │   ├── stats_service.py    - Admin /stats text builder
+│   ├── voice_access.py     - Who may transcribe and what it costs, for both channels (ADR-001)
 │   └── voice_pipeline.py   - Transcription → cleanup → Obsidian → categorize pipeline
 ├── ai/                     # LLM-client cross-cutting helpers
-│   └── _mask.py            - PII masking (<PHONE_N>/<EMAIL_N>/<NAME_N>) at the LLM boundary (152-ФЗ)
+│   ├── _mask.py            - PII masking (<PHONE_N>/<EMAIL_N>/<NAME_N>) at the LLM boundaries (152-ФЗ, ADR-002)
+│   └── chat_formats.py     - The GPT chat's provider formats: tool schemas, messages, reply parsing
 ├── ai_client.py            - Multi-provider LLM client with token bucket rate limiter
 ├── ai_chat.py              - Messages-based chat completion with tool calling support
 ├── tools.py                - Tool definitions and implementations for GPT tool calling
@@ -62,12 +64,14 @@ src/
 ├── obsidian_layout.py      - Vault folder layout (base dir, inbox, trash, categories)
 ├── gpt_commands.py         - GPT chat command handler with tool calling
 ├── main.py                 - Application entry point (Telegram + FastAPI startup)
-└── selftest.py             - Health check and self-test endpoints
+└── selftest.py             - Startup self-test: the sample voice through the pipeline, reported to admins
 ```
 
 ```
 tests/
-├── fixtures.py             - All shared test fixtures (no fixtures in test files)
+├── fixtures.py             - App fixtures (no fixtures in test files)
+├── db_fixtures.py          - The test MongoDB: a container per session, a clean database per test
+├── script_fixtures.py      - Fixtures for the repository's scripts (release, gate, pre-release QA)
 ├── conftest.py             - Pytest configuration and plugin imports
 ├── test_architecture.py    - Domain isolation and import style rules (pytestarch)
 ├── test_api_contracts.py   - Handler registration, signatures, menu consistency
@@ -76,6 +80,8 @@ tests/
 │   └── test_*_service.py, test_voice_pipeline.py
 ├── telegram/               - Adapter-level handler tests (aiogram-shape mocks)
 │   └── test_user_flow.py, test_admin.py, test_payments.py, ...
+├── scripts/                - The repository's own scripts
+│   └── test_*.py           - Release, changelog, gate, dependency audit, CRAP, stack smoke, pre-release QA, deploy
 └── test_*.py               - Integration and unit tests for shared/infra code
 ```
 
@@ -88,55 +94,56 @@ User sends voice message (Telegram or WhatsApp)
          │
          ▼
 ┌─────────────────────────────────────────────┐
-│ 1. RECEIVE & VALIDATE                       │
-│    telegram/voice.py or whatsapp/handlers.py│
-│    Download audio, check user not blocked   │
+│ 1. RECEIVE                                  │
+│    telegram/handlers/voice.py or            │
+│    whatsapp/handlers.py; a WhatsApp number  │
+│    acts as its linked Telegram account      │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
-│ 2. SELECT PROVIDER                          │
-│    Check user tier + Wit.ai availability    │
-│    Free → Wit.ai only                       │
-│    Paid/VIP/Admin → Wit.ai, Groq fallback   │
+│ 2. ADMIT (services/voice_access.py)         │
+│    Blocked → refused                        │
+│    Provider: Free → Wit.ai only; others →   │
+│    their choice, Wit.ai, then Groq          │
+│    No tokens left → refused                 │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
 │ 3. TRANSCRIBE                               │
 │    transcription/service.py                 │
-│    Wit.ai: chunk at 20s, combine results    │
+│    Wit.ai: chunk at 19.5 s, combine results │
 │    Groq: send entire audio file             │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
-│ 4. DEDUCT CREDITS                           │
-│    credits.py: ceil(duration / 20) tokens   │
-│    Free pool first, then purchased          │
-└─────────────────┬───────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────┐
-│ 5. OPTIONAL: AI CLEANUP                     │
+│ 4. OPTIONAL: AI CLEANUP (above Free)        │
 │    transcript_cleanup.py via ai_client.py   │
 │    Context: last 3 transcriptions (TTL 2h)  │
-│    + per-category vocabulary                │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
-│ 6. OPTIONAL: SAVE TO OBSIDIAN               │
+│ 5. OPTIONAL: SAVE TO OBSIDIAN               │
 │    obsidian.py → github_api.py              │
 │    Dual-save: clean + raw in HTML comment   │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
-│ 7. OPTIONAL: AUTO-CATEGORIZE                │
+│ 6. OPTIONAL: AUTO-CATEGORIZE                │
 │    categorization.py via ai_client.py       │
 │    Returns (category, keywords)             │
 │    Moves note to folder, updates vocabulary │
 └─────────────────┬───────────────────────────┘
                   ▼
 ┌─────────────────────────────────────────────┐
+│ 7. SETTLE (services/voice_access.py)        │
+│    ceil(duration / 20) tokens: free pool    │
+│    first, then purchased; Wit or Groq use   │
+│    and stats counted; Wit alerts to admins  │
+└─────────────────┬───────────────────────────┘
+                  ▼
+┌─────────────────────────────────────────────┐
 │ 8. RESPOND                                  │
 │    Send transcription back to user          │
-│    Check & send admin alerts if needed      │
 └─────────────────────────────────────────────┘
 ```
 
@@ -151,13 +158,13 @@ ai_client.py receives request with preferred provider
     ┌────┴────┐
     │ OK      │ Rate limited
     ▼         ▼
-  Send    Retry with backoff (2s, 4s, 8s — max 3 retries)
+  Send    Retry: 3 attempts, waits of 2 s and 4 s
   request      │
     │     ┌────┴────┐
     │     │ OK      │ Still limited
     │     ▼         ▼
     │   Send     Next provider in fallback chain
-    │   request  deepseek → openrouter → gemini → groq
+    │   request  primary, then deepseek → openrouter → gemini → groq
     │                │
     │           All exhausted → RateLimitError
     ▼
@@ -170,9 +177,9 @@ ai_client.py receives request with preferred provider
 |---------|---------|--------|-----------------|
 | Wit.ai | Primary speech-to-text | `transcription/wit_client.py` | 500 req/month per language |
 | Groq Whisper | Fallback speech-to-text | `transcription/groq_client.py` | 7,200 sec/day |
-| DeepSeek | Primary LLM (cleanup, categorize) | `ai_client.py` | 60 RPM |
+| DeepSeek | LLM, first in the fallback chain | `ai_client.py` | 60 RPM |
 | OpenRouter | LLM fallback | `ai_client.py` | 10 RPM |
-| Google Gemini | LLM fallback | `ai_client.py` | 15 RPM |
+| Google Gemini | Default primary LLM (cleanup, categorize, GPT chat) | `ai_client.py`, `ai_chat.py` | 15 RPM |
 | Groq LLM | LLM fallback | `ai_client.py` | 30 RPM |
 | GitHub API | Obsidian vault sync | `github_api.py` | 5,000 req/hour |
 | Telegram Bot API | Messaging, file downloads | `telegram/` | Polling, no hard limit |
@@ -204,11 +211,12 @@ Each provider has an independent token bucket with per-minute capacity.
 | Gemini | 15 | `ai_client.py:_PROVIDER_LIMITS` |
 | OpenRouter | 10 | `ai_client.py:_PROVIDER_LIMITS` |
 
-Retry strategy: 3 attempts with exponential backoff (2s, 4s, 8s). If all retries fail, the request falls through to the next provider in the chain.
+Retry strategy: 3 attempts, with waits of 2 s and 4 s between them. If all of them fail, the request falls through to the next provider in the chain.
 
-Fallback chains (configurable at runtime via admin panel):
-- **Categorization:** deepseek → openrouter → gemini → groq
-- **GPT commands:** deepseek → openrouter → gemini → groq
+Fallback chains, one for categorization and cleanup, one for the GPT chat: the primary
+(`CATEGORIZATION_PROVIDER` / `GPT_PROVIDER`, gemini by default, or the one the admin panel
+stores in `BotConfig`: openrouter, gemini or groq), then the rest of
+deepseek → openrouter → gemini → groq, fixed in `ai_client.py`. A provider without a key is skipped.
 
 ### Wit.ai Usage
 
@@ -218,7 +226,8 @@ Fallback chains (configurable at runtime via admin panel):
 | Languages tracked | en, ru, es, de (independent counters) | `wit_tracking.py` |
 | Warning alert | 80% usage | `alerts.py` |
 | Critical alert | 95% usage | `alerts.py` |
-| On exhaustion | Fallback to Groq Whisper | `transcription/service.py` |
+| Counted for | Telegram and WhatsApp | `services/voice_access.py:settle_voice` |
+| On exhaustion | Free: refused; other tiers: Groq Whisper | `services/voice_access.py:select_provider` |
 
 ### User Tokens
 
@@ -227,34 +236,39 @@ Fallback chains (configurable at runtime via admin panel):
 | Token cost | 1 token = 20 seconds of audio | `const.py:SECONDS_PER_TOKEN` |
 | Free tier | 10 tokens/month | `config.py:FREE_MONTHLY_TOKENS` |
 | Deduction order | Free pool first, then purchased | `credits.py` |
-| Purchase method | Telegram Stars (4 package tiers) | `telegram/payments.py` |
+| Purchase method | Telegram Stars (4 packages) | `services/payments_service.py` |
+| WhatsApp | Spends the linked Telegram account's tokens (ADR-001) | `services/voice_access.py` |
 
 ### User Tiers
 
-| Tier | Transcription | Provider | Tokens |
+| Tier (`UserTier`) | Transcription | Provider | Tokens |
 |------|--------------|----------|--------|
-| Admin | Unlimited | Groq priority | N/A |
-| VIP | Unlimited | Groq priority | N/A |
-| Tester | Unlimited | Wit.ai + Groq fallback | Admin top-up |
-| Paid | Token-based | Wit.ai + Groq fallback | Purchased via Stars |
+| VIP (admins too) | Unlimited | Wit.ai; Groq by choice or past the Wit limit | Not spent |
+| Tester | Unlimited | Wit.ai; Groq by choice or past the Wit limit | Not spent |
+| Paid | Token-based | Wit.ai; Groq by choice or past the Wit limit | Purchased via Stars |
 | Free | 10/month | Wit.ai only | Purchasable |
-| Blocked | Denied | N/A | N/A |
+
+Blocked is a role, not a tier: a blocked user gets no voice transcription (Telegram or
+WhatsApp), no GPT chat and no `/categorize`.
 
 ## Engineering Decisions
 
 ### DDD with Modular Structure
 
-The codebase is organized by domain (`telegram/`, `whatsapp/`, `transcription/`) rather than by technical layer. Each platform handler is self-contained, while shared services (`credits`, `ai_client`, `categorization`) live at the `src/` root level. This keeps related logic together and makes it easy to add new platforms.
+The codebase is organized by domain (`telegram/`, `whatsapp/`, `transcription/`) rather than by technical layer. Each platform handler is self-contained, while shared services (`credits`, `ai_client`, `categorization`) live at the `evlampiy/` root level. This keeps related logic together and makes it easy to add new platforms.
 
 ### Trophy Testing
 
-Tests use real MongoDB (via mongomock-motor) and real application logic. Mocks are applied only at external I/O boundaries: HTTP APIs (Wit.ai, Groq, GitHub, LLM providers), Telegram Bot API, and WhatsApp Cloud API. This catches integration bugs that unit-test-heavy approaches miss. All fixtures live in `tests/fixtures.py` — test files have zero fixture definitions.
+Tests run against a real MongoDB — the image production runs, in a container testcontainers starts for the session (CI uses a service container of the same image) — and real application logic. Mocks are applied only at external I/O boundaries: HTTP APIs (Wit.ai, Groq, GitHub, LLM providers), Telegram Bot API, and WhatsApp Cloud API. This catches integration bugs that unit-test-heavy approaches miss. All fixtures live in fixture modules (`tests/fixtures.py` for the app, `tests/db_fixtures.py` for the database, `tests/script_fixtures.py` for the repository's scripts) — test files have zero fixture definitions.
 
-In addition to integration tests, three contract test suites guard structural invariants:
+In addition to integration tests, four contract test suites guard structural invariants:
 
 - **`test_architecture.py`** — pytestarch rules enforce domain isolation (telegram ↔ whatsapp never import each other, transcription is channel-independent) and stdlib import style (`import datetime`, not `from datetime import ...`).
 - **`test_api_contracts.py`** — every command in `COMMAND_HANDLERS` is async with `(update, context)` signature; all `BOT_COMMANDS` / `ADMIN_COMMANDS` menu entries map to registered handlers; all callback query handlers exist; `/health` endpoint returns expected schema.
-- **`test_docs.py`** — all internal markdown links resolve to existing files; every `.py` file in `src/` is listed in `ARCHITECTURE.md` (and vice versa); all READMEs have a Documentation table; CHANGELOG subsection names are from the allowed set.
+- **`test_docs.py`** — all internal markdown links resolve to existing files; every `.py` file in `evlampiy/` is listed in `ARCHITECTURE.md` (and vice versa); all READMEs have a Documentation table; CHANGELOG subsection names are from the allowed set; README badges show the coverage floor CI enforces and point at an existing workflow.
+- **`scripts/test_gate.py`** — `scripts/gate.sh` runs exactly the checks of the CI job, in its order, and a failed check fails the gate without skipping the rest.
+
+The WhatsApp webhook is fuzzed with Hypothesis (`test_whatsapp_webhook.py`): unsigned and forged updates are refused and never reach the handlers, and a signed update of any shape is handled without an exception.
 
 ### Token Bucket Rate Limiting
 
@@ -262,7 +276,7 @@ Each LLM provider has a per-minute token bucket (`ai_client.py`). When a bucket 
 
 ### Multi-Provider Fallback Chains
 
-Two independent chains exist: one for categorization, one for GPT commands. Both default to `deepseek → openrouter → gemini → groq`. Chains can be switched at runtime via the admin panel (stored in MongoDB `BotConfig`) without restart.
+Two independent chains exist: one for categorization and cleanup, one for the GPT chat. Each starts with its primary (gemini by default) and goes on through the rest of `deepseek → openrouter → gemini → groq`. The admin panel switches the primary at runtime (stored in MongoDB `BotConfig`) without restart; the tail is fixed in code.
 
 ### Brute-Force Protection for Account Linking
 
@@ -274,8 +288,8 @@ Free users get Wit.ai only (no Groq fallback, no provider choice). This keeps co
 
 ### Async Throughout
 
-The entire stack is async: FastAPI for WhatsApp webhooks, aiogram for Telegram polling, httpx for outbound HTTP, and Beanie (async Motor) for MongoDB. The entry point (`main.py`) runs Telegram polling in the main thread and FastAPI in a daemon thread.
+The entire stack is async: FastAPI for WhatsApp webhooks, aiogram for Telegram polling, httpx for outbound HTTP, and Beanie (on pymongo's async client) for MongoDB. The entry point (`main.py`) runs Telegram polling and the HTTP server as two supervised asyncio tasks in one event loop, so one that fails restarts without taking the other down.
 
 ### Context-Aware Cleanup
 
-The AI cleanup step receives the last 3 transcriptions from the same chat (TTL 2 hours) as context, plus per-category vocabulary from `vocabulary.json`. This allows the LLM to resolve ambiguous words using surrounding topic context and domain-specific terminology.
+The AI cleanup step receives the last 3 transcriptions from the same chat (TTL 2 hours) as context. This allows the LLM to resolve ambiguous words from the surrounding topic. The per-category vocabulary (`vocabulary.json`) serves categorization only.

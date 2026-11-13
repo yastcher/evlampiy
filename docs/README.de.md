@@ -1,15 +1,33 @@
 # Evlampiy Notes Bot
 
-[![CI](https://github.com/yastcher/evlampiy/actions/workflows/deploy.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions)
-[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen.svg)](https://github.com/yastcher/evlampiy)
-[![Python 3.14](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/yastcher/evlampiy/actions/workflows/ci.yml/badge.svg)](https://github.com/yastcher/evlampiy/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A591.6%25-brightgreen.svg)](https://github.com/yastcher/evlampiy/actions/workflows/ci.yml)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](../LICENSE)
 
 [English](../README.md) | [Русский](README.ru.md) | [Español](README.es.md) | Deutsch
 
-Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung.
+Sprache-zu-Text Bot für Telegram und WhatsApp in vier Sprachen: Er transkribiert eine
+Sprachnachricht, bereinigt den Text mit einem LLM und legt ihn als Notiz in deinem Obsidian-Vault
+auf GitHub ab, in einem Ordner nach Thema.
 
 **Ausprobieren:** https://t.me/evlampiy_notes_bot
+
+## Der Weg einer Sprachnachricht
+
+```mermaid
+flowchart TD
+    tg["Telegram<br/>aiogram"] --> admit
+    wa["WhatsApp<br/>pywa-Webhook"] -->|"eine verknüpfte Nummer<br/>ist ihr Telegram-Konto"| admit
+    admit["Zulassung<br/>Sperre · Stufe · Tokens"] --> stt["Sprache zu Text<br/>Wit.ai oder Groq Whisper"]
+    stt --> cleanup["LLM-Bereinigung<br/>über der Gratis-Stufe"]
+    cleanup --> note["Obsidian-Notiz<br/>über die GitHub-API"]
+    note --> sort["Kategorisierung<br/>das LLM wählt den Ordner"]
+    sort --> settle["Abrechnung<br/>Tokens · Wit.ai-Zähler · Statistik"]
+    settle --> reply["Antwort im Chat"]
+    cleanup & sort <-.-> mask{{"PII-Maske<br/>Namen · Telefonnummern · E-Mails"}}
+    mask <-.-> llm(["LLM-Anbieter<br/>Gemini · DeepSeek · Groq<br/>OpenRouter · Anthropic"])
+```
 
 ## Funktionen
 
@@ -18,7 +36,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **Multiplattform** — Telegram und WhatsApp
 - **Mehrsprachig** — Englisch, Deutsch, Russisch, Spanisch
 - **Chat-Einstellungen** — Individuelle Sprache und Trigger für jeden Chat
-- **KI-Textbereinigung** — Optionale LLM-gestützte Bereinigung von Transkriptionen (entfernt Füllwörter, korrigiert Zeichensetzung). Wenn die Bereinigung deaktiviert ist, bleibt die Telegram-Antwort roh, Obsidian-Notizen werden jedoch stets bereinigt.
+- **KI-Textbereinigung** — Optionale LLM-gestützte Bereinigung von Transkriptionen (entfernt Füllwörter, korrigiert Zeichensetzung) oberhalb der kostenlosen Stufe. Wenn die Bereinigung deaktiviert ist, bleibt die Telegram-Antwort roh, die Obsidian-Notiz wird jedoch bereinigt.
 
 ### Transkriptionsanbieter
 - **Wit.ai** — Standardanbieter mit monatlicher Limitüberwachung
@@ -27,7 +45,7 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 ### Monetarisierung
 - **Token-System** — 10 kostenlose Tokens/Monat + kaufbare Pakete (1 Token = 20 Sek. Audio)
 - **Telegram Stars** — Native Zahlungsintegration mit 4 Paketstufen
-- **Benutzerstufen** — Free, Paid, VIP, Tester, Admin, Blocked
+- **Benutzerstufen** — Free, Paid, VIP (auch Admins) und Tester; einem gesperrten Benutzer verweigert der Bot den Dienst
 
 ### Obsidian-Integration
 - **GitHub-Synchronisierung** — Automatisches Speichern von Transkriptionen in Ihrem Vault über GitHub API
@@ -35,24 +53,35 @@ Sprache-zu-Text Bot für Telegram und WhatsApp mit mehrsprachiger Unterstützung
 - **Repository-Auswahl** — Beim Verbinden ein vorhandenes GitHub-Repository wählen oder ein neues erstellen (beliebiger Name)
 - **Auto-Kategorisierung** — KI-gestützte Notizklassifizierung (DeepSeek, Groq, Gemini, OpenRouter, Anthropic)
 - **Duales Speichern** — Notizen enthalten bereinigten Text; die rohe Transkription wird in einem HTML-Kommentar aufbewahrt
-- **vocabulary.json** — Automatisch aufgebaute Stichwortliste je Kategorie; verbessert die Korrektur von Transkriptionsfehlern
+- **vocabulary.json** — Automatisch aufgebaute Stichwortliste je Kategorie; lenkt die Kategorisierung neuer Notizen
 - **Bereinigungskontext** — Neueste Transkriptionen aus demselben Chat werden dem LLM zur präziseren Bereinigung übergeben
 
 ### Kontoverknüpfung
-- **Telegram ↔ WhatsApp** — Konten mit Einmalcodes verknüpfen
+- **Telegram ↔ WhatsApp** — Eine per Einmalcode verknüpfte WhatsApp-Nummer ist dein Telegram-Konto: dieselben Tokens, Einstellungen und derselbe Vault
 - **Rate Limiting** — Schutz gegen Brute-Force-Angriffe
 
 ### Administration
 - **Admin-Panel** — `/admin` Hub mit Inline-Buttons in Telegram
 - **Benutzerverwaltung** — VIP- und Tester-Benutzer hinzufügen/entfernen, sperren/entsperren, Tokens aufladen über Telegram
 - **Nutzungsstatistiken** — Monatliche Transkriptionen, Einnahmen, Kosten
-- **Gesundheitsüberwachung** — Wit.ai/Groq-Nutzungsalarme
+- **Gesundheitsüberwachung** — Admin-Alarme zu Wit.ai-Nutzung, erster Zahlung und Umsatzmeilensteinen
+
+## Engineering
+
+- **Grenzen, die Tests halten** — die Telegram- und WhatsApp-Adapter importieren einander nie, und die Use Cases in `services/` importieren weder aiogram noch pywa noch FastAPI: sonst schlägt `tests/test_architecture.py` (pytestarch) fehl.
+- **Eine echte Datenbank in den Tests** — MongoDB 8.0.3, das Image der Produktion, in einem testcontainers-Container; Mocks gibt es nur an externen APIs, und die Tests sehen nie die Schlüssel des Entwicklers.
+- **Ein Gate, der Zwilling von CI** — `scripts/gate.sh` führt aus, was CI ausführt, in derselben Reihenfolge: pip-audit über jede gepinnte Version, ruff, ty, Semgrep, die Tests mit einer Coverage-Schwelle, die nur steigt, shellcheck; ein Test schlägt fehl, wenn beide auseinanderlaufen.
+- **QA vor dem Release** — `scripts/pre_release_qa.sh` ergänzt ein CRAP-Limit, einen Smoke-Test des Stacks aus dem Release-Image und Mutationstests (mutmut), deren Überlebende nur weniger werden; `scripts/release.sh` taggt keinen Baum, der sie nicht bestanden hat.
+- **Ein Tag ist das Release** — CI prüft den Tag gegen den Baum, baut das Image und scannt es mit Trivy, rollt es mit einem Datenbank-Dump, einer Minute Beobachtung und automatischem Rollback aus und veröffentlicht dann ein GitHub Release ([die Pipeline](DEPLOY.md#server-deploy-cicd)).
+- **Personenbezogene Daten bleiben aus den Prompts** — Namen, Telefonnummern und E-Mails werden vor jeder LLM-Anfrage zu Tokens und kommen in der Antwort zurück ([ADR-002](adr/ADR-002-pii-is-masked-where-each-llm-client-hands-a-request-to-providers.md)).
+- **Entscheidungen festgehalten** — [docs/adr/](adr/README.md) hält die geltenden Entscheidungen mit ihren Gründen fest.
 
 ## Voraussetzungen
 
 - Python 3.14+
 - MongoDB
 - FFmpeg (für Audioverarbeitung)
+- Docker (die Tests starten MongoDB in einem Container)
 - [Wit.ai](https://wit.ai/) API-Tokens
 - Telegram Bot-Token von [@BotFather](https://t.me/BotFather)
 - (Optional) WhatsApp Business API-Zugangsdaten
@@ -76,52 +105,26 @@ cp .env.example .env
 # Bearbeite .env mit deinen Tokens
 
 # Starten
-uv run python -m src.main
+uv run python -m evlampiy.main
 ```
 
 ## Konfiguration
 
-Erstelle die `.env` Datei:
+`.env.example` listet jede Einstellung mit einem Kommentar. Das Minimum:
 
 ```env
-TELEGRAM_BOT_TOKEN=dein_bot_token
+TELEGRAM_BOT_TOKEN=dein_bot_token        # von @BotFather
 MONGO_URI=mongodb://localhost:27017/
-
-# Wit.ai Tokens (erhältlich auf https://wit.ai/)
-WIT_EN_TOKEN=dein_englisch_token
-WIT_RU_TOKEN=dein_russisch_token
-WIT_ES_TOKEN=dein_spanisch_token
-WIT_DE_TOKEN=dein_deutsch_token
-
-# Optional: GPT-Integration
-GPT_TOKEN=dein_openai_token
-GPT_MODEL=gpt-4o-mini
-
-# Optional: WhatsApp-Integration (siehe WHATSAPP_SETUP.md)
-WHATSAPP_TOKEN=dein_whatsapp_token
-WHATSAPP_PHONE_ID=deine_phone_id
-WHATSAPP_VERIFY_TOKEN=dein_verify_token
-
-# Optional: GitHub OAuth (für Obsidian-Integration)
-# Für manuelle Token-Einrichtung, siehe docs/GITHUB_TOKEN_SETUP.md
-GITHUB_CLIENT_ID=deine_github_oauth_app_client_id
-
-# Optional: Monetarisierung
-GROQ_API_KEY=dein_groq_api_schluessel
-VIP_USER_IDS=123456,789012   # Env-Fallback; Verwaltung über /admin in Telegram
-ADMIN_USER_IDS=123456789
-FREE_MONTHLY_TOKENS=10
-WIT_FREE_MONTHLY_LIMIT=500
-
-# Optional: KI-Anbieter für Kategorisierung und GPT (deepseek / groq / gemini / openrouter / anthropic)
-# Empfohlen: deepseek — schnell, keine Rate-Limit-Probleme
-# Fallback-Kette (auto): primary → groq → openrouter → gemini
-CATEGORIZATION_PROVIDER=deepseek
-GPT_PROVIDER=deepseek
-GEMINI_API_KEY=dein_gemini_api_schluessel  # optionaler Fallback
+WIT_DE_TOKEN=dein_wit_token              # einer pro gesprochener Sprache: WIT_EN_TOKEN, WIT_RU_TOKEN, WIT_ES_TOKEN
 ```
 
-Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
+Der Rest schaltet Funktionen ein:
+
+- WhatsApp — `WHATSAPP_*`, siehe [WhatsApp-Einrichtung](WHATSAPP_SETUP.md)
+- der Obsidian-Vault — `GITHUB_CLIENT_ID`, siehe [GitHub OAuth App](GITHUB_TOKEN_SETUP.md)
+- der Whisper-Fallback — `GROQ_API_KEY`
+- LLM-Bereinigung, Sortierung und der GPT-Chat — `CATEGORIZATION_PROVIDER` und `GPT_PROVIDER` (standardmäßig Gemini) mit dem Schlüssel dieses Anbieters; fällt er aus, versucht die Kette deepseek → openrouter → gemini → groq; ein Host, der sie nicht erreicht, geht über `LLM_API_BASE` ([DEPLOY.md](DEPLOY.md#llm-providers-blocked-on-the-host))
+- Admins — `ADMIN_USER_IDS`; VIP-Nutzer und Tester werden mit `/admin` in Telegram verwaltet
 
 ## Bot-Befehle
 
@@ -134,14 +137,6 @@ Für WhatsApp-Einrichtungsanleitung, siehe [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md
 
 ## Entwicklung
 
-### Ansatz
-
-- **DDD** — Domain-Driven Design mit klaren Modulgrenzen (`transcription/`, `telegram/`, `whatsapp/`)
-- **TDD** — Erst Tests, dann Implementierung
-- **Trophy Testing** — Integrationstests mit echter DB (mongomock), Mocks nur an externen Grenzen
-
-### Befehle
-
 ```bash
 # Dev-Abhängigkeiten installieren
 uv sync --group dev
@@ -153,10 +148,10 @@ uv run pytest
 uv run ruff check
 
 # Typprüfung ausführen
-uv run ty check src
+uv run ty check evlampiy tests
 
-# Mit Coverage ausführen
-uv run pytest --cov=src --cov-fail-under=85
+# Alles, was CI prüft, in derselben Reihenfolge (Tests inklusive Coverage-Schwelle)
+scripts/gate.sh
 ```
 
 ## Dokumentation
@@ -164,11 +159,13 @@ uv run pytest --cov=src --cov-fail-under=85
 | Dokument | Beschreibung |
 |----------|-------------|
 | [Architektur](ARCHITECTURE.md) | Verzeichnisstruktur, Datenfluss, technische Entscheidungen, Limits (English) |
-| [Deployment](DEPLOY.md) | Docker, nginx, Health Checks, Logs |
+| [Glossar](GLOSSARY.md) | Die Begriffe des Projekts: Chats, Stufen, Tokens, die Maske, der Vault (English) |
+| [Deployment](DEPLOY.md) | Docker, die Release-Pipeline, Datenbank-Dumps und Rollback, Health Checks, Logs |
+| [Entscheidungen](adr/README.md) | Geltende Architekturentscheidungen, jede mit ihrem Grund (English) |
 | [Administration](ADMIN.md) | Admin-Befehle, Rollen, Alarme, Monitoring |
 | [WhatsApp-Einrichtung](WHATSAPP_SETUP.md) | WhatsApp Business API Konfiguration |
 | [Kontoverknüpfung](WHATSAPP_LINKING.md) | Telegram ↔ WhatsApp Verknüpfung |
-| [GitHub Token](GITHUB_TOKEN_SETUP.md) | Manuelle GitHub-Token-Einrichtung für Obsidian |
+| [GitHub OAuth App](GITHUB_TOKEN_SETUP.md) | Die OAuth App hinter `GITHUB_CLIENT_ID` für die Obsidian-Anbindung |
 
 ## Lizenz
 

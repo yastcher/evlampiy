@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, patch
 
-from src.credits import (
+from evlampiy.credits import (
     DeductResult,
     add_credits,
     admin_add_credits,
@@ -19,9 +19,9 @@ from src.credits import (
     is_vip_user,
     record_user_usage,
 )
-from src.dto import UsedTrial, UserCredits, UserMonthlyUsage, UserTier
-from src.mongo import add_user_role, remove_user_role
-from src.wit_tracking import get_wit_usage_this_month, increment_wit_usage, is_wit_available
+from evlampiy.dto import UsedTrial, UserCredits, UserMonthlyUsage, UserTier
+from evlampiy.mongo import add_user_role, remove_user_role
+from evlampiy.wit_tracking import get_wit_usage_this_month, increment_wit_usage, is_wit_available
 
 
 class TestTokenCost:
@@ -101,7 +101,7 @@ class TestCreditFlow:
         assert ok is False
         assert msg == "insufficient_credits"
 
-    @patch("src.credits.settings")
+    @patch("evlampiy.credits.settings")
     async def test_vip_always_can_perform(self, mock_settings):
         """VIP users can always perform operations."""
         vip_id = "42"
@@ -219,7 +219,7 @@ class TestLazyReset:
         assert free == 0
 
         # Simulate month change
-        with patch("src.credits.current_month_key", return_value="2099-01"):
+        with patch("evlampiy.credits.current_month_key", return_value="2099-01"):
             free, _ = await get_credits(user_id)
             assert free == 10
 
@@ -236,7 +236,7 @@ class TestLazyReset:
         user_id = "rollover_deduct_user"
         await deduct_credits(user_id, 10)  # current month: free 10 -> 0
 
-        with patch("src.credits.current_month_key", return_value="2099-07"):
+        with patch("evlampiy.credits.current_month_key", return_value="2099-07"):
             result = await deduct_credits(user_id, 3)
             assert result.free_used == 3
             assert result.purchased_used == 0
@@ -300,7 +300,7 @@ class TestRecordUserUsage:
 
 
 class TestWitUsageLimits:
-    @patch("src.wit_tracking.settings")
+    @patch("evlampiy.wit_tracking.settings")
     async def test_complete_wit_usage_flow(self, mock_settings):
         """Test complete Wit.ai usage tracking flow."""
         mock_settings.wit_free_monthly_limit = 3
@@ -352,7 +352,7 @@ class TestGrantInitialCredits:
         await UsedTrial(user_hash=hash_user_id(user_id)).insert()
 
         # Force our trial lookup to miss it, so we attempt our own insert -> DuplicateKeyError.
-        with patch("src.credits.UsedTrial.find_one", AsyncMock(return_value=None)):
+        with patch("evlampiy.credits.UsedTrial.find_one", AsyncMock(return_value=None)):
             granted = await grant_initial_credits_if_eligible(user_id)
 
         assert granted is False

@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiogram.exceptions import TelegramNetworkError
 
-from src import const
-from src.selftest import _test_config, _test_localization, run_selftest
+from evlampiy import const
+from evlampiy.selftest import _test_config, _test_localization, run_selftest
 
 SAMPLE_AUDIO = b"fake_ogg_audio_data"
 SAMPLE_DURATION = 5
@@ -17,7 +17,7 @@ ADMIN_ID = "12345"
 
 async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("привет мир", 5, 1)
@@ -38,7 +38,7 @@ async def test_sends_voice_and_transcription_to_admin(mock_bot, _patch_settings,
 
 async def test_sends_error_on_empty_transcription(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("", 5, 0)
@@ -50,7 +50,7 @@ async def test_sends_error_on_empty_transcription(mock_bot, _patch_settings, moc
 
 async def test_sends_error_on_transcription_exception(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.side_effect = RuntimeError("connection timeout")
@@ -62,7 +62,7 @@ async def test_sends_error_on_transcription_exception(mock_bot, _patch_settings,
 
 async def test_uses_russian_language(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("текст", 3, 1)
@@ -76,7 +76,7 @@ async def test_uses_russian_language(mock_bot, _patch_settings, mock_selftest_cl
 async def test_does_not_crash_on_send_failure(mock_bot, _patch_settings, mock_selftest_cleanup, caplog):
     mock_bot.send_message.side_effect = RuntimeError("chat not found")
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("text", 2, 1)
@@ -88,7 +88,7 @@ async def test_does_not_crash_on_send_failure(mock_bot, _patch_settings, mock_se
 async def test_voice_upload_failure_still_sends_report(mock_bot, _patch_settings, mock_selftest_cleanup):
     mock_bot.send_voice.side_effect = TelegramNetworkError(method=MagicMock(), message="timeout")
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("text", 2, 1)
@@ -98,7 +98,7 @@ async def test_voice_upload_failure_still_sends_report(mock_bot, _patch_settings
 
 
 async def test_skips_when_no_admins(mock_bot):
-    with patch("src.selftest.settings") as mock_settings:
+    with patch("evlampiy.selftest.settings") as mock_settings:
         mock_settings.admin_user_ids = set()
         await run_selftest(mock_bot)
 
@@ -107,7 +107,7 @@ async def test_skips_when_no_admins(mock_bot):
 
 
 async def test_skips_when_sample_file_missing(mock_bot, caplog):
-    with patch("src.selftest.settings") as mock_settings:
+    with patch("evlampiy.selftest.settings") as mock_settings:
         mock_settings.admin_user_ids = {ADMIN_ID}
         mock_settings.selftest_sample_path = "/nonexistent/path/audio.ogg"
         await run_selftest(mock_bot)
@@ -118,8 +118,8 @@ async def test_skips_when_sample_file_missing(mock_bot, caplog):
 
 async def test_message_contains_version(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest._get_version", return_value="0.7.0"),
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest._get_version", return_value="0.7.0"),
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("text", 2, 1)
@@ -131,7 +131,7 @@ async def test_message_contains_version(mock_bot, _patch_settings, mock_selftest
 
 async def test_groq_skipped_when_not_configured(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("текст", 3, 1)
@@ -145,7 +145,7 @@ async def test_groq_skipped_when_not_configured(mock_bot, _patch_settings, mock_
 async def test_groq_success(mock_bot, _patch_settings, mock_selftest_cleanup):
     _patch_settings.groq_api_key = "test-key"
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("привет мир", 5, 1)
@@ -160,7 +160,7 @@ async def test_groq_success(mock_bot, _patch_settings, mock_selftest_cleanup):
 async def test_groq_error_wit_ok(mock_bot, _patch_settings, mock_selftest_cleanup):
     _patch_settings.groq_api_key = "test-key"
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.side_effect = [("привет мир", 5, 1), RuntimeError("groq timeout")]
@@ -174,7 +174,7 @@ async def test_groq_error_wit_ok(mock_bot, _patch_settings, mock_selftest_cleanu
 async def test_sends_to_multiple_admins(mock_bot, _patch_settings, mock_selftest_cleanup):
     _patch_settings.admin_user_ids = {"12345", "67890"}
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(),
     ):
         mock_transcribe.return_value = ("text", 2, 1)
@@ -191,7 +191,7 @@ async def test_sends_to_multiple_admins(mock_bot, _patch_settings, mock_selftest
 
 async def test_cleanup_success(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup("я сегодня ходил в магазин и купил молоко"),
     ):
         mock_transcribe.return_value = ("text", 2, 1)
@@ -204,9 +204,9 @@ async def test_cleanup_success(mock_bot, _patch_settings, mock_selftest_cleanup)
 
 async def test_cleanup_error(mock_bot, _patch_settings):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         patch(
-            "src.selftest.cleanup_text",
+            "evlampiy.selftest.cleanup_text",
             new_callable=AsyncMock,
             side_effect=RuntimeError("API error"),
         ),
@@ -220,7 +220,7 @@ async def test_cleanup_error(mock_bot, _patch_settings):
 
 async def test_cleanup_empty_response(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup(None),
     ):
         mock_transcribe.return_value = ("text", 2, 1)
@@ -243,7 +243,7 @@ def test_localization_missing_key():
     fake_translates = {
         "test_key": {"en": "Test", "ru": "Тест"},  # missing es, de
     }
-    with patch("src.selftest.translates", fake_translates):
+    with patch("evlampiy.selftest.translates", fake_translates):
         text, error = _test_localization()
     assert text == ""
     assert error is not None
@@ -255,7 +255,7 @@ def test_localization_missing_key():
 
 
 def test_config_all_ok():
-    with patch("src.selftest.settings") as mock_settings:
+    with patch("evlampiy.selftest.settings") as mock_settings:
         mock_settings.gpt_provider = "deepseek"
         mock_settings.categorization_provider = "deepseek"
         mock_settings.deepseek_api_key = "key-123"
@@ -267,7 +267,7 @@ def test_config_all_ok():
 
 
 def test_config_missing_provider_key():
-    with patch("src.selftest.settings") as mock_settings:
+    with patch("evlampiy.selftest.settings") as mock_settings:
         mock_settings.gpt_provider = "deepseek"
         mock_settings.categorization_provider = "deepseek"
         mock_settings.deepseek_api_key = ""
@@ -280,7 +280,7 @@ def test_config_missing_provider_key():
 
 
 def test_config_missing_wit_token():
-    with patch("src.selftest.settings") as mock_settings:
+    with patch("evlampiy.selftest.settings") as mock_settings:
         mock_settings.gpt_provider = "deepseek"
         mock_settings.categorization_provider = "deepseek"
         mock_settings.deepseek_api_key = "key-123"
@@ -293,7 +293,7 @@ def test_config_missing_wit_token():
 
 
 def test_config_multiple_warnings():
-    with patch("src.selftest.settings") as mock_settings:
+    with patch("evlampiy.selftest.settings") as mock_settings:
         mock_settings.gpt_provider = "gemini"
         mock_settings.categorization_provider = "deepseek"
         mock_settings.gemini_api_key = ""
@@ -313,7 +313,7 @@ def test_config_multiple_warnings():
 
 async def test_message_has_all_sections(mock_bot, _patch_settings, mock_selftest_cleanup):
     with (
-        patch("src.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
+        patch("evlampiy.selftest.transcribe_audio", new_callable=AsyncMock) as mock_transcribe,
         mock_selftest_cleanup("cleaned"),
     ):
         mock_transcribe.return_value = ("text", 2, 1)

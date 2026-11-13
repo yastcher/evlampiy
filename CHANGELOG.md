@@ -1,3 +1,78 @@
+## [Unreleased]
+
+<!-- New entries go here, through scripts/changelog_add.py — never under a released version. -->
+<!-- Subsections, in order: Added / Changed / Fixed / Removed / Docs. -->
+
+### Added
+
+- `scripts/gate.sh` runs every CI check locally, in CI's order; a test keeps the two in step
+- A runaway test can no longer take the machine down: the gate caps the tests at 2 GB without swap, and a hung test fails after 2 minutes
+- Hypothesis fuzzes the WhatsApp webhook: unsigned and forged updates never reach the handlers
+- SAST: Semgrep in the gate and CI, CodeQL in CI with its findings in the Security tab
+- The gate and CI audit every pin of `uv.lock` for known vulnerabilities (pip-audit)
+- `scripts/pre_release_qa.sh` runs the slow checks before a release, the gate and a CRAP limit for now; `release.sh` tags only a tree it passed
+- Pre-release QA runs mutmut over the PII mask, billing, account linking and categorization; survivors and untested mutants only go down
+- Pre-release QA starts the release image with MongoDB in a stack of its own and passes it only healthy and with no restarts a minute later
+- `deploy/` dumps the database before a release, keeps the running release's compose file, and puts that release back when the new one does not hold
+- Pull requests and releases build the image and scan its OS packages with Trivy; a fixable HIGH or CRITICAL stops a release
+
+### Changed
+
+- WhatsApp works through the linked Telegram account: its tokens, settings, vault and block; an unlinked number is told how to link
+- WhatsApp users who hide their number behind a username get a reply that such accounts are not supported yet
+- Releases are cut from `main` by `scripts/release.sh patch|minor|major` and ship as `vX.Y.Z` tags
+- CHANGELOG entries go under `[Unreleased]` via `scripts/changelog_add.py`; the release picks the version
+- The package is `evlampiy` instead of `src`: run `python -m evlampiy.main`
+- Python 3.14 is pinned in `.python-version`
+- All dependencies updated (pywa 4, FastAPI 0.162, Starlette 1, aiogram 3.31, beanie 2.2)
+- CI lives in `.github/workflows/ci.yml` with pinned actions, a format check, shellcheck and a coverage floor that only goes up
+- Tests run against a real MongoDB 8.0.3 (a testcontainers container locally, a service container in CI) instead of mongomock
+- MongoDB is reached through pymongo's async client instead of the deprecated motor
+- Every GitHub Action is pinned to a commit
+- The containers the tests and pre-release QA start have memory caps of their own, swap included
+- ty checks the tests as well as the package, in the gate and CI
+- The GPT chat's provider formats moved from `ai_chat.py` to `ai/chat_formats.py`, apart from the calls
+- A `vX.Y.Z` tag is what deploys: CI checks it, builds and pushes the image, rolls it out through `deploy/` and publishes a GitHub Release; the `release` branch no longer deploys
+
+### Fixed
+
+- Phone numbers stay out of the logs: linking, lockouts, WhatsApp replies and saved notes are logged by the Telegram user or the note
+- A blocked user can no longer use the GPT chat or `/categorize`, as the admin guide always said
+- The GPT chat no longer stops at a model's preamble when the same reply carries a tool call
+- The GPT chat reaches Gemini and Anthropic through `LLM_API_BASE`, as cleanup and sorting already did
+- The GPT chat masks names, phones and emails before they leave for a provider, as cleanup and sorting already did
+- A tool call whose arguments a provider cut short no longer fails the next GPT chat turn on Gemini or Anthropic
+- MongoDB comes back on its own after a crash or a reboot, as the bot already did
+- MongoDB gets the 64000 open files it asks for: at Docker's default 1024 it aborted once its collections and indexes outgrew the limit
+- The WhatsApp webhook stays off without `WHATSAPP_APP_SECRET`, where pywa accepted unsigned, forgeable updates; `/health` reports its state
+- Services-isolation architecture tests matched no module and always passed; now they catch violations
+- Tests replace `asyncio.sleep` only where the code under test looks it up: a process-wide patch ran pymongo's heartbeat hot until a run took 9 GB
+- The HTTP app no longer serves `/docs`, `/redoc` and `/openapi.json` to anyone the proxy lets through
+- The Gemini review workflow no longer splices the pull request's base branch into a shell command
+- Local image builds no longer copy `tmp/`, `mutants/` and `.hypothesis/` into the image
+- The bot's port is published on the host's loopback only: Docker opened it to the internet past the firewall; the WhatsApp webhook comes in through the TLS proxy
+- Tests run on `Settings`' defaults, never the developer's `.env` or shell keys; a real vendor call needs `LIVE_VENDOR_TESTS=1`
+- `/stats` and the revenue alerts count the Telegram Stars paid, not the tokens they bought; Stars are recorded from this release on
+- A revenue milestone is announced on any payment that crosses it, not only on the month's first payment
+- WhatsApp transcriptions count toward the Wit.ai monthly limit and stop at it, as Telegram's do
+- Pre-release QA runs a mutant that died or timed out beside others again, alone, and starts mutation testing only with as many workers as the free memory fits
+- The deploy trusts only the server's host key from the `SSH_KNOWN_HOSTS` secret, not whatever key answers
+- The image installs the Debian security fixes its base image has not been rebuilt with yet; Trivy found two HIGH zlib CVEs
+- Pre-release QA stops when the mutants' MongoDB dies instead of counting every later timeout as killed, and that MongoDB no longer outgrows its memory cap
+
+### Removed
+
+- The Codecov upload from CI: it had no token and nothing read it
+- cosmic-ray, replaced by mutmut
+
+### Docs
+
+- `docs/GLOSSARY.md` names the project's own things, one word for each
+- The docs describe the bot the code runs: provider chains, tiers, retries, the self-test, the event loop; the category vocabulary serves categorization only
+- `GITHUB_TOKEN_SETUP.md` explains the OAuth App behind `GITHUB_CLIENT_ID` instead of a token the bot never read
+- `DEPLOY.md` describes the tag release, the database dumps and the rollback, with a diagram of the pipeline
+- The READMEs draw a voice message's path, list the engineering behind the bot and keep the configuration to the minimum, `.env.example` holding the rest
+
 ## [0.9.7] — 2026-07-15
 
 ### Added

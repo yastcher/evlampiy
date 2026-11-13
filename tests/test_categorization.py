@@ -1,7 +1,7 @@
 import json
 from unittest.mock import AsyncMock, patch
 
-from src.categorization import (
+from evlampiy.categorization import (
     categorize_all_inbox,
     categorize_note,
     classify_note,
@@ -10,7 +10,7 @@ from src.categorization import (
     move_github_file,
     update_vocabulary_in_repo,
 )
-from src.github_api import GitHubRepo
+from evlampiy.github_api import GitHubRepo
 
 _TEST_REPO = GitHubRepo(token="token", owner="owner", repo="repo")
 
@@ -28,7 +28,7 @@ class TestGetExistingCategories:
             {"name": "README.md", "type": "file"},
         ]
 
-        with patch("src.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)):
+        with patch("evlampiy.categorization.get_repo_contents", AsyncMock(return_value=mock_contents)):
             result = await get_existing_categories(_TEST_REPO)
 
         assert "inbox" not in result
@@ -39,7 +39,7 @@ class TestGetExistingCategories:
 
     async def test_returns_empty_list_on_empty_repo(self):
         """Returns empty list when no categories exist."""
-        with patch("src.categorization.get_repo_contents", AsyncMock(return_value=[])):
+        with patch("evlampiy.categorization.get_repo_contents", AsyncMock(return_value=[])):
             result = await get_existing_categories(_TEST_REPO)
 
         assert result == []
@@ -52,7 +52,7 @@ class TestGetVocabularyFromRepo:
         """Returns vocabulary dict when file exists and is valid JSON."""
         vocab = {"work": ["project", "deadline"], "sports": ["training"]}
         with patch(
-            "src.categorization.get_github_file",
+            "evlampiy.categorization.get_github_file",
             AsyncMock(return_value=(json.dumps(vocab), "sha123")),
         ):
             result = await get_vocabulary_from_repo(_TEST_REPO)
@@ -60,14 +60,14 @@ class TestGetVocabularyFromRepo:
 
     async def test_returns_empty_dict_when_file_missing(self):
         """Returns {} when vocabulary.json does not exist."""
-        with patch("src.categorization.get_github_file", AsyncMock(return_value=None)):
+        with patch("evlampiy.categorization.get_github_file", AsyncMock(return_value=None)):
             result = await get_vocabulary_from_repo(_TEST_REPO)
         assert result == {}
 
     async def test_returns_empty_dict_on_invalid_json(self):
         """Returns {} when vocabulary.json is not valid JSON."""
         with patch(
-            "src.categorization.get_github_file",
+            "evlampiy.categorization.get_github_file",
             AsyncMock(return_value=("not valid json {{{", "sha123")),
         ):
             result = await get_vocabulary_from_repo(_TEST_REPO)
@@ -88,10 +88,10 @@ class TestUpdateVocabularyInRepo:
 
         with (
             patch(
-                "src.categorization.get_github_file",
+                "evlampiy.categorization.get_github_file",
                 AsyncMock(return_value=(json.dumps(existing), "sha")),
             ),
-            patch("src.categorization.put_github_file", side_effect=fake_put),
+            patch("evlampiy.categorization.put_github_file", side_effect=fake_put),
         ):
             await update_vocabulary_in_repo(_TEST_REPO, "work", ["deadline"])
 
@@ -110,10 +110,10 @@ class TestUpdateVocabularyInRepo:
 
         with (
             patch(
-                "src.categorization.get_github_file",
+                "evlampiy.categorization.get_github_file",
                 AsyncMock(return_value=(json.dumps(existing), "sha")),
             ),
-            patch("src.categorization.put_github_file", side_effect=fake_put),
+            patch("evlampiy.categorization.put_github_file", side_effect=fake_put),
         ):
             await update_vocabulary_in_repo(_TEST_REPO, "work", ["project", "sprint"])
 
@@ -132,10 +132,10 @@ class TestUpdateVocabularyInRepo:
 
         with (
             patch(
-                "src.categorization.get_github_file",
+                "evlampiy.categorization.get_github_file",
                 AsyncMock(return_value=(json.dumps(existing), "sha")),
             ),
-            patch("src.categorization.put_github_file", side_effect=fake_put),
+            patch("evlampiy.categorization.put_github_file", side_effect=fake_put),
         ):
             await update_vocabulary_in_repo(_TEST_REPO, "work", ["new1", "new2", "new3", "new4"])
 
@@ -150,8 +150,8 @@ class TestUpdateVocabularyInRepo:
             return True
 
         with (
-            patch("src.categorization.get_github_file", AsyncMock(return_value=None)),
-            patch("src.categorization.put_github_file", side_effect=fake_put),
+            patch("evlampiy.categorization.get_github_file", AsyncMock(return_value=None)),
+            patch("evlampiy.categorization.put_github_file", side_effect=fake_put),
         ):
             await update_vocabulary_in_repo(_TEST_REPO, "new_category", ["word1", "word2"])
 
@@ -165,7 +165,7 @@ class TestClassifyNote:
     async def test_returns_existing_category_and_keywords(self):
         """Returns (category, keywords) tuple from JSON response."""
         response = json.dumps({"category": "work", "keywords": ["project", "meeting"]})
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, keywords = await classify_note("Meeting notes about project X", ["work", "personal"])
 
         assert category == "work"
@@ -174,7 +174,7 @@ class TestClassifyNote:
     async def test_suggests_new_category(self):
         """Suggests new category name when no existing match."""
         response = json.dumps({"category": "health_fitness", "keywords": ["gym", "workout"]})
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, keywords = await classify_note("Gym workout plan", ["work", "personal"])
 
         assert category == "health_fitness"
@@ -182,7 +182,7 @@ class TestClassifyNote:
 
     async def test_returns_none_tuple_on_ai_failure(self):
         """Returns (None, []) when AI provider returns None."""
-        with patch("src.categorization.classify_text", AsyncMock(return_value=None)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=None)):
             category, keywords = await classify_note("Some text", ["work"])
 
         assert category is None
@@ -191,14 +191,14 @@ class TestClassifyNote:
     async def test_normalizes_category_name(self):
         """Converts spaces to underscores and lowercases category from JSON."""
         response = json.dumps({"category": "Health Fitness", "keywords": []})
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, _keywords = await classify_note("Workout notes", [])
 
         assert category == "health_fitness"
 
     async def test_fallback_on_plain_text_response(self):
         """Falls back to plain text parsing when LLM returns non-JSON."""
-        with patch("src.categorization.classify_text", AsyncMock(return_value="work")):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value="work")):
             category, keywords = await classify_note("Meeting notes", ["work"])
 
         assert category == "work"
@@ -213,7 +213,7 @@ class TestClassifyNote:
             captured.append(prompt)
             return json.dumps({"category": "sports", "keywords": []})
 
-        with patch("src.categorization.classify_text", side_effect=capture_prompt):
+        with patch("evlampiy.categorization.classify_text", side_effect=capture_prompt):
             await classify_note("Training session", ["sports"], vocabulary=vocabulary)
 
         assert len(captured) == 1
@@ -223,7 +223,7 @@ class TestClassifyNote:
     async def test_keywords_capped_at_5(self):
         """Only the first 5 keywords from LLM response are kept."""
         response = json.dumps({"category": "work", "keywords": ["a", "b", "c", "d", "e", "f", "g"]})
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             _, keywords = await classify_note("Some note", [])
 
         assert len(keywords) == 5
@@ -231,7 +231,7 @@ class TestClassifyNote:
     async def test_strips_control_chars_from_category(self):
         """A newline inside the category is removed (would crash httpx with InvalidURL in the path)."""
         response = json.dumps({"category": "work\nnotes", "keywords": []})
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, _keywords = await classify_note("Some note", [])
 
         assert category == "worknotes"
@@ -239,14 +239,14 @@ class TestClassifyNote:
     async def test_rejects_path_traversal_in_category(self):
         """Path separators and leading dots are stripped so the category cannot escape the base dir."""
         response = json.dumps({"category": "../../secret", "keywords": []})
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, _keywords = await classify_note("Some note", [])
 
         assert category == "secret"
 
     async def test_fallback_strips_control_chars(self):
         """The plain-text fallback branch also sanitizes control characters."""
-        with patch("src.categorization.classify_text", AsyncMock(return_value="work\nnotes")):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value="work\nnotes")):
             category, _keywords = await classify_note("Some note", [])
 
         assert category == "worknotes"
@@ -254,7 +254,7 @@ class TestClassifyNote:
     async def test_preserves_cyrillic_category(self):
         """Non-ASCII category names (e.g. Russian) survive normalization (GitHub paths are UTF-8)."""
         response = json.dumps({"category": "Работа", "keywords": []})
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, _keywords = await classify_note("Заметка", [])
 
         assert category == "работа"
@@ -262,7 +262,7 @@ class TestClassifyNote:
     async def test_parses_fenced_json(self):
         """LLM replies wrapped in a ```json code fence are parsed, not slugified into a folder name."""
         response = '```json\n{"category": "creative_ideas", "keywords": ["рассказ", "роман"]}\n```'
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, keywords = await classify_note("A sci-fi story idea", [])
 
         assert category == "creative_ideas"
@@ -271,7 +271,7 @@ class TestClassifyNote:
     async def test_parses_json_with_surrounding_prose(self):
         """JSON embedded in explanatory prose is still extracted."""
         response = 'Sure, here it is: {"category": "philosophy", "keywords": ["наука"]} Done.'
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, keywords = await classify_note("On knowledge", [])
 
         assert category == "philosophy"
@@ -280,7 +280,7 @@ class TestClassifyNote:
     async def test_rejects_long_unparseable_response_as_category(self):
         """A long non-JSON reply is not turned into a category (would create a garbage folder)."""
         response = "I am sorry, but I cannot categorize this note without more context about its purpose."
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, keywords = await classify_note("???", [])
 
         assert category is None
@@ -289,7 +289,7 @@ class TestClassifyNote:
     async def test_rejects_braced_unparseable_response_as_category(self):
         """A malformed JSON object is rejected rather than slugified into a folder name."""
         response = '{"category": "creative_ideas" "keywords": []}'
-        with patch("src.categorization.classify_text", AsyncMock(return_value=response)):
+        with patch("evlampiy.categorization.classify_text", AsyncMock(return_value=response)):
             category, keywords = await classify_note("???", [])
 
         assert category is None
@@ -303,11 +303,11 @@ class TestMoveGithubFile:
         """File is moved by copying and deleting."""
         with (
             patch(
-                "src.categorization.get_github_file",
+                "evlampiy.categorization.get_github_file",
                 AsyncMock(return_value=("content", "sha123")),
             ),
-            patch("src.categorization.put_github_file", AsyncMock(return_value=True)),
-            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.put_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.delete_github_file", AsyncMock(return_value=True)),
         ):
             result = await move_github_file(_TEST_REPO, "evlampiy/inbox/note.md", "evlampiy/work/note.md")
 
@@ -315,7 +315,7 @@ class TestMoveGithubFile:
 
     async def test_returns_false_when_file_not_found(self):
         """Returns False when source file doesn't exist."""
-        with patch("src.categorization.get_github_file", AsyncMock(return_value=None)):
+        with patch("evlampiy.categorization.get_github_file", AsyncMock(return_value=None)):
             result = await move_github_file(_TEST_REPO, "evlampiy/inbox/note.md", "evlampiy/work/note.md")
 
         assert result is False
@@ -324,10 +324,10 @@ class TestMoveGithubFile:
         """Returns False when put_github_file fails."""
         with (
             patch(
-                "src.categorization.get_github_file",
+                "evlampiy.categorization.get_github_file",
                 AsyncMock(return_value=("content", "sha123")),
             ),
-            patch("src.categorization.put_github_file", AsyncMock(return_value=False)),
+            patch("evlampiy.categorization.put_github_file", AsyncMock(return_value=False)),
         ):
             result = await move_github_file(_TEST_REPO, "evlampiy/inbox/note.md", "evlampiy/work/note.md")
 
@@ -362,12 +362,12 @@ class TestCategorizeNote:
             return True
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
-            patch("src.categorization.put_github_file", side_effect=fake_put),
-            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.put_github_file", side_effect=fake_put),
+            patch("evlampiy.categorization.delete_github_file", AsyncMock(return_value=True)),
             patch(
-                "src.categorization.classify_text",
+                "evlampiy.categorization.classify_text",
                 AsyncMock(return_value=json.dumps({"category": "work", "keywords": ["meeting", "project"]})),
             ),
         ):
@@ -403,12 +403,12 @@ class TestCategorizeNote:
             return True
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
-            patch("src.categorization.put_github_file", side_effect=fake_put),
-            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.put_github_file", side_effect=fake_put),
+            patch("evlampiy.categorization.delete_github_file", AsyncMock(return_value=True)),
             patch(
-                "src.categorization.classify_text",
+                "evlampiy.categorization.classify_text",
                 AsyncMock(return_value=json.dumps({"category": "work\nnotes", "keywords": []})),
             ),
         ):
@@ -437,12 +437,12 @@ class TestCategorizeNote:
             return True
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
-            patch("src.categorization.put_github_file", side_effect=fake_put),
-            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.put_github_file", side_effect=fake_put),
+            patch("evlampiy.categorization.delete_github_file", AsyncMock(return_value=True)),
             patch(
-                "src.categorization.classify_text",
+                "evlampiy.categorization.classify_text",
                 AsyncMock(return_value=json.dumps({"category": "work", "keywords": []})),
             ),
         ):
@@ -472,12 +472,12 @@ class TestCategorizeNote:
             return True
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
-            patch("src.categorization.put_github_file", side_effect=fake_put),
-            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.put_github_file", side_effect=fake_put),
+            patch("evlampiy.categorization.delete_github_file", AsyncMock(return_value=True)),
             patch(
-                "src.categorization.classify_text",
+                "evlampiy.categorization.classify_text",
                 AsyncMock(return_value=json.dumps({"category": "trash", "keywords": ["asdfgh"]})),
             ),
         ):
@@ -497,9 +497,9 @@ class TestCategorizeNote:
             return None
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
-            patch("src.categorization.classify_text", AsyncMock(return_value=None)),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.classify_text", AsyncMock(return_value=None)),
         ):
             result = await categorize_note(_TEST_REPO, "note.md", "Some content")
 
@@ -532,12 +532,12 @@ class TestCategorizeAllInbox:
             return None
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
-            patch("src.categorization.put_github_file", AsyncMock(return_value=True)),
-            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.put_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.delete_github_file", AsyncMock(return_value=True)),
             patch(
-                "src.categorization.classify_text",
+                "evlampiy.categorization.classify_text",
                 AsyncMock(return_value=json.dumps({"category": "work", "keywords": []})),
             ),
         ):
@@ -569,11 +569,11 @@ class TestCategorizeAllInbox:
             return None
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
-            patch("src.categorization.put_github_file", AsyncMock(return_value=True)),
-            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
-            patch("src.categorization.classify_text", side_effect=fake_classify),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.put_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.classify_text", side_effect=fake_classify),
         ):
             await categorize_all_inbox(_TEST_REPO)
 
@@ -594,8 +594,8 @@ class TestCategorizeAllInbox:
             return None
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
         ):
             result = await categorize_all_inbox(_TEST_REPO)
 
@@ -630,11 +630,11 @@ class TestCategorizeAllInbox:
             return None
 
         with (
-            patch("src.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
-            patch("src.categorization.get_github_file", side_effect=fake_get_github_file),
-            patch("src.categorization.put_github_file", AsyncMock(return_value=True)),
-            patch("src.categorization.delete_github_file", AsyncMock(return_value=True)),
-            patch("src.categorization.classify_text", side_effect=fake_classify),
+            patch("evlampiy.categorization.get_repo_contents", side_effect=fake_get_repo_contents),
+            patch("evlampiy.categorization.get_github_file", side_effect=fake_get_github_file),
+            patch("evlampiy.categorization.put_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.delete_github_file", AsyncMock(return_value=True)),
+            patch("evlampiy.categorization.classify_text", side_effect=fake_classify),
         ):
             result = await categorize_all_inbox(_TEST_REPO)
 

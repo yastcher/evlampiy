@@ -5,6 +5,12 @@ services:
     # SIGSEGV ~30s after startup on hosts with kernel 6.x + glibc 2.39+.
     # Verified working: 8.0.3, 8.0.4. Re-test before bumping past 8.0.4.
     image: mongo:8.0.3
+    # Docker gives a container 1024 open files; WiredTiger keeps one per collection and
+    # index, and at the limit mongod aborts (EMFILE). 64000 is what MongoDB asks for.
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
     volumes:
       - ../mongo_data:/data/db
     healthcheck:
@@ -19,6 +25,10 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ../.env
+    environment:
+      # No Docker in here for the tests to start their own MongoDB: they use this one,
+      # in a database of their own (tests/fixtures.py).
+      TEST_MONGO_URI: mongodb://mongodb:27017/
     command: sleep infinity
     ports:
       - "8000:8000"

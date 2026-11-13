@@ -1,0 +1,369 @@
+"""Fixtures for the tests of the repository's own scripts: release, changelog and gate."""
+
+import os
+import pathlib
+import re
+import shutil
+import subprocess
+
+import pytest
+
+from scripts import prepare_release
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+_RELEASE_PYPROJECT = """\
+[project]
+name = "evlampiy"
+version = "1.2.3"
+dependencies = ["click==1.2.3"]
+
+[tool.example]
+version = "9.9.9"
+"""
+
+# A dependency on the project's own number: an edit anchored on the version alone would hit it.
+_RELEASE_LOCK = """\
+version = 1
+requires-python = ">=3.14"
+
+[[package]]
+name = "click"
+version = "1.2.3"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "evlampiy"
+version = "1.2.3"
+source = { virtual = "." }
+"""
+
+# The scaffold is the real one: closing the section drops exactly those lines.
+_RELEASE_CHANGELOG = (
+    "## [Unreleased]\n\n"
+    + "\n".join(prepare_release.SCAFFOLD)
+    + "\n\n### Fixed\n\n- The next fix.\n\n## [1.2.3] — 2026-10-05\n\n### Fixed\n\n- The fix.\n"
+)
+
+# Git for the release tests, deaf to the developer's own config (signing, hooks, templates).
+_GIT_ENV = {
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_AUTHOR_NAME": "Release Test",
+    "GIT_AUTHOR_EMAIL": "release@example.com",
+    "GIT_COMMITTER_NAME": "Release Test",
+    "GIT_COMMITTER_EMAIL": "release@example.com",
+}
+
+
+def git(cwd: pathlib.Path, *args: str) -> str:
+    """Run git in `cwd` with the isolated config; return stdout."""
+    result = subprocess.run(
+        ["git", *args], cwd=cwd, env=os.environ | _GIT_ENV, capture_output=True, text=True, check=True
+    )
+    return result.stdout
+
+
+@pytest.fixture
+def release_tree(tmp_path):
+    """A project tree on version 1.2.3 with one entry waiting under [Unreleased]."""
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    (tree / "pyproject.toml").write_text(_RELEASE_PYPROJECT)
+    (tree / "uv.lock").write_text(_RELEASE_LOCK)
+    (tree / "CHANGELOG.md").write_text(_RELEASE_CHANGELOG)
+    return tree
+
+
+@pytest.fixture
+def release_repo(tmp_path, release_tree):
+    """`release_tree` as a git repository on main, pushed to a bare origin, with the real
+    release scripts in it and a pre-release stamp for its tree. Returns (work tree, origin,
+    run) where run(*args, **env) runs release.sh."""
+    origin = tmp_path / "origin.git"
+    git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
+    scripts = release_tree / "scripts"
+    scripts.mkdir()
+    for name in ("release.sh", "prepare_release.py", "release_from_tag.py"):
+        shutil.copy2(REPO_ROOT / "scripts" / name, scripts / name)
+    git(release_tree, "init", "-q", "-b", "main")
+    git(release_tree, "add", "-A")
+    git(release_tree, "commit", "-q", "-m", "init")
+    git(release_tree, "remote", "add", "origin", str(origin))
+    git(release_tree, "push", "-q", "-u", "origin", "main")
+    (release_tree / ".git" / "pre_release_qa.ok").write_text(git(release_tree, "rev-parse", "HEAD^{tree}"))
+
+    def run(*args: str, **env: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [scripts / "release.sh", *args],
+            cwd=release_tree,
+            env=os.environ | _GIT_ENV | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+
+    return release_tree, origin, run
+
+
+@pytest.fixture
+def run_gate(tmp_path):
+    """Run a copy of the real scripts/gate.sh with every command it calls stubbed on PATH.
+
+    Returns a callable: `run_gate(*args, fail="uv run pytest")` makes the `fail` command
+    exit 1 and gives back the finished process and every command the gate invoked, in
+    order. The gate is called from the real repository root, whose scripts/ holds more
+    than the copy's: a glob expanded there instead of in the gate's own tree shows up in
+    the logged shellcheck command.
+    """
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    gate = scripts / "gate.sh"
+    shutil.copy2(REPO_ROOT / "scripts" / "gate.sh", gate)
+    stub = (
+        "#!/usr/bin/env bash\n"
+        'printf "%s %s\\n" "${0##*/}" "$*" >> "$GATE_LOG"\n'
+        'if [ "${0##*/} $*" = "$GATE_FAIL" ]; then exit 1; fi\n'
+    )
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for name in ("uv", "uvx", "shellcheck", "systemd-run"):
+        (stubs / name).write_text(stub)
+        (stubs / name).chmod(0o755)
+    log = tmp_path / "commands.log"
+
+    def run(*args: str, fail: str = "") -> tuple[subprocess.CompletedProcess[str], list[str]]:
+        env = {"PATH": f"{stubs}:{os.environ['PATH']}", "GATE_LOG": str(log), "GATE_FAIL": fail}
+        result = subprocess.run(
+            [gate, *args],
+            cwd=REPO_ROOT,
+            env=os.environ | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        commands = log.read_text().splitlines() if log.exists() else []
+        return result, commands
+
+    return run
+
+
+# What the stage stubs answer: `docker port` an address, a `mongosh` ping its 1, `free -m` the
+# memory available (QA_AVAILABLE_MB, or QA_AVAILABLE_AFTER_RUN_MB once mutmut has run), and
+# `mutmut results` the statuses in QA_MUTMUT_RESULTS.
+_QA_STUB = """#!/usr/bin/env bash
+printf "%s%s %s\\n" "${TEST_MONGO_URI:+TEST_MONGO_URI=$TEST_MONGO_URI }" "${0##*/}" "$*" >> "$QA_LOG"
+if [ "${0##*/} $*" = "$QA_FAIL" ]; then exit 1; fi
+case "${0##*/} $*" in
+  "docker port"*) echo 127.0.0.1:27999 ;;
+  "docker exec"*) echo 1 ;;
+  "docker inspect"*)
+    # The mutants' MongoDB runs, unless QA_MONGO_DIES says when it is gone: in the run, or in the run again.
+    case "${QA_MONGO_DIES:-}" in
+      "") echo true ;;
+      rerun) if grep -q "max-children 1 evlampiy" "$QA_LOG"; then exit 1; fi; echo true ;;
+      *) exit 1 ;;
+    esac ;;
+  "free -m")
+    available=${QA_AVAILABLE_MB:-4000}
+    if [ -n "${QA_AVAILABLE_AFTER_RUN_MB:-}" ] && grep -q "mutmut run" "$QA_LOG"; then
+      available=$QA_AVAILABLE_AFTER_RUN_MB
+    fi
+    echo "               total        used        free      shared  buff/cache   available"
+    echo "Mem:            7798        5000         800         600        2000        $available" ;;
+  "uv run mutmut results --all true") printf "%b" "${QA_MUTMUT_RESULTS:-}" ;;
+esac
+"""
+
+
+@pytest.fixture
+def run_qa(tmp_path):
+    """Run a copy of the real scripts/pre_release_qa.sh in a committed git tree, its stages stubbed.
+
+    scripts/gate.sh and scripts/stack_smoke.sh are stubs in that tree, `uv`, `docker` and `systemd-run` on
+    PATH: each logs what it was asked, the variable the mutants' MongoDB travels in included,
+    and fails when that equals `fail`. Returns (tree, run): run(fail="", **env) gives back the
+    finished process, the commands the stages ran (the container's pid-named suffix as
+    `<pid>`), and the stamp's text (None when absent).
+    """
+    tree = tmp_path / "tree"
+    scripts = tree / "scripts"
+    scripts.mkdir(parents=True)
+    shutil.copy2(REPO_ROOT / "scripts" / "pre_release_qa.sh", scripts / "pre_release_qa.sh")
+    (tree / "docker-compose.yml").write_text("services:\n\n  mongodb:\n    # pinned\n    image: mongo:8.0.3\n")
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for path in (
+        scripts / "gate.sh",
+        scripts / "stack_smoke.sh",
+        stubs / "uv",
+        stubs / "docker",
+        stubs / "systemd-run",
+        stubs / "free",
+    ):
+        path.write_text(_QA_STUB)
+        path.chmod(0o755)
+    git(tree, "init", "-q", "-b", "main")
+    git(tree, "add", "-A")
+    git(tree, "commit", "-q", "-m", "init")
+    log = tmp_path / "commands.log"
+    stamp = tree / ".git" / "pre_release_qa.ok"
+    # The developer's own TEST_MONGO_URI would reach every stub.
+    base = {name: value for name, value in os.environ.items() if name != "TEST_MONGO_URI"}
+
+    def run(fail: str = "", **env: str) -> tuple[subprocess.CompletedProcess[str], list[str], str | None]:
+        log.unlink(missing_ok=True)
+        stage_env = {"PATH": f"{stubs}:{os.environ['PATH']}", "QA_LOG": str(log), "QA_FAIL": fail}
+        result = subprocess.run(
+            [scripts / "pre_release_qa.sh"],
+            cwd=tree,
+            env=base | _GIT_ENV | stage_env | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        lines = log.read_text().splitlines() if log.exists() else []
+        commands = [re.sub(r"evlampiy-qa-mongo-\d+", "evlampiy-qa-mongo-<pid>", line.rstrip()) for line in lines]
+        return result, commands, stamp.read_text().strip() if stamp.exists() else None
+
+    return tree, run
+
+
+# What the stack's stubs answer: an address, a container id, its state, the health body.
+_STACK_STUB = """#!/usr/bin/env bash
+printf "%s %s\\n" "${0##*/}" "$*" >> "$STACK_LOG"
+if [ "${0##*/} $*" = "$STACK_FAIL" ]; then exit 1; fi
+case "${0##*/} $*" in
+  "docker compose up "*) echo "$COMPOSE_PROJECT_NAME $COMPOSE_FILE $EVLAMPIY_IMAGE:$IMAGE_TAG" > "$STACK_ENV" ;;
+  "docker compose port "*) echo 127.0.0.1:27999 ;;
+  "docker compose ps --quiet "*) echo "${*: -1}-id" ;;
+  "docker inspect "*) echo "$STACK_STATE" ;;
+  "curl "*) echo "$STACK_HEALTH" ;;
+esac
+"""
+
+
+@pytest.fixture
+def run_stack(tmp_path):
+    """Run a copy of the real scripts/stack_smoke.sh in a git tree, `docker` and `curl` stubbed.
+
+    Returns run(fail="", state="running 0", health=<the body /health should give>) giving back
+    the finished process, every command it ran, and the compose environment `up` saw.
+    """
+    tree = tmp_path / "tree"
+    (tree / "scripts").mkdir(parents=True)
+    shutil.copy2(REPO_ROOT / "scripts" / "stack_smoke.sh", tree / "scripts" / "stack_smoke.sh")
+    git(tree, "init", "-q", "-b", "main")
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for name in ("docker", "curl"):
+        (stubs / name).write_text(_STACK_STUB)
+        (stubs / name).chmod(0o755)
+    log, env_seen = tmp_path / "commands.log", tmp_path / "compose.env"
+
+    def run(
+        fail: str = "", state: str = "running 0", health: str = '{"status":"ok","whatsapp":"off"}'
+    ) -> tuple[subprocess.CompletedProcess[str], list[str], str]:
+        env = {
+            "PATH": f"{stubs}:{os.environ['PATH']}",
+            "STACK_LOG": str(log),
+            "STACK_ENV": str(env_seen),
+            "STACK_FAIL": fail,
+            "STACK_STATE": state,
+            "STACK_HEALTH": health,
+            "STACK_OBSERVE_SECONDS": "0",
+        }
+        result = subprocess.run(
+            [tree / "scripts" / "stack_smoke.sh"],
+            cwd=tree,
+            env=os.environ | _GIT_ENV | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        commands = [line.rstrip() for line in log.read_text().splitlines()] if log.exists() else []
+        return result, commands, env_seen.read_text().strip() if env_seen.exists() else ""
+
+    return run
+
+
+# The server's docker: a dump on stdout, two containers, their states before and after the
+# steady minute (the first `inspect` of names is "before"), the image the bot runs, the
+# release images on the host. `curl` answers /health unless DEPLOY_UNHEALTHY; `sleep` waits for nothing.
+_DEPLOY_STUB = """#!/usr/bin/env bash
+case "${0##*/}" in
+  sleep) exit 0 ;;
+  curl) [ -z "$DEPLOY_UNHEALTHY" ] || exit 7 ;;
+esac
+printf "%s %s\\n" "${0##*/}" "$*" >> "$DEPLOY_LOG"
+if [ "${0##*/} $*" = "$DEPLOY_FAIL" ]; then exit 1; fi
+case "${0##*/} $*" in
+  "docker compose exec -T mongodb mongodump"*) echo "dump of the database" ;;
+  "docker compose ps --all --quiet") printf "c-mongo\\nc-app\\n" ;;
+  "docker compose ps --quiet evlampiy_notes") echo c-app ;;
+  "docker inspect --format {{.Name}}"*)
+    n=$(( $(cat "$DEPLOY_COUNT" 2>/dev/null || echo 0) + 1 ))
+    echo "$n" > "$DEPLOY_COUNT"
+    if [ "$n" -eq 1 ]; then printf "%b\\n" "$DEPLOY_BEFORE"; else printf "%b\\n" "$DEPLOY_AFTER"; fi ;;
+  "docker inspect --format {{.Config.Image}}"*) echo "$DEPLOY_RUNNING" ;;
+  "docker images "*) printf "%b\\n" "$DEPLOY_IMAGES" ;;
+esac
+"""
+DEPLOY_IMAGE = "ghcr.io/yastcher/evlampiy_notes"
+_STEADY = "/mongodb running 0\\n/evlampiy_notes running 0"
+
+
+@pytest.fixture
+def deploy_server(tmp_path):
+    """A deploy directory as the pipeline leaves it — the real deploy/ scripts, v0.9.7 running,
+    v0.10.0's compose file in incoming/ — with docker, curl and sleep stubbed.
+
+    Returns (server, run): run(*args, **env) runs a script of deploy/ there and gives back the
+    finished process and every command it ran; the env overrides the stub's answers.
+    """
+    server = tmp_path / "server"
+    (server / "deploy").mkdir(parents=True)
+    for script in ("deploy.sh", "rollback.sh", "backup-db.sh", "common.sh"):
+        shutil.copy2(REPO_ROOT / "deploy" / script, server / "deploy" / script)
+    (server / "docker-compose.yml").write_text("# v0.9.7's stack\n")
+    (server / "incoming").mkdir()
+    (server / "incoming" / "docker-compose.yml").write_text("# v0.10.0's stack\n")
+    (server / ".env").write_text(f"TELEGRAM_BOT_TOKEN=kept\nEVLAMPIY_IMAGE={DEPLOY_IMAGE}\nIMAGE_TAG=v0.9.7\n")
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for name in ("docker", "curl", "sleep"):
+        (stubs / name).write_text(_DEPLOY_STUB)
+        (stubs / name).chmod(0o755)
+    log = tmp_path / "commands.log"
+
+    def run(script: str, *args: str, **env: str) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+        log.unlink(missing_ok=True)
+        (tmp_path / "inspect.count").unlink(missing_ok=True)
+        answers = {
+            "PATH": f"{stubs}:{os.environ['PATH']}",
+            "DEPLOY_LOG": str(log),
+            "DEPLOY_COUNT": str(tmp_path / "inspect.count"),
+            "DEPLOY_FAIL": "",
+            "DEPLOY_UNHEALTHY": "",
+            "DEPLOY_BEFORE": _STEADY,
+            "DEPLOY_AFTER": _STEADY,
+            "DEPLOY_RUNNING": f"{DEPLOY_IMAGE}:v0.10.0",
+            "DEPLOY_IMAGES": f"{DEPLOY_IMAGE}:v0.10.0\\n{DEPLOY_IMAGE}:v0.9.7\\n{DEPLOY_IMAGE}:v0.9.5",
+            "DEPLOY_OBSERVE_SECONDS": "0",
+        }
+        result = subprocess.run(
+            ["bash", server / "deploy" / script, *args],
+            env=os.environ | answers | env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        commands = [line.rstrip() for line in log.read_text().splitlines()] if log.exists() else []
+        return result, commands
+
+    return server, run

@@ -1,4 +1,4 @@
-"""Service-level smoke tests for `src.services.voice_pipeline.process_voice`.
+"""Service-level smoke tests for `evlampiy.services.voice_pipeline.process_voice`.
 
 These tests call the service directly with `audio_bytes` — no aiogram or pywa mocks.
 Telegram-adapter and WhatsApp-adapter behavior (validation, credits, gpt-command
@@ -8,14 +8,14 @@ formatting, send_message wiring) is covered by `tests/test_user_flow.py` and
 
 from unittest.mock import AsyncMock, patch
 
-from src import const
-from src.dto import UserTier
-from src.mongo import set_auto_categorize, set_auto_cleanup, set_chat_language, set_github_settings
-from src.services.voice_pipeline import VoicePipelineResult, process_voice
+from evlampiy import const
+from evlampiy.dto import UserTier
+from evlampiy.mongo import set_auto_categorize, set_auto_cleanup, set_chat_language, set_github_settings
+from evlampiy.services.voice_pipeline import VoicePipelineResult, process_voice
 
 
 class TestProcessVoiceTranscription:
-    """Trophy: real DB (mongomock); mock only external boundaries."""
+    """Trophy: real DB; mock only external boundaries."""
 
     async def test_empty_transcription_returns_none(self):
         """Empty transcription → service returns None (caller skips reply)."""
@@ -23,11 +23,11 @@ class TestProcessVoiceTranscription:
         await set_chat_language(chat_id, "en")
         with (
             patch(
-                "src.services.voice_pipeline.transcribe_audio",
+                "evlampiy.services.voice_pipeline.transcribe_audio",
                 AsyncMock(return_value=("", 0, 0)),
             ),
             patch(
-                "src.services.voice_pipeline.save_transcription_to_obsidian",
+                "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
                 AsyncMock(return_value=(False, None)),
             ),
         ):
@@ -49,12 +49,12 @@ class TestProcessVoiceTranscription:
         await set_auto_cleanup(chat_id, True)  # enabled but ignored for FREE
         with (
             patch(
-                "src.services.voice_pipeline.transcribe_audio",
+                "evlampiy.services.voice_pipeline.transcribe_audio",
                 AsyncMock(return_value=("raw text", 5, 1)),
             ),
-            patch("src.services.voice_pipeline.cleanup_transcript", AsyncMock()) as mock_cleanup,
+            patch("evlampiy.services.voice_pipeline.cleanup_transcript", AsyncMock()) as mock_cleanup,
             patch(
-                "src.services.voice_pipeline.save_transcription_to_obsidian",
+                "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
                 AsyncMock(return_value=(False, None)),
             ),
         ):
@@ -77,15 +77,15 @@ class TestProcessVoiceTranscription:
         await set_auto_cleanup(chat_id, True)
         with (
             patch(
-                "src.services.voice_pipeline.transcribe_audio",
+                "evlampiy.services.voice_pipeline.transcribe_audio",
                 AsyncMock(return_value=("ну вот текст", 5, 1)),
             ),
             patch(
-                "src.services.voice_pipeline.cleanup_transcript",
+                "evlampiy.services.voice_pipeline.cleanup_transcript",
                 AsyncMock(return_value="Текст."),
             ) as mock_cleanup,
             patch(
-                "src.services.voice_pipeline.save_transcription_to_obsidian",
+                "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
                 AsyncMock(return_value=(False, None)),
             ),
         ):
@@ -110,15 +110,15 @@ class TestProcessVoiceTranscription:
         raw, cleaned = "ну сырой текст", "Сырой текст."
         with (
             patch(
-                "src.services.voice_pipeline.transcribe_audio",
+                "evlampiy.services.voice_pipeline.transcribe_audio",
                 AsyncMock(return_value=(raw, 5, 1)),
             ),
             patch(
-                "src.services.voice_pipeline.cleanup_transcript",
+                "evlampiy.services.voice_pipeline.cleanup_transcript",
                 AsyncMock(return_value=cleaned),
             ),
             patch(
-                "src.services.voice_pipeline.save_transcription_to_obsidian",
+                "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
                 AsyncMock(return_value=(False, None)),
             ) as mock_save,
         ):
@@ -147,14 +147,14 @@ class TestProcessVoiceTranscription:
         await set_github_settings(chat_id, "owner", "repo", "tok")
         with (
             patch(
-                "src.services.voice_pipeline.transcribe_audio",
+                "evlampiy.services.voice_pipeline.transcribe_audio",
                 AsyncMock(return_value=("note text", 5, 1)),
             ),
             patch(
-                "src.services.voice_pipeline.save_transcription_to_obsidian",
+                "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
                 AsyncMock(return_value=(True, "note.md")),
             ),
-            patch("src.services.voice_pipeline.categorize_note", AsyncMock()) as mock_categorize,
+            patch("evlampiy.services.voice_pipeline.categorize_note", AsyncMock()) as mock_categorize,
         ):
             await process_voice(
                 audio_bytes=b"audio",
@@ -175,15 +175,15 @@ class TestProcessVoiceTranscription:
         await set_auto_cleanup(user_settings, True)
         with (
             patch(
-                "src.services.voice_pipeline.transcribe_audio",
+                "evlampiy.services.voice_pipeline.transcribe_audio",
                 AsyncMock(return_value=("text", 5, 1)),
             ),
             patch(
-                "src.services.voice_pipeline.cleanup_transcript",
+                "evlampiy.services.voice_pipeline.cleanup_transcript",
                 AsyncMock(return_value="cleaned"),
             ) as mock_cleanup,
             patch(
-                "src.services.voice_pipeline.save_transcription_to_obsidian",
+                "evlampiy.services.voice_pipeline.save_transcription_to_obsidian",
                 AsyncMock(return_value=(False, None)),
             ),
         ):

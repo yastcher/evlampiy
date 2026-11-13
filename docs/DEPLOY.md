@@ -39,6 +39,7 @@ WHATSAPP_TOKEN=your_whatsapp_token
 WHATSAPP_PHONE_ID=your_phone_id
 WHATSAPP_VERIFY_TOKEN=your_verify_token
 WHATSAPP_APP_ID=your_app_id
+# Required for WhatsApp: without it the webhook stays off
 WHATSAPP_APP_SECRET=your_app_secret
 
 # Optional: GitHub OAuth (for Obsidian integration)
@@ -61,7 +62,7 @@ GEMINI_API_KEY=your_gemini_api_key
 ### Local Run
 
 ```bash
-uv run python -m src.main
+uv run python -m evlampiy.main
 ```
 
 ### Docker
@@ -79,7 +80,8 @@ The `docker-compose.yml` includes:
 - MongoDB database
 - Bot service with auto-restart
 
-For WhatsApp integration, port 8000 is exposed for webhook callbacks.
+The bot's HTTP server (`/health` and the WhatsApp webhook) listens on port 8000 of the host's
+loopback only: the internet reaches the webhook through a TLS proxy on the same host.
 
 #### Telegram blocked on the host
 
@@ -95,21 +97,44 @@ Empty = providers are called directly. DeepSeek and Qwen are reached directly an
 
 ### Server deploy (CI/CD)
 
-Releases roll out from the `release` branch via `.github/workflows/deploy.yml`: lint + type check +
-tests, then the image is built, tagged `:<commit-sha>` (immutable rollback handle) and `:latest`,
-and pushed to **GHCR** (`ghcr.io/yastcher/evlampiy_notes`). The deploy step copies
-`docker-compose.yml` over SSH, pins `EVLAMPIY_IMAGE` + `IMAGE_TAG` in the server's `.env`, pulls the
-image and recreates only the bot container — MongoDB is never restarted. If `/health` does not
-answer within 30s, the job fails and dumps the container logs.
+A release is a `vX.Y.Z` tag, and `.github/workflows/ci.yml` ships it:
 
-The registry needs no extra secret: the image lives in this repo's GHCR namespace, and both push and
-pull are authorized with the built-in `GITHUB_TOKEN` (job permission `packages: write`).
+```mermaid
+flowchart TD
+    qa["pre_release_qa.sh<br/>on main"] --> cut["release.sh minor"]
+    cut -->|"push main, then tag v0.10.0"| checks["lint-and-test<br/>the gate's checks"]
+    checks --> image["image<br/>tag check · build · Trivy · push"]
+    image --> deploy["deploy<br/>dump · roll out · hold a minute"]
+    deploy -->|holds| page["GitHub Release<br/>CHANGELOG section"]
+    deploy -->|does not hold| back["release before it put back,<br/>job fails"]
+```
+
+1. On `main`, `scripts/pre_release_qa.sh` runs the gate, the CRAP limit, a smoke of the release
+   image's stack and mutation testing, and stamps the tree it passed.
+2. `scripts/release.sh patch|minor|major` names the `[Unreleased]` section of CHANGELOG.md, commits,
+   pushes `main`, then the tag. It tags no tree the QA run did not pass; `SKIP_PRERELEASE_QA=1` is
+   for a hotfix that cannot wait.
+3. On the tag, after the checks, the `image` job checks the tag against the tree
+   (`scripts/release_from_tag.py`), builds the image, scans its OS packages with Trivy (a fixable
+   HIGH or CRITICAL fails the release; the Python pins are `scripts/audit_deps.py`'s, in the
+   checks) and pushes `:vX.Y.Z` and `:latest` to **GHCR** (`ghcr.io/yastcher/evlampiy_notes`).
+   A pull request builds and scans the image too, without pushing it.
+4. The `deploy` job copies `docker-compose.yml` and `deploy/*.sh` to the server over SSH and runs
+   `deploy/deploy.sh`: a `mongodump`, the release pinned in `.env` (`EVLAMPIY_IMAGE`, `IMAGE_TAG`),
+   pull, start. The release has to answer `/health`, hold a minute with nothing restarting and be
+   the image that runs; otherwise the release before it is put back and the job fails. Two tags
+   never deploy at once.
+5. After a deploy that held, the `release` job publishes a GitHub Release with the tag's CHANGELOG
+   section.
+
+The registry needs no extra secret: push and pull use the run's own `GITHUB_TOKEN`.
 
 #### GitHub secrets
 
 | Name | Description |
 |---|---|
 | `SSH_PRIVATE_KEY` | base64 ssh key (`cat ~/.ssh/id_rsa \| base64 -w0`); the user must be in the `docker` group |
+| `SSH_KNOWN_HOSTS` | the server's host key, the only one the deploy trusts: `ssh-keygen -F <SERVER_IP>` on a machine that already connects to it, without the `#` line |
 | `SERVER_IP` | server IP / hostname |
 | `SERVER_USER` | ssh user — unprivileged, not `root` (e.g. `yast`) |
 | `DEPLOY_DIR` | optional, path relative to `~`; defaults to `evlampiy` |
@@ -125,28 +150,32 @@ mkdir -p ~/evlampiy && cd ~/evlampiy
 # Put the real .env here (see Configuration above) — CI does not deploy it.
 ```
 
-The deploy dir holds `mongo_data/`, the bind mount backing MongoDB — **it is the database**. Back it
-up (`docker compose exec -T mongodb mongodump --archive --gzip > dump.gz`) before moving or deleting
-the directory.
+The deploy dir holds `mongo_data/`, the bind mount backing MongoDB — **it is the database**. Every
+release dumps it into `backups/` first and keeps the newest ten. Dump it the same way before moving
+or deleting the directory (`docker compose exec -T mongodb mongodump --archive --gzip > dump.gz`);
+restore a dump with `docker compose exec -T mongodb mongorestore --archive --gzip --drop < backups/<file>`.
 
 #### Rollback
 
-`IMAGE_TAG` in the server's `.env` is the release commit SHA, so any previous release can be
-restored without CI:
+A release that does not hold is rolled back by the deploy itself. To return by hand to a release
+that ran before:
 
 ```bash
 cd ~/evlampiy
-sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=<previous-sha>/' .env
-docker compose up -d
+bash deploy/rollback.sh v0.9.7
 ```
+
+It runs that release's own compose file, kept as `docker-compose.v0.9.7.yml` when the next release
+arrived, and its image. The database stays as it is: the dump taken before each release is in
+`backups/`.
 
 ### WhatsApp Webhook Setup
 
 If using WhatsApp integration:
 
-1. **Port forwarding**: Ensure port 8000 is accessible from the internet
-2. **HTTPS**: WhatsApp requires HTTPS. Use a reverse proxy (nginx, Caddy) with SSL
-3. **Webhook URL**: Configure in Meta Developer Console as `https://your-domain.com/`
+1. **HTTPS**: WhatsApp requires HTTPS. Run a reverse proxy (nginx, Caddy) with SSL on the bot's
+   host and open 443, not 8000: the bot listens on the host's loopback only
+2. **Webhook URL**: Configure in Meta Developer Console as `https://your-domain.com/`
 
 Example nginx configuration:
 
@@ -172,7 +201,7 @@ The bot always exposes a liveness endpoint (served even when WhatsApp is not con
 
 ```bash
 curl http://localhost:8000/health
-# {"status": "ok"}
+# {"status": "ok", "whatsapp": "on"}   (whatsapp: on | off | no app secret)
 ```
 
 `docker-compose.yml` wires a container healthcheck to it (status shows in `docker ps`). Plain
@@ -191,8 +220,8 @@ uv run ruff check
 # Run tests
 uv run pytest
 
-# Run with coverage
-uv run pytest --cov=src --cov-fail-under=85
+# Everything CI checks, in CI's order (tests include the coverage floor)
+scripts/gate.sh
 ```
 
 ### Logs
@@ -242,6 +271,7 @@ WHATSAPP_TOKEN=ваш_whatsapp_токен
 WHATSAPP_PHONE_ID=ваш_phone_id
 WHATSAPP_VERIFY_TOKEN=ваш_verify_токен
 WHATSAPP_APP_ID=ваш_app_id
+# Обязателен для WhatsApp: без него вебхук не включается
 WHATSAPP_APP_SECRET=ваш_app_secret
 
 # Опционально: GitHub OAuth (для интеграции с Obsidian)
@@ -264,7 +294,7 @@ GEMINI_API_KEY=ваш_gemini_api_ключ
 ### Локальный запуск
 
 ```bash
-uv run python -m src.main
+uv run python -m evlampiy.main
 ```
 
 ### Docker
@@ -282,7 +312,8 @@ docker compose up -d
 - База данных MongoDB
 - Сервис бота с авто-перезапуском
 
-Для интеграции с WhatsApp порт 8000 открыт для webhook-колбэков.
+HTTP-сервер бота (`/health` и вебхук WhatsApp) слушает порт 8000 только на loopback хоста:
+из интернета вебхук доходит через TLS-прокси на том же хосте.
 
 #### Telegram заблокирован на хосте
 
@@ -298,21 +329,43 @@ endpoint.
 
 ### Деплой на сервер (CI/CD)
 
-Релизы катятся из ветки `release` через `.github/workflows/deploy.yml`: линтер + тайпчекер + тесты,
-затем сборка образа, теги `:<commit-sha>` (неизменяемый handle для отката) и `:latest`, push в
-**GHCR** (`ghcr.io/yastcher/evlampiy_notes`). Шаг деплоя копирует по SSH `docker-compose.yml`, пинит
-`EVLAMPIY_IMAGE` + `IMAGE_TAG` в серверном `.env`, тянет образ и пересоздаёт только контейнер бота —
-MongoDB не перезапускается. Если `/health` не отвечает 30 секунд, job падает и печатает логи
-контейнера.
+Релиз — это тег `vX.Y.Z`, его выкатывает `.github/workflows/ci.yml`:
 
-Реестр не требует дополнительных секретов: образ лежит в GHCR-неймспейсе этого же репозитория, push
-и pull авторизуются встроенным `GITHUB_TOKEN` (job-permission `packages: write`).
+```mermaid
+flowchart TD
+    qa["pre_release_qa.sh<br/>на main"] --> cut["release.sh minor"]
+    cut -->|"push main, затем тег v0.10.0"| checks["lint-and-test<br/>проверки гейта"]
+    checks --> image["image<br/>проверка тега · сборка · Trivy · push"]
+    image --> deploy["deploy<br/>дамп · выкат · минута наблюдения"]
+    deploy -->|держится| page["GitHub Release<br/>раздел CHANGELOG"]
+    deploy -->|не держится| back["возврат предыдущего релиза,<br/>джоба падает"]
+```
+
+1. На `main` `scripts/pre_release_qa.sh` прогоняет гейт, лимит CRAP, смоук стека из релизного
+   образа и мутационное тестирование и штампует дерево, которое прошло.
+2. `scripts/release.sh patch|minor|major` даёт номер разделу `[Unreleased]` в CHANGELOG.md,
+   коммитит, пушит `main`, затем тег. Дерево без прошедшего QA он не тегирует;
+   `SKIP_PRERELEASE_QA=1` — для хотфикса, который не может ждать.
+3. На теге после проверок джоба `image` сверяет тег с деревом (`scripts/release_from_tag.py`),
+   собирает образ, сканирует его системные пакеты Trivy (исправимая HIGH или CRITICAL валит
+   релиз; Python-зависимости проверяет `scripts/audit_deps.py` в проверках) и пушит `:vX.Y.Z` и
+   `:latest` в **GHCR** (`ghcr.io/yastcher/evlampiy_notes`). Pull request тоже собирает и
+   сканирует образ, но не пушит.
+4. Джоба `deploy` копирует по SSH на сервер `docker-compose.yml` и `deploy/*.sh` и запускает
+   `deploy/deploy.sh`: `mongodump`, релиз закрепляется в `.env` (`EVLAMPIY_IMAGE`, `IMAGE_TAG`),
+   pull, старт. Релиз должен ответить на `/health`, продержаться минуту без перезапусков и
+   оказаться тем образом, который работает; иначе возвращается предыдущий релиз и джоба падает.
+   Два тега одновременно не выкатываются.
+5. Если выкат удержался, джоба `release` публикует GitHub Release с разделом CHANGELOG этого тега.
+
+Реестр не требует дополнительных секретов: push и pull идут по `GITHUB_TOKEN` самого прогона.
 
 #### GitHub secrets
 
 | Имя | Описание |
 |---|---|
 | `SSH_PRIVATE_KEY` | base64 ssh-ключ (`cat ~/.ssh/id_rsa \| base64 -w0`); пользователь должен быть в группе `docker` |
+| `SSH_KNOWN_HOSTS` | ключ хоста сервера — деплой доверяет только ему: `ssh-keygen -F <SERVER_IP>` на машине, которая уже ходит на сервер, без строки с `#` |
 | `SERVER_IP` | IP / hostname сервера |
 | `SERVER_USER` | пользователь для ssh — непривилегированный, не `root` (например `yast`) |
 | `DEPLOY_DIR` | опционально, путь относительно `~`; по умолчанию `evlampiy` |
@@ -328,28 +381,31 @@ mkdir -p ~/evlampiy && cd ~/evlampiy
 # Положите сюда настоящий .env (см. «Конфигурация» выше) — CI его не деплоит.
 ```
 
-В деплой-директории лежит `mongo_data/` — bind-mount MongoDB, **то есть сама база**. Перед переносом
-или удалением директории снимите бэкап:
-`docker compose exec -T mongodb mongodump --archive --gzip > dump.gz`.
+В деплой-директории лежит `mongo_data/` — bind-mount MongoDB, **то есть сама база**. Каждый релиз
+сначала снимает её дамп в `backups/` и хранит десять последних. Перед переносом или удалением
+директории снимите дамп так же (`docker compose exec -T mongodb mongodump --archive --gzip > dump.gz`);
+восстановление: `docker compose exec -T mongodb mongorestore --archive --gzip --drop < backups/<файл>`.
 
 #### Откат
 
-`IMAGE_TAG` в серверном `.env` — это SHA коммита релиза, поэтому любой предыдущий релиз
-восстанавливается без CI:
+Релиз, который не удержался, деплой откатывает сам. Вернуться вручную к релизу, который работал
+раньше:
 
 ```bash
 cd ~/evlampiy
-sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=<предыдущий-sha>/' .env
-docker compose up -d
+bash deploy/rollback.sh v0.9.7
 ```
+
+Он запускает собственный compose-файл того релиза (сохранён как `docker-compose.v0.9.7.yml`, когда
+пришёл следующий) и его образ. База остаётся как есть: дамп перед каждым релизом лежит в `backups/`.
 
 ### Настройка Webhook для WhatsApp
 
 При использовании WhatsApp:
 
-1. **Проброс портов**: Порт 8000 должен быть доступен из интернета
-2. **HTTPS**: WhatsApp требует HTTPS. Используйте reverse proxy (nginx, Caddy) с SSL
-3. **URL Webhook**: Настройте в Meta Developer Console как `https://ваш-домен.com/`
+1. **HTTPS**: WhatsApp требует HTTPS. Поднимите reverse proxy (nginx, Caddy) с SSL на хосте бота
+   и откройте 443, а не 8000: бот слушает только loopback хоста
+2. **URL Webhook**: Настройте в Meta Developer Console как `https://ваш-домен.com/`
 
 Пример конфигурации nginx:
 
@@ -375,7 +431,7 @@ server {
 
 ```bash
 curl http://localhost:8000/health
-# {"status": "ok"}
+# {"status": "ok", "whatsapp": "on"}   (whatsapp: on | off | no app secret)
 ```
 
 ### Разработка
@@ -390,8 +446,8 @@ uv run ruff check
 # Запуск тестов
 uv run pytest
 
-# Запуск с покрытием
-uv run pytest --cov=src --cov-fail-under=85
+# Всё, что проверяет CI, в том же порядке (тесты — с порогом покрытия)
+scripts/gate.sh
 ```
 
 ### Логи

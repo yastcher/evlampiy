@@ -1,0 +1,220 @@
+"""Note categorization using AI providers."""
+
+import json
+import logging
+from collections.abc import Mapping, Sequence
+
+from evlampiy import const, obsidian_layout
+from evlampiy.ai_client import classify_text
+from evlampiy.github_api import (
+    GitHubRepo,
+    delete_github_file,
+    get_github_file,
+    get_repo_contents,
+    put_github_file,
+)
+from evlampiy.prompts import CATEGORIZE_PROMPT_TEMPLATE
+
+logger = logging.getLogger(__name__)
+
+_VOCABULARY_PATH = "vocabulary.json"
+_VOCABULARY_MAX_KEYWORDS_PER_CATEGORY = 50
+# A category is a short folder slug (the prompt asks for 1-2 words); anything longer means the
+# LLM reply wasn't a clean category and must not become a folder name.
+_MAX_CATEGORY_LEN = 50
+
+
+async def get_existing_categories(repo_info: GitHubRepo) -> list[str]:
+    """Get list of existing category folders under the base dir, excluding system folders."""
+    contents = await get_repo_contents(repo_info, obsidian_layout.base_dir())
+    categories = []
+    for item in contents:
+        if item.get("type") == "dir" and item["name"] not in const.EXCLUDED_CATEGORIES:
+            categories.append(item["name"])
+    return categories
+
+
+async def get_vocabulary_from_repo(repo_info: GitHubRepo) -> dict[str, list[str]]:
+    """Read vocabulary.json from repo root. Returns {} if absent or invalid."""
+    file_data = await get_github_file(repo_info, _VOCABULARY_PATH)
+    if not file_data:
+        return {}
+    content, _ = file_data
+    try:
+        data: dict[str, list[str]] = json.loads(content)
+        return data
+    except json.JSONDecodeError, ValueError:
+        logger.warning("vocabulary.json is invalid JSON, ignoring")
+        return {}
+
+
+async def update_vocabulary_in_repo(repo_info: GitHubRepo, category: str, keywords: Sequence[str]) -> None:
+    """Merge new keywords into vocabulary.json, deduplicating and capping at 50 per category."""
+    vocabulary = await get_vocabulary_from_repo(repo_info)
+    existing = vocabulary.get(category, [])
+    # dict.fromkeys preserves insertion order and deduplicates
+    merged = list(dict.fromkeys(existing + list(keywords)))
+    vocabulary[category] = merged[:_VOCABULARY_MAX_KEYWORDS_PER_CATEGORY]
+    content = json.dumps(vocabulary, ensure_ascii=False, indent=2)
+    await put_github_file(
+        repo_info=repo_info,
+        path=_VOCABULARY_PATH,
+        content=content,
+        commit_message=f"Update vocabulary for {category}",
+    )
+
+
+def _extract_json_object(text: str) -> dict | None:
+    """Best-effort extraction of a JSON object from an LLM reply.
+
+    Models often wrap the JSON in a markdown ```json fence or add prose around it, which
+    breaks a plain ``json.loads``. Take the substring from the first ``{`` to the last ``}``
+    and parse that. Returns None if nothing parseable is found.
+    """
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end <= start:
+        return None
+    try:
+        parsed = json.loads(text[start : end + 1])
+    except json.JSONDecodeError, ValueError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _normalize_category(raw: str) -> str | None:
+    """Normalize an LLM-produced category into a safe path segment.
+
+    WARNING (security): the category becomes part of the GitHub Contents API URL path,
+    and the LLM input is partly derived from user speech. A stray control character (e.g.
+    a newline) crashes httpx with InvalidURL, and path separators / leading dots would let
+    a note escape the base dir. Strip both; keep Unicode letters so non-English categories
+    (e.g. Cyrillic) still work. Reject overlong or JSON-structured slugs so a mis-parsed
+    reply can't become a monster folder name.
+    """
+    slug = raw.strip().lower().replace(" ", "_")
+    slug = "".join(ch for ch in slug if ch.isprintable() and ch not in "/\\")
+    slug = slug.strip("._-")
+    if not slug or len(slug) > _MAX_CATEGORY_LEN or any(ch in slug for ch in "{}[]"):
+        return None
+    return slug
+
+
+async def classify_note(
+    text: str,
+    existing_categories: Sequence[str],
+    vocabulary: Mapping[str, Sequence[str]] | None = None,
+) -> tuple[str | None, list[str]]:
+    """Classify note text into a category using the configured AI provider.
+
+    Returns (category, keywords) where keywords are domain terms extracted from the note.
+    """
+    categories_list = ", ".join(existing_categories) if existing_categories else "none"
+    vocab_hint = ""
+    if vocabulary:
+        flat = ", ".join(kw for keywords in vocabulary.values() for kw in keywords)
+        vocab_hint = f"\nDomain vocabulary: {flat}"
+
+    prompt = CATEGORIZE_PROMPT_TEMPLATE.format(
+        categories_list=categories_list,
+        vocab_hint=vocab_hint,
+        text=text,
+    )
+
+    result = await classify_text(prompt)
+    if not result:
+        return None, []
+
+    data = _extract_json_object(result)
+    if data is not None:
+        category = _normalize_category(str(data.get("category", "")))
+        keywords = [str(k) for k in data.get("keywords", [])[:5]]
+        return category, keywords
+
+    # Fallback: some models reply with a bare category word instead of JSON. The guard in
+    # _normalize_category rejects anything that doesn't look like a short category.
+    return _normalize_category(result), []
+
+
+async def move_github_file(repo_info: GitHubRepo, old_path: str, new_path: str) -> bool:
+    """Move a file in GitHub by copying content and deleting original."""
+    file_data = await get_github_file(repo_info, old_path)
+    if not file_data:
+        return False
+
+    content, sha = file_data
+
+    success = await put_github_file(
+        repo_info=repo_info,
+        path=new_path,
+        content=content,
+        commit_message=f"Move {old_path} to {new_path}",
+    )
+    if not success:
+        return False
+
+    await delete_github_file(
+        repo_info=repo_info,
+        path=old_path,
+        sha=sha,
+        commit_message=f"Delete original {old_path}",
+    )
+    return True
+
+
+async def categorize_note(
+    repo_info: GitHubRepo,
+    filename: str,
+    content: str,
+    existing_categories: Sequence[str] | None = None,
+    vocabulary: Mapping[str, Sequence[str]] | None = None,
+) -> str | None:
+    """Categorize a single note and move it to the appropriate folder."""
+    if existing_categories is None:
+        existing_categories = await get_existing_categories(repo_info)
+    if vocabulary is None:
+        vocabulary = await get_vocabulary_from_repo(repo_info)
+
+    category, keywords = await classify_note(content, existing_categories, vocabulary)
+    if not category:
+        return None
+
+    old_path = f"{obsidian_layout.inbox_dir()}/{filename}"
+    new_path = f"{obsidian_layout.category_dir(category)}/{filename}"
+
+    success = await move_github_file(repo_info, old_path, new_path)
+    if success:
+        logger.info("Categorized %s to %s", filename, category)
+        # Trash is a sink for garbage; its keywords would pollute the vocabulary.
+        if keywords and category != const.OBSIDIAN_TRASH_FOLDER:
+            await update_vocabulary_in_repo(repo_info, category, keywords)
+        return category
+
+    logger.error("Failed to move %s to %s", filename, category)
+    return None
+
+
+async def categorize_all_inbox(repo_info: GitHubRepo) -> int:
+    """Categorize all files in the inbox folder. Returns count of processed files."""
+    existing_categories = await get_existing_categories(repo_info)
+    vocabulary = await get_vocabulary_from_repo(repo_info)
+    inbox = obsidian_layout.inbox_dir()
+    contents = await get_repo_contents(repo_info, inbox)
+    processed = 0
+
+    for item in contents:
+        if item.get("type") != "file" or not item["name"].endswith(".md"):
+            continue
+        if item["name"] == ".gitkeep":
+            continue
+
+        file_data = await get_github_file(repo_info, f"{inbox}/{item['name']}")
+        if not file_data:
+            continue
+
+        content, _ = file_data
+        result = await categorize_note(repo_info, item["name"], content, existing_categories, vocabulary)
+        if result:
+            processed += 1
+
+    return processed

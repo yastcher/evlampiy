@@ -2,19 +2,20 @@
 
 import inspect
 
+import pytest
 from aiogram.fsm.state import State
 from fastapi.testclient import TestClient
 
-from src.telegram.handlers.admin import admin_callback_router
-from src.telegram.handlers.common import (
+from evlampiy.telegram.handlers.admin import admin_callback_router
+from evlampiy.telegram.handlers.common import (
     WAITING_FOR_COMMAND,
     enter_your_command_from_hub,
     handle_command_input,
     hub_callback_router,
 )
-from src.telegram.handlers.payments import buy_package_callback
-from src.telegram.handlers.settings import lang_buttons, provider_buttons
-from src.telegram.setup import ADMIN_COMMANDS, BOT_COMMANDS, COMMAND_HANDLERS
+from evlampiy.telegram.handlers.payments import buy_package_callback
+from evlampiy.telegram.handlers.settings import lang_buttons, provider_buttons
+from evlampiy.telegram.setup import ADMIN_COMMANDS, BOT_COMMANDS, COMMAND_HANDLERS
 
 
 class TestCommandHandlerContracts:
@@ -25,11 +26,7 @@ class TestCommandHandlerContracts:
         assert not non_callable, f"Non-callable handlers: {non_callable}"
 
     def test_all_handlers_are_async(self):
-        non_async = [
-            name
-            for name, handler in COMMAND_HANDLERS.items()
-            if not inspect.iscoroutinefunction(handler)
-        ]
+        non_async = [name for name, handler in COMMAND_HANDLERS.items() if not inspect.iscoroutinefunction(handler)]
         assert not non_async, f"Sync handlers (must be async): {non_async}"
 
     def test_all_handlers_first_param_is_message(self):
@@ -68,9 +65,7 @@ class TestBotMenuConsistency:
 
     def test_admin_commands_registered(self):
         """Every command in ADMIN_COMMANDS menu is registered in COMMAND_HANDLERS."""
-        unregistered = [
-            cmd.command for cmd in ADMIN_COMMANDS if cmd.command not in COMMAND_HANDLERS
-        ]
+        unregistered = [cmd.command for cmd in ADMIN_COMMANDS if cmd.command not in COMMAND_HANDLERS]
         assert not unregistered, f"Admin commands not in COMMAND_HANDLERS: {unregistered}"
 
     def test_all_languages_have_same_commands(self):
@@ -112,11 +107,7 @@ class TestFastAPIContracts:
 
     def test_health_endpoint_exists(self, fastapi_app_no_whatsapp):
         """The /health GET endpoint is registered."""
-        routes = {
-            (r.path, tuple(r.methods))
-            for r in fastapi_app_no_whatsapp.routes
-            if hasattr(r, "methods")
-        }
+        routes = {(r.path, tuple(r.methods)) for r in fastapi_app_no_whatsapp.routes if hasattr(r, "methods")}
         assert ("/health", ("GET",)) in routes, f"Missing /health GET. Routes: {routes}"
 
     def test_health_returns_ok(self, fastapi_app_no_whatsapp):
@@ -124,9 +115,12 @@ class TestFastAPIContracts:
         client = TestClient(fastapi_app_no_whatsapp)
         response = client.get("/health")
         assert response.status_code == 200
-        body = response.json()
-        assert "status" in body, f"Missing 'status' key in response: {body}"
-        assert body["status"] == "ok"
+        assert response.json() == {"status": "ok", "whatsapp": "off"}
+
+    @pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
+    def test_api_docs_are_not_served(self, fastapi_app_no_whatsapp, path):
+        """The bot reads none of them; served, they map the API for anyone the proxy lets through."""
+        assert TestClient(fastapi_app_no_whatsapp).get(path).status_code == 404
 
 
 class TestConversationHandlerContract:

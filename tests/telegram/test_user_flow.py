@@ -3,12 +3,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from aiogram.enums import ChatMemberStatus
 
-from src import const
-from src.account_linking import confirm_link, generate_link_code
-from src.config import ENGLISH, GERMAN, RUSSIAN, SPANISH
-from src.credits import add_credits, current_month_key, deduct_credits
-from src.dto import MonthlyStats
-from src.mongo import (
+from evlampiy import const
+from evlampiy.account_linking import confirm_link, generate_link_code
+from evlampiy.config import ENGLISH, GERMAN, RUSSIAN, SPANISH
+from evlampiy.credits import add_credits, current_month_key, deduct_credits
+from evlampiy.dto import MonthlyStats
+from evlampiy.mongo import (
     add_user_role,
     get_auto_categorize,
     get_auto_cleanup,
@@ -25,15 +25,16 @@ from src.mongo import (
     set_preferred_provider,
     set_save_to_obsidian,
 )
-from src.telegram.handlers.account import account_hub
-from src.telegram.handlers.common import (
+from evlampiy.services.admin_service import block_user
+from evlampiy.telegram.handlers.account import account_hub
+from evlampiy.telegram.handlers.common import (
     WAITING_FOR_COMMAND,
     enter_your_command,
     handle_command_input,
     hub_callback_router,
     start,
 )
-from src.telegram.handlers.obsidian import (
+from evlampiy.telegram.handlers.obsidian import (
     categorize_all,
     connect_github,
     disconnect_github,
@@ -41,14 +42,14 @@ from src.telegram.handlers.obsidian import (
     toggle_categorize,
     toggle_obsidian,
 )
-from src.telegram.handlers.settings import (
+from evlampiy.telegram.handlers.settings import (
     choose_language,
     lang_buttons,
     provider_buttons,
     settings_hub,
     toggle_cleanup,
 )
-from src.telegram.handlers.voice import from_voice_to_text
+from evlampiy.telegram.handlers.voice import from_voice_to_text
 
 
 class TestStartCommand:
@@ -207,7 +208,7 @@ class TestVoiceMessageFlow:
         await add_user_role(user_id, "blocked", "admin")
         mock_private_update.voice = mock_telegram_voice
 
-        with patch("src.telegram.handlers.voice.send_response", AsyncMock()) as mock_send:
+        with patch("evlampiy.telegram.handlers.voice.send_response", AsyncMock()) as mock_send:
             await from_voice_to_text(mock_private_update, mock_context)
 
             mock_send.assert_called_once()
@@ -246,8 +247,8 @@ class TestVoiceMessageFlow:
         mock_private_update.voice = mock_telegram_voice
 
         with (
-            patch("src.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=False)),
-            patch("src.telegram.handlers.voice.settings.groq_api_key", ""),
+            patch("evlampiy.services.voice_access.is_wit_available", AsyncMock(return_value=False)),
+            patch("evlampiy.services.voice_access.settings.groq_api_key", ""),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -267,7 +268,7 @@ class TestVoiceMessageFlow:
         await deduct_credits(user_id, 100)
         mock_private_update.voice = mock_telegram_voice
 
-        with patch("src.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=True)):
+        with patch("evlampiy.services.voice_access.is_wit_available", AsyncMock(return_value=True)):
             await from_voice_to_text(mock_private_update, mock_context)
 
         call_kwargs = voice_external_mocks["send"].call_args.kwargs
@@ -288,8 +289,8 @@ class TestVoiceMessageFlow:
         voice_external_mocks["transcribe"].return_value = ("Hello", 10, 1)
 
         with (
-            patch("src.telegram.handlers.voice.is_wit_available", AsyncMock(return_value=False)),
-            patch("src.telegram.handlers.voice.settings.groq_api_key", "test-key"),
+            patch("evlampiy.services.voice_access.is_wit_available", AsyncMock(return_value=False)),
+            patch("evlampiy.services.voice_access.settings.groq_api_key", "test-key"),
         ):
             await from_voice_to_text(mock_private_update, mock_context)
 
@@ -575,10 +576,12 @@ class TestConnectGithub:
 
         with (
             patch(
-                "src.telegram.handlers.obsidian.get_github_device_code",
+                "evlampiy.telegram.handlers.obsidian.get_github_device_code",
                 AsyncMock(return_value=device_info),
             ),
-            patch("src.telegram.handlers.obsidian.asyncio.create_task"),
+            # The background poll is another test's subject: here it times out at once. Not
+            # `asyncio.create_task` — that is the event loop's, and the database driver runs on it.
+            patch("evlampiy.telegram.handlers.obsidian.poll_github_for_token", AsyncMock(return_value=None)),
         ):
             await connect_github(mock_private_update, mock_context)
 
@@ -592,7 +595,7 @@ class TestConnectGithub:
         await set_chat_language("u_12345", "en")
 
         with patch(
-            "src.telegram.handlers.obsidian.get_github_device_code",
+            "evlampiy.telegram.handlers.obsidian.get_github_device_code",
             AsyncMock(return_value={"error": "unauthorized_client"}),
         ):
             await connect_github(mock_private_update, mock_context)
@@ -692,11 +695,24 @@ class TestCategorizeAll:
         await set_chat_language(chat_id, "en")
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
-        with patch("src.services.notes_service.categorize_all_inbox", AsyncMock(return_value=5)):
+        with patch("evlampiy.services.notes_service.categorize_all_inbox", AsyncMock(return_value=5)):
             await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.answer.call_args[0][0]
         assert "5" in reply_text
+
+    async def test_a_blocked_user_cannot_sort_the_inbox(self, mock_private_update, mock_context):
+        """Sorting asks the LLM about every note: a blocked user is refused before it starts."""
+        chat_id = "u_12345"
+        await set_chat_language(chat_id, "en")
+        await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
+        await block_user("12345", admin_id="999")
+
+        with patch("evlampiy.services.notes_service.categorize_all_inbox", AsyncMock(return_value=5)) as sort:
+            await categorize_all(mock_private_update, mock_context)
+
+        sort.assert_not_called()
+        assert mock_private_update.answer.call_args[0][0] == "You are blocked from using this bot."
 
     async def test_shows_no_files_message(self, mock_private_update, mock_context):
         """Shows message when no files to categorize."""
@@ -704,7 +720,7 @@ class TestCategorizeAll:
         await set_chat_language(chat_id, "en")
         await set_github_settings(chat_id, "testowner", "testrepo", "ghp_test")
 
-        with patch("src.services.notes_service.categorize_all_inbox", AsyncMock(return_value=0)):
+        with patch("evlampiy.services.notes_service.categorize_all_inbox", AsyncMock(return_value=0)):
             await categorize_all(mock_private_update, mock_context)
 
         reply_text = mock_private_update.answer.call_args[0][0]
@@ -963,7 +979,7 @@ class TestSettingsHubTierDependentUI:
         # Make user PAID by purchasing credits
         await add_credits(user_id, 5)
 
-        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
+        with patch("evlampiy.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         call_args = mock_private_update.answer.call_args
@@ -987,7 +1003,7 @@ class TestSettingsHubTierDependentUI:
         await set_chat_language(chat_id, "en")
         # User has no credits added → FREE tier
 
-        with patch("src.telegram.handlers.settings.settings.groq_api_key", "test-key"):
+        with patch("evlampiy.telegram.handlers.settings.settings.groq_api_key", "test-key"):
             await settings_hub(mock_private_update, mock_context)
 
         call_args = mock_private_update.answer.call_args
