@@ -159,6 +159,13 @@ if [ "${0##*/} $*" = "$QA_FAIL" ]; then exit 1; fi
 case "${0##*/} $*" in
   "docker port"*) echo 127.0.0.1:27999 ;;
   "docker exec"*) echo 1 ;;
+  "docker inspect"*)
+    # The mutants' MongoDB runs, unless QA_MONGO_DIES says when it is gone: in the run, or in the run again.
+    case "${QA_MONGO_DIES:-}" in
+      "") echo true ;;
+      rerun) if grep -q "max-children 1 evlampiy" "$QA_LOG"; then exit 1; fi; echo true ;;
+      *) exit 1 ;;
+    esac ;;
   "free -m")
     available=${QA_AVAILABLE_MB:-4000}
     if [ -n "${QA_AVAILABLE_AFTER_RUN_MB:-}" ] && grep -q "mutmut run" "$QA_LOG"; then

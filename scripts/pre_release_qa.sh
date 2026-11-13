@@ -50,7 +50,7 @@ stage "mutation"
 # cover it; survivors and untested mutants only come down. From scratch: mutmut keeps a copied
 # file unmutated when only the slice changed. mutmut runs a test session per mutant, so they
 # share one MongoDB of the image production runs, started here — each session takes a database
-# of its own (tests/db_fixtures.py) — rather than a container each. Capped in memory: a mutant
+# no other session holds (tests/db_fixtures.py) — rather than a container each. Capped in memory: a mutant
 # can make code allocate without end, and the cap kills that worker instead of the desktop.
 # The cap allows 1.2 GB for mutmut and its fork server and 0.5 GB per worker, and it protects
 # only while that much is free: a run started with less lets the kernel kill the desktop
@@ -96,11 +96,21 @@ if [ "$ready" -ne 1 ]; then
   echo "pre_release_qa: the MongoDB for the mutants did not answer in 30 seconds" >&2
   exit 1
 fi
+# Once the MongoDB is gone, every mutant after it times out, and a timeout counts as killed: the
+# run would pass while testing nothing. Asked after each mutmut run, before its counts are read.
+# 2026-11-12: its memory cap killed mongod at mutant 360 of 884, and all 228 after it timed out.
+mongo_still_running() {
+  if [ "$(docker inspect --format '{{.State.Running}}' "$mongo" 2>/dev/null)" != true ]; then
+    echo "pre_release_qa: the MongoDB for the mutants died during the run, so its counts are no verdict (journalctl -k says why)" >&2
+    exit 1
+  fi
+}
 rm -rf mutants
 mongo_uri="mongodb://$(docker port "$mongo" 27017)/"
 TEST_MONGO_URI="$mongo_uri" \
   systemd-run --user --scope --quiet -p MemoryMax=$((1200 + 500 * children))M \
   -p MemorySwapMax=0 -p OOMPolicy=continue uv run mutmut run --max-children "$children"
+mongo_still_running
 # The cap is one for the whole run, and the kernel kills its largest process, which need not
 # be the mutant that allocated: whatever died or timed out beside others is judged again,
 # alone, so a survivor cannot hide among the runaways. The statuses are read first, so a
@@ -115,6 +125,7 @@ if ((${#again[@]})); then
   TEST_MONGO_URI="$mongo_uri" \
     systemd-run --user --scope --quiet -p MemoryMax=1700M \
     -p MemorySwapMax=0 -p OOMPolicy=continue uv run mutmut run --max-children 1 "${again[@]}"
+  mongo_still_running
 fi
 uv run mutmut export-cicd-stats
 uv run python scripts/mutation_ratchet.py mutants/mutmut-cicd-stats.json \

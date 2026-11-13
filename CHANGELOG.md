@@ -58,6 +58,7 @@
 - Pre-release QA runs a mutant that died or timed out beside others again, alone, and starts mutation testing only with as many workers as the free memory fits
 - The deploy trusts only the server's host key from the `SSH_KNOWN_HOSTS` secret, not whatever key answers
 - The image installs the Debian security fixes its base image has not been rebuilt with yet; Trivy found two HIGH zlib CVEs
+- Pre-release QA stops when the mutants' MongoDB dies instead of counting every later timeout as killed, and that MongoDB no longer outgrows its memory cap
 
 ### Removed
 

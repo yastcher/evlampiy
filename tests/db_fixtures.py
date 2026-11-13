@@ -1,9 +1,14 @@
 """The tests' MongoDB: one server per session, a clean database per test."""
 
+import contextlib
+import fcntl
+import itertools
 import os
 import pathlib
 import re
-from collections.abc import Iterator
+import tempfile
+import uuid
+from collections.abc import Generator, Iterator
 
 import docker.types
 import pymongo
@@ -11,6 +16,7 @@ import pytest
 from beanie import init_beanie
 from docker.errors import DockerException
 from pymongo import AsyncMongoClient
+from pymongo.asynchronous.database import AsyncDatabase
 from testcontainers.community.mongodb import MongoDbContainer
 
 from evlampiy.mongo import ALL_DOCUMENT_MODELS
@@ -28,6 +34,8 @@ _MONGO_START_TIMEOUT_MS = 60_000
 
 
 _PRODUCTION_COMPOSE = pathlib.Path(__file__).resolve().parents[1] / "docker-compose.yml"
+# Where the sessions on this machine agree which test database each holds.
+_DATABASE_LOCKS = pathlib.Path(tempfile.gettempdir())
 
 
 def compose_mongo_image(compose: pathlib.Path) -> str:
@@ -69,24 +77,61 @@ def mongo_uri() -> Iterator[str]:
         container.stop()
 
 
+@contextlib.contextmanager
+def held_database(mongo_uri: str, prefix: str) -> Generator[str]:
+    """The first `<prefix>_<n>` database no other session holds, emptied of what an earlier one left.
+
+    mutmut runs a test session per mutant, two at once, on the one server pre-release QA starts.
+    A database created and dropped per session queued its collections and indexes for removal
+    faster than mongod removed them, and their memory took mongod past its cap (2026-11-12). So
+    a database is kept for the next session, and a lock on its file, which the system lets go
+    even when the session is killed, keeps two sessions at once out of one database.
+    """
+    for slot in itertools.count():
+        with (_DATABASE_LOCKS / f"{prefix}-{slot}.lock").open("w") as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                continue
+            name = f"{prefix}_{slot}"
+            with pymongo.MongoClient(mongo_uri) as client:
+                for collection in client[name].list_collection_names():
+                    client[name][collection].delete_many({})
+            yield name
+            return
+
+
 @pytest.fixture(scope="session")
 def test_database(mongo_uri) -> Iterator[str]:
-    """This session's own database, dropped when it ends.
+    """This session's database: one no other session holds, TEST_MONGO_URI's server may hold other data."""
+    with held_database(mongo_uri, "evlampiy_test") as name:
+        yield name
 
-    One per process: TEST_MONGO_URI may name a server that holds other data, and mutmut runs
-    a test session per mutant, several at once, on the one server pre-release QA starts.
-    """
-    name = f"evlampiy_test_{os.getpid()}"
-    yield name
+
+@pytest.fixture
+def database_prefix(mongo_uri) -> Iterator[str]:
+    """A prefix of `held_database` databases of the test's own, dropped after it with their locks."""
+    prefix = f"held_{uuid.uuid4().hex[:8]}"
+    yield prefix
     with pymongo.MongoClient(mongo_uri) as client:
-        client.drop_database(name)
+        for name in client.list_database_names():
+            if name.startswith(f"{prefix}_"):
+                client.drop_database(name)
+    for lock in _DATABASE_LOCKS.glob(f"{prefix}-*.lock"):
+        lock.unlink()
+
+
+async def bind_models(database: AsyncDatabase) -> None:
+    """Bind the app's models to a test database. It outlives the session (`held_database`), so an
+    index the models no longer declare is dropped rather than left to refuse inserts."""
+    await init_beanie(database=database, document_models=ALL_DOCUMENT_MODELS, allow_index_dropping=True)
 
 
 @pytest.fixture(autouse=True)
 async def init_db(mongo_uri, test_database):
     """Bind the app's models to the session's database; empty their collections after the test."""
     client = AsyncMongoClient(mongo_uri)
-    await init_beanie(database=client[test_database], document_models=ALL_DOCUMENT_MODELS)
+    await bind_models(client[test_database])
     yield
     for model in ALL_DOCUMENT_MODELS:
         await model.delete_all()

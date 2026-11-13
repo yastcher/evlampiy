@@ -9,6 +9,7 @@ _MUTMUT = (
     "TEST_MONGO_URI=mongodb://127.0.0.1:27999/ systemd-run --user --scope --quiet -p MemoryMax=2200M"
     " -p MemorySwapMax=0 -p OOMPolicy=continue uv run mutmut run --max-children 2"
 )
+_STILL_RUNNING = "docker inspect --format {{.State.Running}} " + _MONGO
 QA_STAGES = [
     "gate.sh",
     "uv run python scripts/crap.py coverage.json --max 20",
@@ -19,6 +20,7 @@ QA_STAGES = [
     f"docker exec {_MONGO} mongosh --quiet --eval db.runCommand({{ping: 1}}).ok",
     f"docker port {_MONGO} 27017",
     _MUTMUT,
+    _STILL_RUNNING,
     "uv run mutmut results --all true",
     "uv run mutmut export-cicd-stats",
     "uv run python scripts/mutation_ratchet.py mutants/mutmut-cicd-stats.json --survived-max 195 --no-tests-max 49",
@@ -78,6 +80,30 @@ def test_mutants_that_died_or_timed_out_beside_others_run_again_alone(run_qa):
     after_results = commands[commands.index("uv run mutmut results --all true") + 1 :]
     assert after_results[:2] == ["free -m", f"{_RERUN} evlampiy.a.x_f__mutmut_1 evlampiy.c.x_h__mutmut_3"]
     assert stamp == git(tree, "rev-parse", "HEAD^{tree}").strip()
+
+
+def test_a_mongodb_that_died_in_the_run_leaves_no_verdict(run_qa):
+    """Every mutant after its death times out, and a timeout counts as killed: no count is read."""
+    _, run = run_qa
+
+    result, commands, stamp = run(QA_MONGO_DIES="run")
+
+    assert result.returncode == 1
+    assert "the MongoDB for the mutants died during the run" in result.stderr
+    assert commands[-3:] == [_MUTMUT, _STILL_RUNNING, f"docker stop {_MONGO}"]
+    assert stamp is None
+
+
+def test_a_mongodb_that_died_in_the_run_again_leaves_no_verdict(run_qa):
+    _, run = run_qa
+
+    result, commands, stamp = run(QA_MUTMUT_RESULTS=_DIED_BESIDE_OTHERS, QA_MONGO_DIES="rerun")
+
+    assert result.returncode == 1
+    assert "the MongoDB for the mutants died during the run" in result.stderr
+    assert commands[-2:] == [_STILL_RUNNING, f"docker stop {_MONGO}"]
+    assert commands[-3].startswith(_RERUN)
+    assert stamp is None
 
 
 def test_with_nothing_dead_nothing_runs_again(run_qa):
