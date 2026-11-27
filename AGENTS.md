@@ -131,6 +131,7 @@ Enforced by ruff. See pyproject.toml `[tool.ruff]` for full config. Do not dupli
 - Never hardcode secrets, tokens, or passwords in code — always use `settings.*` or environment variables
 - Never expose MongoDB port to host in docker-compose.yml, and publish nothing else past the host's loopback (`127.0.0.1:…`): Docker opens a published port past the firewall (`tests/test_compose.py` checks both)
 - Never use absolute paths in code or configs
+- Never put deployment specifics or the owner's own data into the repository, a commit or the CHANGELOG, the repository is public: where production runs (country, provider, server), how it reaches blocked services, its configuration, keys and incidents; an example stays neutral ("a host where the API is blocked"), and the specifics go to long memory
 
 ## Security review
 

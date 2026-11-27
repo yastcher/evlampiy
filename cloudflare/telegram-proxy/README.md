@@ -1,7 +1,7 @@
 # Telegram Bot API proxy (Cloudflare Worker)
 
 A reverse proxy for `api.telegram.org`. Use it when the bot runs on a host where
-Telegram is blocked (e.g. a Russian VPS) but Cloudflare is reachable: the bot
+Telegram is blocked but Cloudflare is reachable: the bot
 talks to the Worker, the Worker talks to Telegram.
 
 ## Deploy

@@ -1,5 +1,5 @@
-// Reverse proxy for LLM provider APIs that are geo-blocked from some hosts
-// (e.g. a Russian VPS). Point the bot at this Worker via:
+// Reverse proxy for LLM provider APIs that are geo-blocked from some hosts.
+// Point the bot at this Worker via:
 //   LLM_API_BASE=https://<worker-name>.<subdomain>.workers.dev
 //
 // The bot calls https://<worker>/<provider>/<path>; the Worker maps <provider> to a

@@ -1,7 +1,7 @@
 // Reverse proxy for the Telegram Bot API.
 //
-// Lets the bot reach Telegram from a host where api.telegram.org is blocked
-// (e.g. a Russian VPS). Point aiogram at this Worker via:
+// Lets the bot reach Telegram from a host where api.telegram.org is blocked.
+// Point aiogram at this Worker via:
 //   TELEGRAM_API_BASE=https://<worker-name>.<subdomain>.workers.dev
 //
 // It only ever forwards to api.telegram.org, so it is not an open proxy.

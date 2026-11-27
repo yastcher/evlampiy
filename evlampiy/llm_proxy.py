@@ -8,7 +8,7 @@ route the same geo-blocked hosts, so the rule lives here instead of being duplic
 from evlampiy import const
 from evlampiy.config import settings
 
-# Providers geo-blocked from some deploys (e.g. a Russian VPS). Their const API base is
+# Providers geo-blocked from some deploys. Their const API base is
 # host-only, so the proxy Worker can route /<provider>/<path> to the upstream host.
 # DeepSeek/Qwen keep their path-suffixed bases and stay direct.
 PROXYABLE_PROVIDERS = frozenset(
