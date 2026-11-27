@@ -1,7 +1,7 @@
 # LLM provider API proxy (Cloudflare Worker)
 
-A reverse proxy for the LLM provider APIs that are geo-blocked on some hosts (e.g. a
-Russian VPS) while Cloudflare stays reachable: the bot talks to the Worker, the Worker
+A reverse proxy for the LLM provider APIs that are geo-blocked on some hosts while
+Cloudflare stays reachable: the bot talks to the Worker, the Worker
 talks to the provider. Covers **Groq, OpenRouter, Gemini, Anthropic, OpenAI** (DeepSeek
 and Qwen are reached directly and are not proxied).
 

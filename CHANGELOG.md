@@ -3,6 +3,10 @@
 <!-- New entries go here, through scripts/changelog_add.py — never under a released version. -->
 <!-- Subsections, in order: Added / Changed / Fixed / Removed / Docs. -->
 
+### Added
+
+- Claude Code sessions keep their state in long memory: AGENTS.md says how, and two hooks remind to save it before compaction and how to recall it after
+
 ## [0.10.0] — 2026-11-13
 
 ### Added
